@@ -1,0 +1,174 @@
+---
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * FASHIONMARKET - Lista de Deseos (Favoritos)
+ * Productos guardados por el usuario
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
+
+export const prerender = false;
+
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { supabase } from '../../lib/supabase/client';
+
+// Verificar autenticación
+const accessToken = Astro.cookies.get('sb-access-token')?.value;
+const refreshToken = Astro.cookies.get('sb-refresh-token')?.value;
+
+if (!accessToken || !refreshToken || !supabase) {
+  return Astro.redirect('/login?redirect=/cuenta/favoritos');
+}
+
+const sb = supabase as any;
+
+const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
+  access_token: accessToken,
+  refresh_token: refreshToken,
+});
+
+if (sessionError || !sessionData.user) {
+  return Astro.redirect('/login?redirect=/cuenta/favoritos');
+}
+
+const user = sessionData.user;
+
+// Obtener lista de deseos con productos
+const { data: wishlistItems } = await sb
+  .from('wishlist')
+  .select(`
+    *,
+    products (*)
+  `)
+  .eq('user_id', user.id)
+  .order('created_at', { ascending: false });
+
+const formatPrice = (cents: number) => {
+  return new Intl.NumberFormat('es-ES', {
+    style: 'currency',
+    currency: 'EUR',
+  }).format(cents / 100);
+};
+---
+
+<BaseLayout title="Lista de Deseos | FashionMarket">
+  <main class="min-h-screen bg-cream py-8 lg:py-12">
+    <div class="container-custom max-w-5xl">
+      <!-- Breadcrumb -->
+      <nav class="mb-6">
+        <ol class="flex items-center gap-2 text-sm text-charcoal-500">
+          <li><a href="/" class="hover:text-navy-900 transition-colors">Inicio</a></li>
+          <li>/</li>
+          <li><a href="/cuenta" class="hover:text-navy-900 transition-colors">Mi Cuenta</a></li>
+          <li>/</li>
+          <li class="text-navy-900 font-medium">Lista de Deseos</li>
+        </ol>
+      </nav>
+
+      <div class="bg-white rounded-lg shadow-sm">
+        <!-- Header -->
+        <div class="p-6 border-b border-charcoal-100 flex items-center justify-between">
+          <div>
+            <h1 class="text-2xl font-serif text-navy-900">Lista de Deseos</h1>
+            <p class="text-charcoal-500 mt-1">
+              {wishlistItems?.length || 0} producto(s) guardado(s)
+            </p>
+          </div>
+        </div>
+
+        <!-- Lista de productos -->
+        <div class="p-6">
+          {(!wishlistItems || wishlistItems.length === 0) ? (
+            <div class="text-center py-12">
+              <svg class="w-20 h-20 mx-auto text-charcoal-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+              </svg>
+              <h2 class="text-lg font-medium text-navy-900 mb-2">Tu lista de deseos está vacía</h2>
+              <p class="text-charcoal-500 mb-6">Guarda tus productos favoritos para comprarlos más tarde</p>
+              <a 
+                href="/tienda" 
+                class="inline-flex items-center gap-2 px-6 py-3 bg-navy-900 text-white rounded-md hover:bg-navy-800 transition-colors"
+              >
+                Explorar productos
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                </svg>
+              </a>
+            </div>
+          ) : (
+            <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {wishlistItems.map((item: any) => (
+                <div class="group border border-charcoal-100 rounded-lg overflow-hidden hover:shadow-lg transition-shadow">
+                  <div class="relative aspect-[3/4] bg-charcoal-100">
+                    {item.products?.images?.[0] ? (
+                      <img 
+                        src={item.products.images[0]} 
+                        alt={item.products.name}
+                        class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                    ) : (
+                      <div class="w-full h-full flex items-center justify-center">
+                        <svg class="w-16 h-16 text-charcoal-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                      </div>
+                    )}
+                    
+                    {/* Botón eliminar */}
+                    <form method="POST" action="/api/wishlist/remove" class="absolute top-2 right-2">
+                      <input type="hidden" name="product_id" value={item.products?.id} />
+                      <button 
+                        type="submit"
+                        class="p-2 bg-white rounded-full shadow-md hover:bg-red-50 transition-colors group/btn"
+                        title="Eliminar de favoritos"
+                      >
+                        <svg class="w-5 h-5 text-red-500" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                        </svg>
+                      </button>
+                    </form>
+
+                    {/* Descuento */}
+                    {item.products?.stock === 0 && (
+                      <span class="absolute top-2 left-2 px-2 py-1 bg-red-500 text-white text-xs font-medium rounded">
+                        Agotado
+                      </span>
+                    )}
+                  </div>
+                  
+                  <div class="p-4">
+                    <a 
+                      href={`/producto/${item.products?.slug}`}
+                      class="block"
+                    >
+                      <h3 class="font-medium text-navy-900 group-hover:text-gold-dark transition-colors line-clamp-2">
+                        {item.products?.name}
+                      </h3>
+                      <p class="text-lg font-semibold text-navy-900 mt-2">
+                        {formatPrice(item.products?.price || 0)}
+                      </p>
+                    </a>
+                    
+                    <button 
+                      type="button"
+                      class="w-full mt-3 px-4 py-2 bg-navy-900 text-white text-sm rounded hover:bg-navy-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      disabled={item.products?.stock === 0}
+                    >
+                      {item.products?.stock === 0 ? 'Agotado' : 'Añadir al carrito'}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <!-- Volver -->
+        <div class="p-6 border-t border-charcoal-100">
+          <a href="/cuenta" class="text-charcoal-600 hover:text-navy-900 transition-colors">
+            ← Volver a Mi Cuenta
+          </a>
+        </div>
+      </div>
+    </div>
+  </main>
+</BaseLayout>

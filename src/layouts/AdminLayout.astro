@@ -1,0 +1,49 @@
+---
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * FASHIONMARKET - Layout de Administración
+ * Layout para el panel de administración (SSR protegido)
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
+
+import '../styles/global.css';
+import AdminSidebar from '../components/admin/AdminSidebar.astro';
+import AdminHeader from '../components/admin/AdminHeader.astro';
+
+interface Props {
+  title: string;
+}
+
+const { title } = Astro.props;
+---
+
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>{title} | Admin - FashionMarket</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  </head>
+  
+  <body class="min-h-screen bg-cream">
+    <div class="flex h-screen overflow-hidden">
+      <!-- Sidebar -->
+      <AdminSidebar />
+      
+      <!-- Main Content -->
+      <div class="flex-1 flex flex-col overflow-hidden">
+        <!-- Admin Header -->
+        <AdminHeader title={title} />
+        
+        <!-- Page Content -->
+        <main class="flex-1 overflow-y-auto p-6 lg:p-8">
+          <slot />
+        </main>
+      </div>
+    </div>
+  </body>
+</html>

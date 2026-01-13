@@ -1,0 +1,246 @@
+---
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * FASHIONMARKET - Login Universal
+ * Página de inicio de sesión única para admin y clientes (SSR)
+ * Detecta automáticamente el rol después de iniciar sesión
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
+
+export const prerender = false; // SSR
+
+import '../styles/global.css';
+
+// Si ya está autenticado, redirigir según el rol
+const accessToken = Astro.cookies.get('sb-access-token');
+const userRole = Astro.cookies.get('user-role');
+
+if (accessToken) {
+  if (userRole?.value === 'admin') {
+    return Astro.redirect('/admin');
+  }
+  return Astro.redirect('/tienda');
+}
+---
+
+<!doctype html>
+<html lang="es" class="h-full">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>Iniciar Sesión | FashionMarket</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  </head>
+  
+  <body style="min-height: 100vh; display: flex; align-items: center; justify-content: center; background-color: #faf9f7; margin: 0; padding: 1rem; font-family: 'Inter', system-ui, sans-serif;">
+    <div style="width: 100%; max-width: 400px; margin: 0 auto;">
+      <!-- Logo -->
+      <div style="text-align: center; margin-bottom: 2rem;">
+        <a href="/" style="display: inline-block; text-decoration: none;">
+          <span style="font-family: 'Playfair Display', Georgia, serif; font-size: 1.875rem; font-weight: 600; color: #0a1628;">
+            Fashion<span style="color: #b8a067;">Market</span>
+          </span>
+        </a>
+        <p style="font-size: 0.875rem; margin-top: 0.5rem; color: #6b6b6b;">
+          Accede a tu cuenta
+        </p>
+      </div>
+      
+      <!-- Login Card -->
+      <div style="background: white; padding: 2rem; box-shadow: 0 10px 40px rgba(10, 22, 40, 0.15); border-radius: 0.5rem;">
+        <h1 style="font-family: 'Playfair Display', Georgia, serif; font-size: 1.5rem; font-weight: 500; color: #0a1628; margin: 0 0 1.5rem 0; text-align: center;">
+          Iniciar sesión
+        </h1>
+        
+        <!-- Error Message -->
+        <div id="error-message" style="display: none; margin-bottom: 1.5rem; padding: 1rem; background: #fef2f2; border: 1px solid rgba(139, 38, 53, 0.2); color: #8b2635; font-size: 0.875rem; border-radius: 0.25rem;">
+        </div>
+        
+        <!-- Success Message (para cuando confirman email) -->
+        <div id="success-message" style="display: none; margin-bottom: 1.5rem; padding: 1rem; background: #f0fdf4; border: 1px solid rgba(45, 90, 61, 0.2); color: #2d5a3d; font-size: 0.875rem; border-radius: 0.25rem; text-align: center;">
+          <svg style="width: 24px; height: 24px; margin: 0 auto 0.5rem; color: #2d5a3d;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <p style="font-weight: 500;">¡Email confirmado!</p>
+          <p style="font-size: 0.8rem;">Ahora puedes iniciar sesión</p>
+        </div>
+        
+        <form id="login-form" style="display: flex; flex-direction: column; gap: 1.25rem;">
+          <div>
+            <label for="email" style="display: block; font-size: 0.875rem; font-weight: 500; color: #404040; margin-bottom: 0.5rem;">
+              Email
+            </label>
+            <input
+              type="email"
+              id="email"
+              name="email"
+              required
+              placeholder="tu@email.com"
+              style="width: 100%; padding: 0.75rem 1rem; border: 1px solid #d4d4d4; background: white; color: #2d2d2d; font-size: 0.875rem; outline: none; box-sizing: border-box; border-radius: 0.25rem;"
+            />
+          </div>
+          
+          <div>
+            <label for="password" style="display: block; font-size: 0.875rem; font-weight: 500; color: #404040; margin-bottom: 0.5rem;">
+              Contraseña
+            </label>
+            <input
+              type="password"
+              id="password"
+              name="password"
+              required
+              minlength="6"
+              placeholder="••••••••"
+              style="width: 100%; padding: 0.75rem 1rem; border: 1px solid #d4d4d4; background: white; color: #2d2d2d; font-size: 0.875rem; outline: none; box-sizing: border-box; border-radius: 0.25rem;"
+            />
+          </div>
+          
+          <div style="display: flex; align-items: center; justify-content: space-between;">
+            <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.875rem; color: #525252; cursor: pointer;">
+              <input type="checkbox" name="remember" style="width: 1rem; height: 1rem;" />
+              Recordarme
+            </label>
+            <a href="#" style="font-size: 0.875rem; color: #0a1628; text-decoration: none;">
+              ¿Olvidaste tu contraseña?
+            </a>
+          </div>
+          
+          <button
+            type="submit"
+            id="submit-btn"
+            style="width: 100%; padding: 0.875rem 1.5rem; background: #0a1628; color: white; font-weight: 500; font-size: 0.875rem; border: none; cursor: pointer; border-radius: 0.25rem; transition: background 0.3s;"
+          >
+            Acceder
+          </button>
+        </form>
+        
+        <div style="margin-top: 1.5rem; text-align: center;">
+          <p style="font-size: 0.875rem; color: #6b6b6b; margin: 0;">
+            ¿No tienes cuenta? 
+            <a href="/registro" style="color: #0a1628; font-weight: 500; text-decoration: none;">
+              Regístrate aquí
+            </a>
+          </p>
+        </div>
+      </div>
+      
+      <!-- Back to store -->
+      <p style="text-align: center; margin-top: 1.5rem;">
+        <a href="/" style="font-size: 0.875rem; color: #6b6b6b; text-decoration: none;">
+          ← Volver a la tienda
+        </a>
+      </p>
+    </div>
+    
+    <script>
+      import { supabase, isSupabaseConfigured } from '../lib/supabase/client';
+      
+      const form = document.getElementById('login-form') as HTMLFormElement;
+      const errorDiv = document.getElementById('error-message') as HTMLDivElement;
+      const successDiv = document.getElementById('success-message') as HTMLDivElement;
+      const submitBtn = document.getElementById('submit-btn') as HTMLButtonElement;
+      
+      // Mostrar mensaje si viene de confirmar email
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('confirmed') === 'true') {
+        successDiv.style.display = 'block';
+      }
+      
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        // Reset error
+        errorDiv.style.display = 'none';
+        errorDiv.textContent = '';
+        
+        // Check if Supabase is configured
+        if (!isSupabaseConfigured() || !supabase) {
+          errorDiv.textContent = 'Supabase no está configurado. Por favor, configure las variables de entorno.';
+          errorDiv.style.display = 'block';
+          return;
+        }
+        
+        // Get form data
+        const formData = new FormData(form);
+        const email = formData.get('email') as string;
+        const password = formData.get('password') as string;
+        
+        // Disable button
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Accediendo...';
+        
+        try {
+          const { data, error } = await supabase.auth.signInWithPassword({
+            email,
+            password,
+          });
+          
+          if (error) throw error;
+          
+          if (data.session) {
+            // Obtener el rol del usuario desde la tabla profiles
+            const { data: profile, error: profileError } = await supabase
+              .from('profiles')
+              .select('role')
+              .eq('id', data.user.id)
+              .single() as { data: { role: string } | null, error: any };
+            
+            // Determinar el rol (por defecto 'customer' si no existe perfil)
+            const userRole = (profile as any)?.role || 'customer';
+            
+            // Guardar tokens y rol en cookies via API
+            const response = await fetch('/api/auth/login', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                access_token: data.session.access_token,
+                refresh_token: data.session.refresh_token,
+                role: userRole,
+              }),
+            });
+            
+            if (response.ok) {
+              // Guardar nombre del usuario en localStorage para el header
+              const userName = data.user.user_metadata?.full_name || data.user.email?.split('@')[0] || 'Usuario';
+              localStorage.setItem('user-name', userName);
+              
+              // Si es admin, cerrar sesión y mostrar mensaje
+              if (userRole === 'admin') {
+                await supabase.auth.signOut();
+                // Limpiar cookies
+                document.cookie = 'sb-access-token=; path=/; max-age=0';
+                document.cookie = 'sb-refresh-token=; path=/; max-age=0';
+                document.cookie = 'user-role=; path=/; max-age=0';
+                throw new Error('Los administradores deben usar el acceso exclusivo de administración.');
+              } else {
+                window.location.href = '/cuenta';
+              }
+            } else {
+              throw new Error('Error al guardar la sesión');
+            }
+          }
+        } catch (error: any) {
+          let message = error.message || 'Error al iniciar sesión';
+          
+          // Traducir mensajes comunes
+          if (message.includes('Invalid login credentials')) {
+            message = 'Email o contraseña incorrectos';
+          } else if (message.includes('Email not confirmed')) {
+            message = 'Por favor, confirma tu email antes de iniciar sesión';
+          }
+          
+          errorDiv.textContent = message;
+          errorDiv.style.display = 'block';
+        } finally {
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Acceder';
+        }
+      });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,188 @@
+---
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * FASHIONMARKET - Página de Producto Individual
+ * Ficha de producto con galería, tallas y botón de compra (SSG)
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
+
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import ProductGallery from '../../components/product/ProductGallery';
+import AddToCartButton from '../../components/islands/AddToCartButton';
+import ProductCard from '../../components/product/ProductCard.astro';
+import { supabase, isSupabaseConfigured } from '../../lib/supabase/client';
+
+// Generar rutas estáticas para todos los productos
+export async function getStaticPaths() {
+  // Datos de demostración (dentro de getStaticPaths)
+  const fallbackProducts = [
+    { slug: 'traje-italiano-slim-fit' },
+    { slug: 'camisa-oxford-premium' },
+    { slug: 'cinturon-cuero' },
+    { slug: 'blazer-casual-lino' },
+  ];
+
+  if (isSupabaseConfigured() && supabase) {
+    const { data: products } = await supabase
+      .from('products')
+      .select('slug');
+    
+    if (products?.length) {
+      return products.map((product: { slug: string }) => ({
+        params: { slug: product.slug },
+      }));
+    }
+  }
+  
+  // Rutas de demostración
+  return fallbackProducts.map((product) => ({
+    params: { slug: product.slug },
+  }));
+}
+
+// Datos de demostración para el resto del componente
+const demoProducts = [
+  { id: '1', name: 'Traje Italiano Slim Fit', slug: 'traje-italiano-slim-fit', price: 599.00, images: ['/placeholder-product.jpg', '/placeholder-product.jpg'], category_id: '1', featured: true, stock: 10, sizes: ['S','M','L','XL'], colors: ['Navy', 'Charcoal'], description: 'Elegante traje de corte italiano confeccionado con las mejores telas. Perfecto para ocasiones formales y reuniones de negocios.', material: 'Lana 100%', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+  { id: '2', name: 'Camisa Oxford Premium', slug: 'camisa-oxford-premium', price: 89.00, images: ['/placeholder-product.jpg'], category_id: '2', featured: true, stock: 25, sizes: ['S','M','L','XL'], colors: ['White', 'Light Blue'], description: 'Camisa oxford clásica de algodón egipcio. Versátil para el trabajo o el fin de semana.', material: 'Algodón 100%', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+  { id: '3', name: 'Cinturón de Cuero', slug: 'cinturon-cuero', price: 75.00, images: ['/placeholder-product.jpg'], category_id: '3', featured: true, stock: 50, sizes: ['85cm','90cm','95cm','100cm'], colors: ['Brown', 'Black'], description: 'Cinturón artesanal de cuero genuino con hebilla de latón envejecido.', material: 'Cuero genuino', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+  { id: '4', name: 'Blazer Casual Lino', slug: 'blazer-casual-lino', price: 299.00, images: ['/placeholder-product.jpg'], category_id: '1', featured: true, stock: 15, sizes: ['S','M','L','XL'], colors: ['Beige', 'Navy'], description: 'Blazer de verano ligero y transpirable. Ideal para eventos al aire libre.', material: 'Lino 100%', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+];
+
+const demoCategories = [
+  { id: '1', name: 'Trajes', slug: 'trajes', image_url: '/placeholder-category.jpg', description: 'Trajes de vestir premium' },
+  { id: '2', name: 'Camisas', slug: 'camisas', image_url: '/placeholder-category.jpg', description: 'Camisas de alta calidad' },
+  { id: '3', name: 'Accesorios', slug: 'accesorios', image_url: '/placeholder-category.jpg', description: 'Complementos elegantes' },
+];
+
+const { slug } = Astro.params;
+
+// Obtener producto actual con su categoría
+let product = demoProducts.find(p => p.slug === slug) || null;
+let category = product ? demoCategories.find(c => c.id === product!.category_id) || null : null;
+let relatedProducts = product ? demoProducts.filter(p => p.category_id === product!.category_id && p.id !== product!.id).slice(0, 4) : [];
+
+if (isSupabaseConfigured() && supabase) {
+  const { data: realProduct } = await supabase
+    .from('products')
+    .select('*')
+    .eq('slug', slug as string)
+    .single();
+
+  if (realProduct) {
+    product = realProduct as typeof product;
+    
+    const { data: realCategory } = await supabase
+      .from('categories')
+      .select('*')
+      .eq('id', product!.category_id)
+      .single();
+    
+    if (realCategory) category = realCategory as typeof category;
+
+    const { data: realRelated } = await supabase
+      .from('products')
+      .select('*')
+      .eq('category_id', product!.category_id)
+      .neq('id', product!.id)
+      .limit(4);
+    
+    if (realRelated) relatedProducts = realRelated as typeof relatedProducts;
+  }
+}
+
+// Si no existe el producto, redirigir
+if (!product) {
+  return Astro.redirect('/404');
+}
+---
+
+<BaseLayout 
+  title={product.name}
+  description={product.description}
+  image={product.images[0]}
+>
+  <div class="container-custom py-12">
+    <!-- Breadcrumb -->
+    <nav class="mb-8">
+      <ol class="flex items-center gap-2 text-sm text-charcoal-500">
+        <li><a href="/" class="hover:text-navy-900 transition-colors">Inicio</a></li>
+        <li>/</li>
+        <li><a href="/tienda" class="hover:text-navy-900 transition-colors">Tienda</a></li>
+        <li>/</li>
+        {category && (
+          <>
+            <li>
+              <a href={`/categoria/${category.slug}`} class="hover:text-navy-900 transition-colors">
+                {category.name}
+              </a>
+            </li>
+            <li>/</li>
+          </>
+        )}
+        <li class="text-navy-900 truncate max-w-[200px]">{product.name}</li>
+      </ol>
+    </nav>
+    
+    <!-- Product Details -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16">
+      <!-- Gallery -->
+      <div>
+        <ProductGallery 
+          client:load 
+          images={product.images} 
+          productName={product.name} 
+        />
+      </div>
+      
+      <!-- Product Info -->
+      <div class="lg:max-w-lg">
+        <!-- Category -->
+        {category && (
+          <a 
+            href={`/categoria/${category.slug}`}
+            class="inline-block text-xs uppercase tracking-widest text-charcoal-500 hover:text-navy-900 transition-colors mb-3"
+          >
+            {category.name}
+          </a>
+        )}
+        
+        <!-- Name -->
+        <h1 class="font-serif text-3xl lg:text-4xl font-medium text-navy-900 mb-4">
+          {product.name}
+        </h1>
+        
+        <!-- Colors & Material -->
+        <div class="flex items-center gap-4 text-sm text-charcoal-500 mb-6">
+          {product.colors && product.colors.length > 0 && (
+            <span>Colores: <span class="text-charcoal-800">{product.colors.join(', ')}</span></span>
+          )}
+          {product.material && (
+            <span>Material: <span class="text-charcoal-800">{product.material}</span></span>
+          )}
+        </div>
+        
+        <!-- Description -->
+        <p class="text-charcoal-600 leading-relaxed mb-8">
+          {product.description}
+        </p>
+        
+        <!-- Add to Cart Section (Isla React) -->
+        <AddToCartButton client:load product={product} />
+      </div>
+    </div>
+    
+    <!-- Related Products -->
+    {relatedProducts && relatedProducts.length > 0 && (
+      <section class="mt-24">
+        <h2 class="font-serif text-2xl font-medium text-navy-900 mb-8">
+          También te puede interesar
+        </h2>
+        <div class="product-grid">
+          {relatedProducts.map((relatedProduct) => (
+            <ProductCard product={relatedProduct} />
+          ))}
+        </div>
+      </section>
+    )}
+  </div>
+</BaseLayout>

@@ -1,0 +1,169 @@
+---
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * FASHIONMARKET - Página de Checkout
+ * Proceso de pago con Stripe
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
+
+export const prerender = false;
+
+import BaseLayout from '../layouts/BaseLayout.astro';
+import CheckoutForm from '../components/checkout/CheckoutForm';
+import { supabase } from '../lib/supabase/client';
+
+// Verificar autenticación
+const accessToken = Astro.cookies.get('sb-access-token')?.value;
+const refreshToken = Astro.cookies.get('sb-refresh-token')?.value;
+
+if (!accessToken || !refreshToken || !supabase) {
+  return Astro.redirect('/login?redirect=/checkout');
+}
+
+const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
+  access_token: accessToken,
+  refresh_token: refreshToken,
+});
+
+if (sessionError || !sessionData.user) {
+  return Astro.redirect('/login?redirect=/checkout');
+}
+
+const user = sessionData.user;
+
+// Obtener items del carrito (simulado - en tu caso viene del localStorage)
+// En producción, obtendrías esto del carrito del usuario
+const cartTotal = 14999; // 149.99€ (en céntimos)
+---
+
+<BaseLayout title="Checkout | FashionMarket">
+  <main class="min-h-screen bg-cream py-8 lg:py-12">
+    <div class="container-custom max-w-5xl">
+      <!-- Breadcrumb -->
+      <nav class="mb-6">
+        <ol class="flex items-center gap-2 text-sm text-charcoal-500">
+          <li><a href="/" class="hover:text-navy-900 transition-colors">Inicio</a></li>
+          <li>/</li>
+          <li><a href="/tienda" class="hover:text-navy-900 transition-colors">Tienda</a></li>
+          <li>/</li>
+          <li class="text-navy-900 font-medium">Checkout</li>
+        </ol>
+      </nav>
+
+      <div class="grid lg:grid-cols-5 gap-8">
+        <!-- Formulario de pago -->
+        <div class="lg:col-span-3">
+          <div class="bg-white rounded-lg shadow-sm p-6">
+            <h1 class="text-2xl font-serif text-navy-900 mb-6">Finalizar pedido</h1>
+
+            <!-- Componente de Stripe -->
+            <CheckoutForm 
+              amount={cartTotal}
+              client:load
+            />
+          </div>
+        </div>
+
+        <!-- Resumen del pedido -->
+        <div class="lg:col-span-2">
+          <div class="bg-white rounded-lg shadow-sm p-6 sticky top-24">
+            <h2 class="text-lg font-semibold text-navy-900 mb-4">Resumen del pedido</h2>
+
+            <!-- Items del carrito -->
+            <div class="space-y-4 mb-6 pb-6 border-b border-charcoal-100">
+              <div class="flex gap-4">
+                <div class="w-16 h-16 bg-charcoal-100 rounded flex-shrink-0"></div>
+                <div class="flex-1">
+                  <h3 class="font-medium text-navy-900 text-sm">Traje Ejecutivo Navy</h3>
+                  <p class="text-xs text-charcoal-500">Talla: 50 | Color: Azul Marino</p>
+                  <p class="text-sm text-navy-900 mt-1">349,99€</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Totales -->
+            <div class="space-y-3 mb-6">
+              <div class="flex justify-between text-sm">
+                <span class="text-charcoal-600">Subtotal</span>
+                <span class="text-navy-900 font-medium">349,99€</span>
+              </div>
+              <div class="flex justify-between text-sm">
+                <span class="text-charcoal-600">Envío</span>
+                <span class="text-green-600 font-medium">GRATIS</span>
+              </div>
+              <div class="flex justify-between text-base font-semibold pt-3 border-t border-charcoal-100">
+                <span class="text-navy-900">Total</span>
+                <span class="text-navy-900">{(cartTotal / 100).toFixed(2)}€</span>
+              </div>
+            </div>
+
+            <!-- Métodos de pago aceptados -->
+            <div class="border-t border-charcoal-100 pt-4">
+              <p class="text-xs text-charcoal-500 mb-2">Métodos de pago aceptados:</p>
+              <div class="flex items-center gap-2 flex-wrap">
+                <div class="px-2 py-1 bg-charcoal-50 rounded text-xs text-charcoal-600 flex items-center gap-1">
+                  💳 Tarjeta
+                </div>
+                <div class="px-2 py-1 bg-charcoal-50 rounded text-xs text-charcoal-600 flex items-center gap-1">
+                   Apple Pay
+                </div>
+                <div class="px-2 py-1 bg-charcoal-50 rounded text-xs text-charcoal-600 flex items-center gap-1">
+                  🔵 Google Pay
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Garantías -->
+      <div class="grid sm:grid-cols-3 gap-6 mt-12">
+        <div class="flex items-center gap-3 p-4 bg-white rounded-lg">
+          <div class="w-10 h-10 bg-green-50 rounded-full flex items-center justify-center flex-shrink-0">
+            <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+            </svg>
+          </div>
+          <div>
+            <p class="font-medium text-navy-900 text-sm">Pago seguro</p>
+            <p class="text-xs text-charcoal-500">Encriptación SSL</p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-3 p-4 bg-white rounded-lg">
+          <div class="w-10 h-10 bg-blue-50 rounded-full flex items-center justify-center flex-shrink-0">
+            <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+            </svg>
+          </div>
+          <div>
+            <p class="font-medium text-navy-900 text-sm">Sin comisiones</p>
+            <p class="text-xs text-charcoal-500">Precio final</p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-3 p-4 bg-white rounded-lg">
+          <div class="w-10 h-10 bg-purple-50 rounded-full flex items-center justify-center flex-shrink-0">
+            <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+            </svg>
+          </div>
+          <div>
+            <p class="font-medium text-navy-900 text-sm">Devoluciones</p>
+            <p class="text-xs text-charcoal-500">30 días gratis</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    // Manejar resultado del pago
+    window.addEventListener('message', (event) => {
+      if (event.data.type === 'payment-success') {
+        // Redirigir a página de confirmación
+        window.location.href = `/cuenta/pedidos/${event.data.paymentIntentId}`;
+      }
+    });
+  </script>
+</BaseLayout>

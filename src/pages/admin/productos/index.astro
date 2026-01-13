@@ -1,0 +1,237 @@
+---
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * FASHIONMARKET - Admin Products List
+ * Listado y gestión de productos (SSR Protegido)
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
+
+export const prerender = false; // SSR
+
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { supabase, isSupabaseConfigured } from '../../../lib/supabase/client';
+import { supabaseAdmin, isSupabaseAdminConfigured } from '../../../lib/supabase/server';
+import { formatPrice } from '../../../lib/stores/cart';
+
+// Verificar autenticación (solo si Supabase está configurado)
+if (isSupabaseAdminConfigured() && supabaseAdmin) {
+  const accessToken = Astro.cookies.get('sb-access-token')?.value;
+  const userRole = Astro.cookies.get('user-role')?.value;
+
+  if (!accessToken || userRole !== 'admin') {
+    return Astro.redirect('/admin/acceso-seguro');
+  }
+
+  const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(accessToken);
+
+  if (authError || !user) {
+    return Astro.redirect('/admin/acceso-seguro');
+  }
+}
+
+// Datos de demostración
+let products: any[] = [
+  { id: '1', name: 'Traje Italiano Slim Fit', slug: 'traje-italiano-slim-fit', price: 599.00, images: ['/placeholder-product.svg'], category_id: '1', featured: true, stock: 10, sizes: ['S','M','L','XL'], colors: ['Navy', 'Charcoal'], description: 'Traje de corte italiano', material: 'Lana 100%', created_at: new Date().toISOString(), updated_at: new Date().toISOString(), categories: { name: 'Trajes' } },
+  { id: '2', name: 'Camisa Oxford Premium', slug: 'camisa-oxford-premium', price: 89.00, images: ['/placeholder-product.svg'], category_id: '2', featured: true, stock: 25, sizes: ['S','M','L','XL'], colors: ['White', 'Light Blue'], description: 'Camisa oxford clásica', material: 'Algodón 100%', created_at: new Date().toISOString(), updated_at: new Date().toISOString(), categories: { name: 'Camisas' } },
+  { id: '3', name: 'Cinturón de Cuero', slug: 'cinturon-cuero', price: 75.00, images: ['/placeholder-product.svg'], category_id: '3', featured: true, stock: 50, sizes: ['85cm','90cm','95cm','100cm'], colors: ['Brown', 'Black'], description: 'Cinturón artesanal', material: 'Cuero genuino', created_at: new Date().toISOString(), updated_at: new Date().toISOString(), categories: { name: 'Accesorios' } },
+  { id: '4', name: 'Blazer Casual Lino', slug: 'blazer-casual-lino', price: 299.00, images: ['/placeholder-product.svg'], category_id: '1', featured: true, stock: 15, sizes: ['S','M','L','XL'], colors: ['Beige', 'Navy'], description: 'Blazer de verano', material: 'Lino 100%', created_at: new Date().toISOString(), updated_at: new Date().toISOString(), categories: { name: 'Trajes' } },
+];
+
+// Obtener productos reales con categorías
+if (isSupabaseConfigured() && supabase) {
+  const { data: realProducts } = await supabase
+    .from('products')
+    .select(`
+      *,
+      categories (
+        name
+      )
+    `)
+    .order('created_at', { ascending: false });
+  
+  if (realProducts?.length) products = realProducts;
+}
+---
+
+<AdminLayout title="Productos">
+  <div class="space-y-6">
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div>
+        <p class="text-charcoal-500">
+          {products?.length || 0} productos en total
+        </p>
+      </div>
+      
+      <a href="/admin/productos/nuevo" class="btn-primary">
+        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+        </svg>
+        Nuevo producto
+      </a>
+    </div>
+    
+    <!-- Products Table -->
+    <div class="bg-white border border-charcoal-100 overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="w-full">
+          <thead>
+            <tr class="bg-charcoal-50 border-b border-charcoal-100">
+              <th class="text-left px-6 py-4 text-xs font-semibold uppercase tracking-wider text-charcoal-600">
+                Producto
+              </th>
+              <th class="text-left px-6 py-4 text-xs font-semibold uppercase tracking-wider text-charcoal-600">
+                Categoría
+              </th>
+              <th class="text-left px-6 py-4 text-xs font-semibold uppercase tracking-wider text-charcoal-600">
+                Precio
+              </th>
+              <th class="text-left px-6 py-4 text-xs font-semibold uppercase tracking-wider text-charcoal-600">
+                Stock
+              </th>
+              <th class="text-left px-6 py-4 text-xs font-semibold uppercase tracking-wider text-charcoal-600">
+                Estado
+              </th>
+              <th class="text-right px-6 py-4 text-xs font-semibold uppercase tracking-wider text-charcoal-600">
+                Acciones
+              </th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-charcoal-100">
+            {products && products.length > 0 ? (
+              products.map((product) => (
+                <tr class="hover:bg-charcoal-50 transition-colors">
+                  <td class="px-6 py-4">
+                    <div class="flex items-center gap-4">
+                      <div class="w-12 h-12 bg-cream flex-shrink-0">
+                        <img 
+                          src={product.images[0] || '/placeholder-product.svg'} 
+                          alt={product.name}
+                          class="w-full h-full object-cover"
+                        />
+                      </div>
+                      <div>
+                        <p class="text-sm font-medium text-navy-900">
+                          {product.name}
+                        </p>
+                        <p class="text-xs text-charcoal-500 truncate max-w-xs">
+                          {product.slug}
+                        </p>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="px-6 py-4">
+                    <span class="text-sm text-charcoal-600">
+                      {product.categories?.name || '-'}
+                    </span>
+                  </td>
+                  <td class="px-6 py-4">
+                    <span class="text-sm font-medium text-charcoal-800">
+                      {formatPrice(product.price)}
+                    </span>
+                  </td>
+                  <td class="px-6 py-4">
+                    <span class={`text-sm font-medium ${
+                      product.stock < 10 ? 'text-error' : 'text-charcoal-800'
+                    }`}>
+                      {product.stock}
+                    </span>
+                  </td>
+                  <td class="px-6 py-4">
+                    {product.featured ? (
+                      <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-leather/10 text-leather">
+                        Destacado
+                      </span>
+                    ) : (
+                      <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-charcoal-100 text-charcoal-600">
+                        Normal
+                      </span>
+                    )}
+                  </td>
+                  <td class="px-6 py-4 text-right">
+                    <div class="flex items-center justify-end gap-3">
+                      <a 
+                        href={`/producto/${product.slug}`}
+                        target="_blank"
+                        class="text-charcoal-400 hover:text-navy-900 transition-colors"
+                        title="Ver en tienda"
+                      >
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                        </svg>
+                      </a>
+                      <a 
+                        href={`/admin/productos/${product.id}`}
+                        class="text-charcoal-400 hover:text-navy-900 transition-colors"
+                        title="Editar"
+                      >
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                      </a>
+                      <button 
+                        type="button"
+                        class="text-charcoal-400 hover:text-error transition-colors delete-product"
+                        data-id={product.id}
+                        data-name={product.name}
+                        title="Eliminar"
+                      >
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colspan="6" class="px-6 py-12 text-center">
+                  <svg class="w-12 h-12 mx-auto text-charcoal-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                  </svg>
+                  <p class="text-charcoal-600 mb-4">No hay productos todavía</p>
+                  <a href="/admin/productos/nuevo" class="btn-primary">
+                    Crear primer producto
+                  </a>
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    import { supabase, isSupabaseConfigured } from '../../../lib/supabase/client';
+    
+    document.querySelectorAll('.delete-product').forEach((btn) => {
+      btn.addEventListener('click', async (e) => {
+        const target = e.currentTarget as HTMLButtonElement;
+        const id = target.dataset.id;
+        const name = target.dataset.name;
+        
+        if (!id) return;
+        
+        if (!isSupabaseConfigured() || !supabase) {
+          alert('Supabase no está configurado');
+          return;
+        }
+        
+        if (confirm(`¿Estás seguro de eliminar "${name}"? Esta acción no se puede deshacer.`)) {
+          const { error } = await supabase
+            .from('products')
+            .delete()
+            .eq('id', id);
+          
+          if (error) {
+            alert('Error al eliminar el producto');
+          } else {
+            window.location.reload();
+          }
+        }
+      });
+    });
+  </script>
+</AdminLayout>

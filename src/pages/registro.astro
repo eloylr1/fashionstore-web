@@ -1,0 +1,273 @@
+---
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * FASHIONMARKET - Registro de Clientes
+ * Página de registro para nuevos clientes (SSR)
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
+
+export const prerender = false; // SSR
+
+import '../styles/global.css';
+
+// Si ya está autenticado, redirigir a la tienda
+const accessToken = Astro.cookies.get('sb-access-token');
+if (accessToken) {
+  return Astro.redirect('/tienda');
+}
+---
+
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Crear Cuenta | FashionMarket</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  </head>
+  
+  <body class="min-h-screen bg-ivory flex items-center justify-center p-4">
+    <div class="w-full max-w-md">
+      <!-- Logo -->
+      <div class="text-center mb-8">
+        <a href="/" class="inline-block">
+          <span class="font-serif text-3xl font-semibold text-navy-900 tracking-tight">
+            Fashion<span class="text-gold-matte">Market</span>
+          </span>
+        </a>
+        <p class="text-charcoal-500 text-sm mt-2">Crea tu cuenta y descubre nuestra colección</p>
+      </div>
+      
+      <!-- Register Card -->
+      <div class="bg-white p-8 shadow-elevated">
+        <h1 class="font-serif text-2xl font-medium text-navy-900 mb-6 text-center">
+          Crear cuenta
+        </h1>
+        
+        <!-- Error Message -->
+        <div id="error-message" class="hidden mb-6 p-4 bg-red-50 border border-error/20 text-error text-sm">
+        </div>
+        
+        <!-- Success Message -->
+        <div id="success-message" class="hidden mb-6 p-4 bg-green-50 border border-success/20 text-success text-sm">
+        </div>
+        
+        <form id="register-form" class="space-y-5">
+          <div>
+            <label for="full_name" class="block text-sm font-medium text-charcoal-700 mb-2">
+              Nombre completo
+            </label>
+            <input
+              type="text"
+              id="full_name"
+              name="full_name"
+              required
+              class="input-elegant"
+              placeholder="Tu nombre"
+            />
+          </div>
+          
+          <div>
+            <label for="email" class="block text-sm font-medium text-charcoal-700 mb-2">
+              Email
+            </label>
+            <input
+              type="email"
+              id="email"
+              name="email"
+              required
+              class="input-elegant"
+              placeholder="tu@email.com"
+            />
+          </div>
+          
+          <div>
+            <label for="password" class="block text-sm font-medium text-charcoal-700 mb-2">
+              Contraseña
+            </label>
+            <input
+              type="password"
+              id="password"
+              name="password"
+              required
+              minlength="6"
+              class="input-elegant"
+              placeholder="Mínimo 6 caracteres"
+            />
+          </div>
+          
+          <div>
+            <label for="confirm_password" class="block text-sm font-medium text-charcoal-700 mb-2">
+              Confirmar contraseña
+            </label>
+            <input
+              type="password"
+              id="confirm_password"
+              name="confirm_password"
+              required
+              minlength="6"
+              class="input-elegant"
+              placeholder="Repite tu contraseña"
+            />
+          </div>
+          
+          <div class="flex items-start gap-2">
+            <input
+              type="checkbox"
+              id="terms"
+              name="terms"
+              required
+              class="mt-1 w-4 h-4 text-navy-900 border-charcoal-300 rounded focus:ring-navy-900"
+            />
+            <label for="terms" class="text-sm text-charcoal-600">
+              Acepto los <a href="#" class="text-navy-900 hover:text-gold-matte underline">términos y condiciones</a> y la <a href="#" class="text-navy-900 hover:text-gold-matte underline">política de privacidad</a>
+            </label>
+          </div>
+          
+          <button
+            type="submit"
+            class="btn-primary w-full"
+            id="submit-btn"
+          >
+            Crear cuenta
+          </button>
+        </form>
+        
+        <div class="mt-6 text-center">
+          <p class="text-sm text-charcoal-500">
+            ¿Ya tienes cuenta? 
+            <a href="/login" class="text-navy-900 font-medium hover:text-gold-matte transition-colors">
+              Inicia sesión
+            </a>
+          </p>
+        </div>
+      </div>
+      
+      <!-- Back to store -->
+      <p class="text-center mt-6">
+        <a href="/" class="text-sm text-charcoal-500 hover:text-navy-900 transition-colors">
+          ← Volver a la tienda
+        </a>
+      </p>
+    </div>
+    
+    <script>
+      import { supabase, isSupabaseConfigured } from '../lib/supabase/client';
+      
+      const form = document.getElementById('register-form') as HTMLFormElement;
+      const errorDiv = document.getElementById('error-message') as HTMLDivElement;
+      const successDiv = document.getElementById('success-message') as HTMLDivElement;
+      const submitBtn = document.getElementById('submit-btn') as HTMLButtonElement;
+      
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        // Reset messages
+        errorDiv.classList.add('hidden');
+        errorDiv.textContent = '';
+        successDiv.classList.add('hidden');
+        successDiv.textContent = '';
+        
+        // Check if Supabase is configured
+        if (!isSupabaseConfigured() || !supabase) {
+          errorDiv.textContent = 'Supabase no está configurado. Por favor, configure las variables de entorno.';
+          errorDiv.classList.remove('hidden');
+          return;
+        }
+        
+        // Get form data
+        const formData = new FormData(form);
+        const fullName = formData.get('full_name') as string;
+        const email = formData.get('email') as string;
+        const password = formData.get('password') as string;
+        const confirmPassword = formData.get('confirm_password') as string;
+        
+        // Validate passwords match
+        if (password !== confirmPassword) {
+          errorDiv.textContent = 'Las contraseñas no coinciden';
+          errorDiv.classList.remove('hidden');
+          return;
+        }
+        
+        // Disable button
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Creando cuenta...';
+        
+        try {
+          const { data, error } = await supabase.auth.signUp({
+            email,
+            password,
+            options: {
+              data: {
+                full_name: fullName,
+                role: 'customer' // Los clientes siempre se registran como customers
+              },
+              emailRedirectTo: `${window.location.origin}/auth/callback`
+            }
+          });
+          
+          if (error) throw error;
+          
+          if (data.user) {
+            // Si el email necesita confirmación (Supabase tiene habilitada la confirmación)
+            if (data.user.identities?.length === 0) {
+              errorDiv.textContent = 'Este email ya está registrado. Por favor, inicia sesión.';
+              errorDiv.classList.remove('hidden');
+            } else if (!data.session) {
+              // Email de confirmación enviado
+              successDiv.innerHTML = `
+                <div style="text-align: center;">
+                  <svg style="width: 48px; height: 48px; margin: 0 auto 1rem; color: #2d5a3d;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                  </svg>
+                  <p style="font-weight: 600; margin-bottom: 0.5rem;">¡Revisa tu correo!</p>
+                  <p>Hemos enviado un enlace de confirmación a <strong>${email}</strong></p>
+                  <p style="margin-top: 0.5rem; font-size: 0.8rem; color: #6b6b6b;">Revisa también tu carpeta de spam</p>
+                </div>
+              `;
+              successDiv.classList.remove('hidden');
+              form.style.display = 'none';
+            } else {
+              // Si el usuario se autentica directamente
+              const response = await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  access_token: data.session.access_token,
+                  refresh_token: data.session.refresh_token,
+                }),
+              });
+              
+              if (response.ok) {
+                window.location.href = '/tienda';
+              } else {
+                throw new Error('Error al guardar la sesión');
+              }
+            }
+          }
+        } catch (error: any) {
+          let message = error.message || 'Error al crear la cuenta';
+          
+          // Traducir mensajes comunes
+          if (message.includes('already registered')) {
+            message = 'Este email ya está registrado';
+          } else if (message.includes('Password should be')) {
+            message = 'La contraseña debe tener al menos 6 caracteres';
+          } else if (message.includes('Invalid email')) {
+            message = 'Email inválido';
+          }
+          
+          errorDiv.textContent = message;
+          errorDiv.classList.remove('hidden');
+        } finally {
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Crear cuenta';
+        }
+      });
+    </script>
+  </body>
+</html>

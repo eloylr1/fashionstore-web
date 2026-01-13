@@ -1,0 +1,239 @@
+---
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * FASHIONMARKET - Cart Page (Carrito)
+ * Página del carrito de compras (SSR)
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
+
+export const prerender = false;
+
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout 
+  title="Tu Carrito"
+  description="Revisa y gestiona los productos de tu carrito de compras."
+>
+  <div class="container-custom py-12">
+    <!-- Breadcrumb -->
+    <nav class="mb-8">
+      <ol class="flex items-center gap-2 text-sm text-charcoal-500">
+        <li><a href="/" class="hover:text-navy-900 transition-colors">Inicio</a></li>
+        <li>/</li>
+        <li class="text-navy-900">Carrito</li>
+      </ol>
+    </nav>
+    
+    <!-- Header -->
+    <div class="mb-10">
+      <h1 class="font-serif text-4xl font-medium text-navy-900 mb-4">
+        Tu Carrito
+      </h1>
+    </div>
+    
+    <!-- Cart Content - Renderizado por React -->
+    <div id="cart-page-content" class="grid grid-cols-1 lg:grid-cols-3 gap-12">
+      <!-- Cart Items -->
+      <div class="lg:col-span-2">
+        <div id="cart-items-container">
+          <!-- Los items se renderizan con JavaScript/React -->
+          <div class="text-center py-16 text-charcoal-500">
+            <svg class="w-16 h-16 mx-auto text-charcoal-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+            </svg>
+            <p>Cargando carrito...</p>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Order Summary -->
+      <div class="lg:col-span-1">
+        <div class="bg-cream p-6 sticky top-24">
+          <h2 class="font-serif text-xl font-medium text-navy-900 mb-6">
+            Resumen del pedido
+          </h2>
+          
+          <div class="space-y-4 pb-6 border-b border-charcoal-200">
+            <div class="flex justify-between text-sm">
+              <span class="text-charcoal-600">Subtotal</span>
+              <span id="cart-subtotal" class="text-charcoal-800">0,00 €</span>
+            </div>
+            <div class="flex justify-between text-sm">
+              <span class="text-charcoal-600">Envío</span>
+              <span class="text-charcoal-800">Calculado en checkout</span>
+            </div>
+          </div>
+          
+          <div class="flex justify-between py-6 border-b border-charcoal-200">
+            <span class="font-medium text-navy-900">Total</span>
+            <span id="cart-total" class="font-medium text-navy-900">0,00 €</span>
+          </div>
+          
+          <div class="mt-6 space-y-4">
+            <a 
+              href="/checkout"
+              class="btn-primary w-full text-center block"
+            >
+              Finalizar compra
+            </a>
+            
+            <a 
+              href="/productos"
+              class="w-full text-center text-sm text-charcoal-600 hover:text-navy-900 transition-colors block"
+            >
+              Seguir comprando
+            </a>
+          </div>
+          
+          <!-- Trust badges -->
+          <div class="mt-8 pt-6 border-t border-charcoal-200 space-y-3">
+            <div class="flex items-center gap-3 text-sm text-charcoal-600">
+              <svg class="w-5 h-5 text-success flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+              </svg>
+              <span>Pago seguro garantizado</span>
+            </div>
+            <div class="flex items-center gap-3 text-sm text-charcoal-600">
+              <svg class="w-5 h-5 text-success flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              <span>Devolución gratuita en 30 días</span>
+            </div>
+            <div class="flex items-center gap-3 text-sm text-charcoal-600">
+              <svg class="w-5 h-5 text-success flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+              </svg>
+              <span>Envío gratis en pedidos +100€</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Script para inicializar el carrito -->
+  <script>
+    import { cartItems, cartSubtotalFormatted, formatPrice, removeFromCart, updateQuantity } from '../stores/cart';
+    
+    // Función para renderizar los items del carrito
+    function renderCartItems() {
+      const container = document.getElementById('cart-items-container');
+      const subtotalEl = document.getElementById('cart-subtotal');
+      const totalEl = document.getElementById('cart-total');
+      
+      if (!container) return;
+      
+      const items = cartItems.get();
+      const subtotal = cartSubtotalFormatted.get();
+      
+      // Actualizar totales
+      if (subtotalEl) subtotalEl.textContent = subtotal;
+      if (totalEl) totalEl.textContent = subtotal;
+      
+      if (items.length === 0) {
+        container.innerHTML = `
+          <div class="text-center py-16">
+            <svg class="w-20 h-20 mx-auto text-charcoal-300 mb-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+            </svg>
+            <h2 class="font-serif text-2xl text-navy-900 mb-3">Tu carrito está vacío</h2>
+            <p class="text-charcoal-500 mb-8 max-w-md mx-auto">
+              Parece que aún no has añadido ningún producto. Explora nuestra colección y encuentra algo que te guste.
+            </p>
+            <a href="/productos" class="btn-primary">
+              Explorar productos
+            </a>
+          </div>
+        `;
+        return;
+      }
+      
+      container.innerHTML = `
+        <div class="space-y-0">
+          ${items.map(item => `
+            <div class="flex gap-6 py-6 border-b border-charcoal-100" data-product-id="${item.productId}" data-size="${item.size}">
+              <a href="/productos/${item.slug}" class="w-24 h-32 bg-cream flex-shrink-0 overflow-hidden">
+                <img src="${item.image}" alt="${item.name}" class="w-full h-full object-cover hover:scale-105 transition-transform duration-300" />
+              </a>
+              
+              <div class="flex-1 min-w-0">
+                <div class="flex justify-between gap-4">
+                  <div>
+                    <h3 class="font-medium text-navy-900">
+                      <a href="/productos/${item.slug}" class="hover:text-gold-dark transition-colors">
+                        ${item.name}
+                      </a>
+                    </h3>
+                    <p class="text-sm text-charcoal-500 mt-1">Talla: ${item.size}</p>
+                  </div>
+                  <p class="font-medium text-navy-900 whitespace-nowrap">
+                    ${formatPrice(item.price * item.quantity)}
+                  </p>
+                </div>
+                
+                <div class="flex items-center justify-between mt-4">
+                  <div class="flex items-center border border-charcoal-200">
+                    <button 
+                      type="button" 
+                      class="qty-decrease w-10 h-10 flex items-center justify-center text-charcoal-600 hover:bg-charcoal-50 transition-colors"
+                      aria-label="Disminuir cantidad"
+                    >
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4" />
+                      </svg>
+                    </button>
+                    <span class="w-10 text-center font-medium text-charcoal-800">${item.quantity}</span>
+                    <button 
+                      type="button" 
+                      class="qty-increase w-10 h-10 flex items-center justify-center text-charcoal-600 hover:bg-charcoal-50 transition-colors ${item.quantity >= item.maxStock ? 'opacity-50' : ''}"
+                      aria-label="Aumentar cantidad"
+                      ${item.quantity >= item.maxStock ? 'disabled' : ''}
+                    >
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                      </svg>
+                    </button>
+                  </div>
+                  
+                  <button type="button" class="remove-item text-sm text-charcoal-500 hover:text-error transition-colors">
+                    Eliminar
+                  </button>
+                </div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      `;
+      
+      // Añadir event listeners
+      container.querySelectorAll('[data-product-id]').forEach(el => {
+        const productId = el.getAttribute('data-product-id')!;
+        const size = el.getAttribute('data-size')!;
+        const item = items.find(i => i.productId === productId && i.size === size);
+        
+        if (!item) return;
+        
+        el.querySelector('.qty-decrease')?.addEventListener('click', () => {
+          updateQuantity(productId, size, item.quantity - 1);
+        });
+        
+        el.querySelector('.qty-increase')?.addEventListener('click', () => {
+          if (item.quantity < item.maxStock) {
+            updateQuantity(productId, size, item.quantity + 1);
+          }
+        });
+        
+        el.querySelector('.remove-item')?.addEventListener('click', () => {
+          removeFromCart(productId, size);
+        });
+      });
+    }
+    
+    // Suscribirse a cambios del carrito
+    cartItems.subscribe(renderCartItems);
+    
+    // Renderizar inicial
+    renderCartItems();
+  </script>
+</BaseLayout>

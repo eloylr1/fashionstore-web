@@ -1,0 +1,131 @@
+---
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * FASHIONMARKET - Callback de Confirmación de Email
+ * Página que maneja el callback cuando el usuario confirma su email
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
+
+export const prerender = false; // SSR
+
+import '../../styles/global.css';
+---
+
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Confirmando email... | FashionMarket</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  </head>
+  
+  <body style="min-height: 100vh; display: flex; align-items: center; justify-content: center; background-color: #faf9f7; margin: 0; padding: 1rem; font-family: 'Inter', system-ui, sans-serif;">
+    <div style="width: 100%; max-width: 400px; margin: 0 auto; text-align: center;">
+      <!-- Logo -->
+      <div style="margin-bottom: 2rem;">
+        <a href="/" style="display: inline-block; text-decoration: none;">
+          <span style="font-family: 'Playfair Display', Georgia, serif; font-size: 1.875rem; font-weight: 600; color: #0a1628;">
+            Fashion<span style="color: #b8a067;">Market</span>
+          </span>
+        </a>
+      </div>
+      
+      <!-- Loading State -->
+      <div id="loading-state" style="background: white; padding: 2rem; box-shadow: 0 10px 40px rgba(10, 22, 40, 0.15); border-radius: 0.5rem;">
+        <div style="width: 48px; height: 48px; border: 3px solid #d4d4d4; border-top-color: #0a1628; border-radius: 50%; margin: 0 auto 1rem; animation: spin 1s linear infinite;"></div>
+        <p style="color: #6b6b6b; margin: 0;">Confirmando tu email...</p>
+      </div>
+      
+      <!-- Success State -->
+      <div id="success-state" style="display: none; background: white; padding: 2rem; box-shadow: 0 10px 40px rgba(10, 22, 40, 0.15); border-radius: 0.5rem;">
+        <svg style="width: 64px; height: 64px; margin: 0 auto 1rem; color: #2d5a3d;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <h1 style="font-family: 'Playfair Display', Georgia, serif; font-size: 1.5rem; color: #0a1628; margin: 0 0 0.5rem 0;">¡Email confirmado!</h1>
+        <p style="color: #6b6b6b; margin: 0 0 1.5rem 0;">Tu cuenta ha sido verificada correctamente</p>
+        <a href="/login?confirmed=true" style="display: inline-block; padding: 0.75rem 2rem; background: #0a1628; color: white; text-decoration: none; border-radius: 0.25rem; font-weight: 500;">
+          Iniciar sesión
+        </a>
+      </div>
+      
+      <!-- Error State -->
+      <div id="error-state" style="display: none; background: white; padding: 2rem; box-shadow: 0 10px 40px rgba(10, 22, 40, 0.15); border-radius: 0.5rem;">
+        <svg style="width: 64px; height: 64px; margin: 0 auto 1rem; color: #8b2635;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <h1 style="font-family: 'Playfair Display', Georgia, serif; font-size: 1.5rem; color: #0a1628; margin: 0 0 0.5rem 0;">Error de confirmación</h1>
+        <p id="error-message" style="color: #8b2635; margin: 0 0 1.5rem 0;">El enlace ha expirado o es inválido</p>
+        <a href="/registro" style="display: inline-block; padding: 0.75rem 2rem; background: #0a1628; color: white; text-decoration: none; border-radius: 0.25rem; font-weight: 500;">
+          Registrarse de nuevo
+        </a>
+      </div>
+    </div>
+    
+    <style>
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+    </style>
+    
+    <script>
+      import { supabase, isSupabaseConfigured } from '../../lib/supabase/client';
+      
+      const loadingState = document.getElementById('loading-state');
+      const successState = document.getElementById('success-state');
+      const errorState = document.getElementById('error-state');
+      const errorMessage = document.getElementById('error-message');
+      
+      async function handleEmailConfirmation() {
+        if (!isSupabaseConfigured() || !supabase) {
+          showError('Supabase no está configurado');
+          return;
+        }
+        
+        // Supabase maneja automáticamente el token en la URL
+        const { data, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          showError(error.message);
+          return;
+        }
+        
+        if (data.session) {
+          // Email confirmado exitosamente
+          showSuccess();
+        } else {
+          // Intentar extraer el token de la URL (para links de confirmación)
+          const hashParams = new URLSearchParams(window.location.hash.substring(1));
+          const accessToken = hashParams.get('access_token');
+          const refreshToken = hashParams.get('refresh_token');
+          const type = hashParams.get('type');
+          
+          if (type === 'signup' || type === 'email_change' || type === 'recovery') {
+            if (accessToken) {
+              showSuccess();
+            } else {
+              showError('Token de confirmación inválido');
+            }
+          } else {
+            // Puede que ya esté confirmado, redirigir al login
+            window.location.href = '/login?confirmed=true';
+          }
+        }
+      }
+      
+      function showSuccess() {
+        loadingState!.style.display = 'none';
+        successState!.style.display = 'block';
+      }
+      
+      function showError(message: string) {
+        loadingState!.style.display = 'none';
+        errorMessage!.textContent = message;
+        errorState!.style.display = 'block';
+      }
+      
+      // Ejecutar al cargar
+      handleEmailConfirmation();
+    </script>
+  </body>
+</html>

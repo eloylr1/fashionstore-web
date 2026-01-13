@@ -1,0 +1,237 @@
+---
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * FASHIONMARKET - Configuración de Cuenta
+ * Preferencias, seguridad y privacidad
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
+
+export const prerender = false;
+
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { supabase } from '../../lib/supabase/client';
+
+// Verificar autenticación
+const accessToken = Astro.cookies.get('sb-access-token')?.value;
+const refreshToken = Astro.cookies.get('sb-refresh-token')?.value;
+
+if (!accessToken || !refreshToken || !supabase) {
+  return Astro.redirect('/login?redirect=/cuenta/configuracion');
+}
+
+const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
+  access_token: accessToken,
+  refresh_token: refreshToken,
+});
+
+if (sessionError || !sessionData.user) {
+  return Astro.redirect('/login?redirect=/cuenta/configuracion');
+}
+
+const user = sessionData.user;
+
+let successMessage = '';
+let errorMessage = '';
+
+// Manejar cambio de contraseña
+if (Astro.request.method === 'POST') {
+  const formData = await Astro.request.formData();
+  const action = formData.get('action');
+
+  if (action === 'change_password') {
+    const newPassword = formData.get('new_password')?.toString() || '';
+    const confirmPassword = formData.get('confirm_password')?.toString() || '';
+
+    if (newPassword.length < 6) {
+      errorMessage = 'La contraseña debe tener al menos 6 caracteres';
+    } else if (newPassword !== confirmPassword) {
+      errorMessage = 'Las contraseñas no coinciden';
+    } else {
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword
+      });
+
+      if (error) {
+        errorMessage = 'Error al cambiar la contraseña: ' + error.message;
+      } else {
+        successMessage = 'Contraseña actualizada correctamente';
+      }
+    }
+  }
+}
+---
+
+<BaseLayout title="Configuración | FashionMarket">
+  <main class="min-h-screen bg-cream py-8 lg:py-12">
+    <div class="container-custom max-w-3xl">
+      <!-- Breadcrumb -->
+      <nav class="mb-6">
+        <ol class="flex items-center gap-2 text-sm text-charcoal-500">
+          <li><a href="/" class="hover:text-navy-900 transition-colors">Inicio</a></li>
+          <li>/</li>
+          <li><a href="/cuenta" class="hover:text-navy-900 transition-colors">Mi Cuenta</a></li>
+          <li>/</li>
+          <li class="text-navy-900 font-medium">Configuración</li>
+        </ol>
+      </nav>
+
+      {successMessage && (
+        <div class="p-4 bg-green-50 border border-green-200 rounded-lg text-green-700 mb-6">
+          {successMessage}
+        </div>
+      )}
+
+      {errorMessage && (
+        <div class="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 mb-6">
+          {errorMessage}
+        </div>
+      )}
+
+      <!-- Cambiar contraseña -->
+      <div class="bg-white rounded-lg shadow-sm mb-6">
+        <div class="p-6 border-b border-charcoal-100">
+          <h2 class="text-xl font-serif text-navy-900">Cambiar contraseña</h2>
+          <p class="text-charcoal-500 text-sm mt-1">Actualiza tu contraseña de acceso</p>
+        </div>
+        <form method="POST" class="p-6 space-y-4">
+          <input type="hidden" name="action" value="change_password" />
+          
+          <div>
+            <label for="new_password" class="block text-sm font-medium text-navy-900 mb-2">
+              Nueva contraseña
+            </label>
+            <input
+              type="password"
+              id="new_password"
+              name="new_password"
+              required
+              minlength="6"
+              class="w-full px-4 py-3 border border-charcoal-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gold-matte focus:border-transparent"
+              placeholder="Mínimo 6 caracteres"
+            />
+          </div>
+
+          <div>
+            <label for="confirm_password" class="block text-sm font-medium text-navy-900 mb-2">
+              Confirmar contraseña
+            </label>
+            <input
+              type="password"
+              id="confirm_password"
+              name="confirm_password"
+              required
+              minlength="6"
+              class="w-full px-4 py-3 border border-charcoal-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gold-matte focus:border-transparent"
+              placeholder="Repite la contraseña"
+            />
+          </div>
+
+          <button
+            type="submit"
+            class="px-6 py-3 bg-navy-900 text-white rounded-lg hover:bg-navy-800 transition-colors font-medium"
+          >
+            Cambiar contraseña
+          </button>
+        </form>
+      </div>
+
+      <!-- Preferencias de comunicación -->
+      <div class="bg-white rounded-lg shadow-sm mb-6">
+        <div class="p-6 border-b border-charcoal-100">
+          <h2 class="text-xl font-serif text-navy-900">Preferencias de comunicación</h2>
+          <p class="text-charcoal-500 text-sm mt-1">Gestiona cómo nos comunicamos contigo</p>
+        </div>
+        <div class="p-6 space-y-4">
+          <label class="flex items-center justify-between cursor-pointer">
+            <div>
+              <span class="font-medium text-navy-900">Novedades y ofertas</span>
+              <p class="text-sm text-charcoal-500">Recibe información sobre nuevos productos y promociones</p>
+            </div>
+            <input type="checkbox" checked class="w-5 h-5 rounded border-charcoal-300 text-gold-matte focus:ring-gold-matte" />
+          </label>
+
+          <label class="flex items-center justify-between cursor-pointer">
+            <div>
+              <span class="font-medium text-navy-900">Actualizaciones de pedidos</span>
+              <p class="text-sm text-charcoal-500">Notificaciones sobre el estado de tus pedidos</p>
+            </div>
+            <input type="checkbox" checked disabled class="w-5 h-5 rounded border-charcoal-300 text-gold-matte focus:ring-gold-matte cursor-not-allowed" />
+          </label>
+
+          <label class="flex items-center justify-between cursor-pointer">
+            <div>
+              <span class="font-medium text-navy-900">Recordatorios de carrito</span>
+              <p class="text-sm text-charcoal-500">Te avisamos si dejaste productos en tu carrito</p>
+            </div>
+            <input type="checkbox" class="w-5 h-5 rounded border-charcoal-300 text-gold-matte focus:ring-gold-matte" />
+          </label>
+        </div>
+      </div>
+
+      <!-- Privacidad -->
+      <div class="bg-white rounded-lg shadow-sm mb-6">
+        <div class="p-6 border-b border-charcoal-100">
+          <h2 class="text-xl font-serif text-navy-900">Privacidad</h2>
+          <p class="text-charcoal-500 text-sm mt-1">Gestiona tus datos y privacidad</p>
+        </div>
+        <div class="p-6 space-y-4">
+          <a 
+            href="#"
+            class="flex items-center justify-between p-4 border border-charcoal-200 rounded-lg hover:bg-charcoal-50 transition-colors"
+          >
+            <div>
+              <span class="font-medium text-navy-900">Descargar mis datos</span>
+              <p class="text-sm text-charcoal-500">Obtén una copia de toda tu información</p>
+            </div>
+            <svg class="w-5 h-5 text-charcoal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+          </a>
+
+          <a 
+            href="#"
+            class="flex items-center justify-between p-4 border border-charcoal-200 rounded-lg hover:bg-charcoal-50 transition-colors"
+          >
+            <div>
+              <span class="font-medium text-navy-900">Política de privacidad</span>
+              <p class="text-sm text-charcoal-500">Consulta cómo tratamos tus datos</p>
+            </div>
+            <svg class="w-5 h-5 text-charcoal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+            </svg>
+          </a>
+        </div>
+      </div>
+
+      <!-- Zona de peligro -->
+      <div class="bg-white rounded-lg shadow-sm border border-red-200">
+        <div class="p-6 border-b border-red-100">
+          <h2 class="text-xl font-serif text-red-700">Zona de peligro</h2>
+          <p class="text-red-600 text-sm mt-1">Acciones irreversibles</p>
+        </div>
+        <div class="p-6">
+          <div class="flex items-center justify-between">
+            <div>
+              <span class="font-medium text-navy-900">Eliminar cuenta</span>
+              <p class="text-sm text-charcoal-500">Esta acción eliminará permanentemente tu cuenta y todos tus datos</p>
+            </div>
+            <button
+              type="button"
+              class="px-4 py-2 border border-red-300 text-red-600 rounded-lg hover:bg-red-50 transition-colors text-sm font-medium"
+              onclick="confirm('¿Estás seguro de que quieres eliminar tu cuenta? Esta acción es irreversible.') && alert('Contacta con soporte para eliminar tu cuenta')"
+            >
+              Eliminar cuenta
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Volver -->
+      <div class="mt-6">
+        <a href="/cuenta" class="text-charcoal-600 hover:text-navy-900 transition-colors">
+          ← Volver a Mi Cuenta
+        </a>
+      </div>
+    </div>
+  </main>
+</BaseLayout>

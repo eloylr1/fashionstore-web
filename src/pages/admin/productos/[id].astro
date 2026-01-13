@@ -1,0 +1,296 @@
+---
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * FASHIONMARKET - Admin Edit Product
+ * Página para editar un producto existente (SSR)
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
+
+export const prerender = false;
+
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import ImageUploader from '../../../components/admin/ImageUploader';
+import { supabase, isSupabaseConfigured } from '../../../lib/supabase/client';
+
+const { id } = Astro.params;
+
+// Validar que id exista
+if (!id) {
+  return Astro.redirect('/admin/productos');
+}
+
+// Obtener producto a editar
+let product = null;
+let categories: { id: string; name: string; slug: string }[] = [];
+
+if (isSupabaseConfigured() && supabase) {
+  const { data: productData } = await supabase
+    .from('products')
+    .select('*')
+    .eq('id', id)
+    .single();
+  
+  if (productData) {
+    product = productData;
+  }
+  
+  const { data: categoriesData } = await supabase
+    .from('categories')
+    .select('id, name, slug')
+    .order('name');
+  
+  if (categoriesData) {
+    categories = categoriesData;
+  }
+} else {
+  // Datos de demostración
+  categories = [
+    { id: '1', name: 'Trajes', slug: 'trajes' },
+    { id: '2', name: 'Camisas', slug: 'camisas' },
+    { id: '3', name: 'Accesorios', slug: 'accesorios' },
+  ];
+  
+  // Producto de demo
+  product = {
+    id: id,
+    name: 'Producto de ejemplo',
+    slug: 'producto-ejemplo',
+    description: 'Descripción del producto de ejemplo',
+    price: 9900,
+    stock: 10,
+    category_id: '1',
+    images: [],
+    sizes: ['S', 'M', 'L', 'XL'],
+    colors: ['Navy', 'Black'],
+    material: 'Algodón 100%',
+    featured: false,
+  };
+}
+
+// Si no existe el producto, redirigir
+if (!product) {
+  return Astro.redirect('/admin/productos');
+}
+---
+
+<AdminLayout title={`Editar: ${product.name}`}>
+  <div class="max-w-4xl mx-auto">
+    <!-- Breadcrumb -->
+    <nav class="mb-6">
+      <ol class="flex items-center gap-2 text-sm text-charcoal-500">
+        <li><a href="/admin" class="hover:text-navy-900">Dashboard</a></li>
+        <li>/</li>
+        <li><a href="/admin/productos" class="hover:text-navy-900">Productos</a></li>
+        <li>/</li>
+        <li class="text-navy-900">Editar</li>
+      </ol>
+    </nav>
+    
+    <!-- Header -->
+    <div class="flex items-center justify-between mb-8">
+      <h1 class="text-2xl font-semibold text-navy-900">
+        Editar Producto
+      </h1>
+      <a 
+        href="/admin/productos"
+        class="text-sm text-charcoal-600 hover:text-navy-900 transition-colors"
+      >
+        ← Volver a productos
+      </a>
+    </div>
+    
+    <!-- Form -->
+    <form method="POST" action={`/api/admin/products/${id}`} class="space-y-8">
+      <input type="hidden" name="_method" value="PUT" />
+      
+      <!-- Basic Info -->
+      <div class="bg-white p-6 rounded-lg shadow-sm border border-charcoal-100">
+        <h2 class="font-medium text-navy-900 mb-4">Información básica</h2>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label for="name" class="block text-sm font-medium text-charcoal-700 mb-2">
+              Nombre del producto *
+            </label>
+            <input 
+              type="text" 
+              id="name" 
+              name="name" 
+              required
+              value={product.name}
+              class="input-elegant w-full"
+            />
+          </div>
+          
+          <div>
+            <label for="slug" class="block text-sm font-medium text-charcoal-700 mb-2">
+              Slug (URL)
+            </label>
+            <input 
+              type="text" 
+              id="slug" 
+              name="slug"
+              value={product.slug}
+              class="input-elegant w-full"
+              placeholder="Se genera automáticamente"
+            />
+          </div>
+          
+          <div class="md:col-span-2">
+            <label for="description" class="block text-sm font-medium text-charcoal-700 mb-2">
+              Descripción
+            </label>
+            <textarea 
+              id="description" 
+              name="description" 
+              rows="4"
+              class="input-elegant w-full resize-none"
+            >{product.description}</textarea>
+          </div>
+          
+          <div>
+            <label for="category" class="block text-sm font-medium text-charcoal-700 mb-2">
+              Categoría *
+            </label>
+            <select id="category" name="category_id" required class="select-elegant w-full">
+              <option value="">Seleccionar categoría</option>
+              {categories.map((cat) => (
+                <option value={cat.id} selected={cat.id === product.category_id}>
+                  {cat.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          
+          <div>
+            <label for="material" class="block text-sm font-medium text-charcoal-700 mb-2">
+              Material
+            </label>
+            <input 
+              type="text" 
+              id="material" 
+              name="material"
+              value={product.material}
+              class="input-elegant w-full"
+              placeholder="Ej: Algodón 100%"
+            />
+          </div>
+        </div>
+      </div>
+      
+      <!-- Pricing & Stock -->
+      <div class="bg-white p-6 rounded-lg shadow-sm border border-charcoal-100">
+        <h2 class="font-medium text-navy-900 mb-4">Precio y stock</h2>
+        
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div>
+            <label for="price" class="block text-sm font-medium text-charcoal-700 mb-2">
+              Precio (céntimos) *
+            </label>
+            <input 
+              type="number" 
+              id="price" 
+              name="price" 
+              required
+              min="0"
+              value={product.price}
+              class="input-elegant w-full"
+            />
+            <p class="text-xs text-charcoal-500 mt-1">Ej: 9900 = 99,00€</p>
+          </div>
+          
+          <div>
+            <label for="stock" class="block text-sm font-medium text-charcoal-700 mb-2">
+              Stock *
+            </label>
+            <input 
+              type="number" 
+              id="stock" 
+              name="stock" 
+              required
+              min="0"
+              value={product.stock}
+              class="input-elegant w-full"
+            />
+          </div>
+          
+          <div class="flex items-center">
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input 
+                type="checkbox" 
+                name="featured" 
+                checked={product.featured}
+                class="w-4 h-4 text-navy-900 border-charcoal-300 rounded focus:ring-navy-500"
+              />
+              <span class="text-sm text-charcoal-700">Producto destacado</span>
+            </label>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Sizes & Colors -->
+      <div class="bg-white p-6 rounded-lg shadow-sm border border-charcoal-100">
+        <h2 class="font-medium text-navy-900 mb-4">Tallas y colores</h2>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label for="sizes" class="block text-sm font-medium text-charcoal-700 mb-2">
+              Tallas disponibles
+            </label>
+            <input 
+              type="text" 
+              id="sizes" 
+              name="sizes"
+              value={product.sizes?.join(', ')}
+              class="input-elegant w-full"
+              placeholder="S, M, L, XL"
+            />
+            <p class="text-xs text-charcoal-500 mt-1">Separadas por comas</p>
+          </div>
+          
+          <div>
+            <label for="colors" class="block text-sm font-medium text-charcoal-700 mb-2">
+              Colores disponibles
+            </label>
+            <input 
+              type="text" 
+              id="colors" 
+              name="colors"
+              value={product.colors?.join(', ')}
+              class="input-elegant w-full"
+              placeholder="Navy, Black, White"
+            />
+            <p class="text-xs text-charcoal-500 mt-1">Separados por comas</p>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Images -->
+      <div class="bg-white p-6 rounded-lg shadow-sm border border-charcoal-100">
+        <h2 class="font-medium text-navy-900 mb-4">Imágenes del producto</h2>
+        <ImageUploader 
+          client:load 
+          existingImages={product.images || []} 
+          inputName="images"
+        />
+        <input type="hidden" name="images" id="images" value={JSON.stringify(product.images || [])} />
+      </div>
+      
+      <!-- Actions -->
+      <div class="flex items-center justify-end gap-4 pt-4">
+        <a 
+          href="/admin/productos"
+          class="px-6 py-3 text-sm font-medium text-charcoal-600 hover:text-navy-900 transition-colors"
+        >
+          Cancelar
+        </a>
+        <button 
+          type="submit"
+          class="px-6 py-3 bg-navy-900 text-white text-sm font-medium hover:bg-navy-800 transition-colors"
+        >
+          Guardar cambios
+        </button>
+      </div>
+    </form>
+  </div>
+</AdminLayout>

@@ -1,0 +1,117 @@
+---
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * FASHIONMARKET - Admin Sidebar Component
+ * Navegación lateral del panel de administración
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
+
+const navItems = [
+  { 
+    href: '/admin', 
+    label: 'Dashboard', 
+    icon: 'dashboard' 
+  },
+  { 
+    href: '/admin/productos', 
+    label: 'Productos', 
+    icon: 'products' 
+  },
+  { 
+    href: '/admin/categorias', 
+    label: 'Categorías', 
+    icon: 'categories' 
+  },
+  { 
+    href: '/admin/pedidos', 
+    label: 'Pedidos', 
+    icon: 'orders' 
+  },
+];
+
+const currentPath = Astro.url.pathname;
+---
+
+<aside class="w-64 bg-navy-900 text-white flex-shrink-0 hidden lg:block">
+  <div class="h-full flex flex-col">
+    <!-- Logo -->
+    <div class="px-6 py-5 border-b border-navy-800">
+      <a href="/admin" class="flex items-center space-x-2">
+        <span class="font-serif text-xl font-semibold tracking-tight">
+          FashionMarket
+        </span>
+      </a>
+      <p class="text-xs text-charcoal-400 mt-1">Panel de Administración</p>
+    </div>
+    
+    <!-- Navigation -->
+    <nav class="flex-1 px-4 py-6 space-y-1">
+      {navItems.map((item) => {
+        const isActive = currentPath === item.href || 
+          (item.href !== '/admin' && currentPath.startsWith(item.href));
+        
+        return (
+          <a
+            href={item.href}
+            class={`
+              flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors
+              ${isActive 
+                ? 'bg-navy-800 text-white' 
+                : 'text-charcoal-300 hover:bg-navy-800/50 hover:text-white'
+              }
+            `}
+          >
+            {/* Icons */}
+            {item.icon === 'dashboard' && (
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+              </svg>
+            )}
+            {item.icon === 'products' && (
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+              </svg>
+            )}
+            {item.icon === 'categories' && (
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+              </svg>
+            )}
+            {item.icon === 'orders' && (
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+              </svg>
+            )}
+            {item.label}
+          </a>
+        );
+      })}
+    </nav>
+    
+    <!-- Footer -->
+    <div class="px-4 py-4 border-t border-navy-800">
+      <a 
+        href="/" 
+        class="flex items-center gap-3 px-3 py-2.5 text-sm text-charcoal-400 hover:text-white transition-colors"
+        target="_blank"
+      >
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+        </svg>
+        Ver tienda
+      </a>
+      
+      <form action="/api/auth/logout" method="POST" class="mt-1">
+        <button 
+          type="submit"
+          class="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-charcoal-400 hover:text-white transition-colors"
+        >
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+          </svg>
+          Cerrar sesión
+        </button>
+      </form>
+    </div>
+  </div>
+</aside>

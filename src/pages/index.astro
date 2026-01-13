@@ -1,0 +1,380 @@
+---
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * FASHIONMARKET - Homepage
+ * Página principal de la tienda - Diseño Premium (SSR para Header dinámico)
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
+
+export const prerender = false;
+
+import BaseLayout from '../layouts/BaseLayout.astro';
+import ProductCard from '../components/product/ProductCard.astro';
+import { supabase, isSupabaseConfigured } from '../lib/supabase/client';
+
+// Datos de demostración cuando Supabase no está configurado
+const demoCategories = [
+  { id: '1', name: 'Trajes', slug: 'trajes', image_url: 'https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=800&q=80', description: 'Trajes de vestir premium' },
+  { id: '2', name: 'Camisas', slug: 'camisas', image_url: 'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=800&q=80', description: 'Camisas de alta calidad' },
+  { id: '3', name: 'Pantalones', slug: 'pantalones', image_url: 'https://images.unsplash.com/photo-1473966968600-fa801b869a1a?w=800&q=80', description: 'Pantalones elegantes y casuales' },
+  { id: '4', name: 'Accesorios', slug: 'accesorios', image_url: 'https://images.unsplash.com/photo-1624222247344-550fb60583dc?w=800&q=80', description: 'Complementos elegantes' },
+];
+
+const demoProducts = [
+  { id: '1', name: 'Traje Italiano Slim Fit', slug: 'traje-italiano-slim-fit', price: 59900, images: ['https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=600&q=80'], category_id: '1', featured: true, stock: 10, sizes: ['S','M','L','XL'], colors: ['Navy', 'Charcoal'], description: 'Traje de corte italiano', material: 'Lana 100%', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+  { id: '2', name: 'Camisa Oxford Premium', slug: 'camisa-oxford-premium', price: 8900, images: ['https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=600&q=80'], category_id: '2', featured: true, stock: 25, sizes: ['S','M','L','XL'], colors: ['White', 'Light Blue'], description: 'Camisa oxford clásica', material: 'Algodón 100%', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+  { id: '3', name: 'Pantalón Chino Slim', slug: 'pantalon-chino-slim', price: 7900, images: ['https://images.unsplash.com/photo-1473966968600-fa801b869a1a?w=600&q=80'], category_id: '3', featured: true, stock: 30, sizes: ['S','M','L','XL','XXL'], colors: ['Beige', 'Navy'], description: 'Pantalón chino elegante', material: 'Algodón 98%, Elastano 2%', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+  { id: '4', name: 'Blazer Casual de Lino', slug: 'blazer-casual-lino', price: 29900, images: ['https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=600&q=80'], category_id: '1', featured: true, stock: 15, sizes: ['S','M','L','XL'], colors: ['Beige', 'Navy'], description: 'Blazer de verano', material: 'Lino 100%', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+];
+
+// Obtener datos reales si Supabase está configurado
+let featuredProducts = demoProducts;
+let categories = demoCategories;
+
+if (isSupabaseConfigured() && supabase) {
+  const { data: realProducts } = await supabase
+    .from('products')
+    .select('*')
+    .eq('featured', true)
+    .order('created_at', { ascending: false })
+    .limit(8);
+  
+  const { data: realCategories } = await supabase
+    .from('categories')
+    .select('*')
+    .order('name');
+  
+  if (realProducts?.length) featuredProducts = realProducts as typeof featuredProducts;
+  if (realCategories?.length) categories = realCategories as typeof categories;
+}
+---
+
+<BaseLayout title="Moda Masculina Premium">
+  <!-- Hero Section - Full Screen con Imagen de Alta Calidad -->
+  <section class="relative min-h-screen flex items-center justify-center overflow-hidden">
+    <!-- Background Image con Overlay Elegante -->
+    <div class="absolute inset-0">
+      <img 
+        src="https://images.unsplash.com/photo-1617137968427-85924c800a22?w=1920&q=80" 
+        alt="Moda masculina premium"
+        class="w-full h-full object-cover"
+      />
+      <div class="absolute inset-0 bg-gradient-to-b from-black/70 via-black/50 to-black/80"></div>
+    </div>
+    
+    <!-- Contenido del Hero -->
+    <div class="relative z-10 text-center px-4 max-w-5xl mx-auto">
+      <div class="animate-fade-in-up">
+        <span class="inline-block px-4 py-2 bg-white/15 backdrop-blur-sm border border-white/30 text-white text-xs font-medium tracking-[0.3em] uppercase mb-8">
+          Nueva Colección Primavera 2026
+        </span>
+      </div>
+      
+      <h1 class="font-serif text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-medium leading-[1.1] mb-6 animate-fade-in-up" style="animation-delay: 0.1s;">
+        <span class="text-white drop-shadow-lg">Elegancia</span><br/>
+        <span class="text-gold-matte drop-shadow-lg">Redefinida</span>
+      </h1>
+      
+      <p class="text-lg sm:text-xl text-white max-w-2xl mx-auto mb-10 leading-relaxed animate-fade-in-up drop-shadow-md" style="animation-delay: 0.2s;">
+        Descubre piezas únicas seleccionadas para el hombre contemporáneo. 
+        Calidad artesanal, diseño atemporal.
+      </p>
+      
+      <div class="flex flex-col sm:flex-row items-center justify-center gap-4 animate-fade-in-up" style="animation-delay: 0.3s;">
+        <a href="/tienda" class="group relative inline-flex items-center gap-3 px-8 py-4 bg-white text-navy-900 font-medium text-sm tracking-wide transition-all duration-300 hover:bg-gold-matte hover:text-white shadow-lg">
+          <span>Explorar Colección</span>
+          <svg class="w-4 h-4 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+          </svg>
+        </a>
+        <a href="/categoria/trajes" class="inline-flex items-center gap-3 px-8 py-4 border-2 border-white/60 text-white font-medium text-sm tracking-wide transition-all duration-300 hover:bg-white/20 hover:border-white shadow-lg">
+          Ver Trajes
+        </a>
+      </div>
+    </div>
+    
+    <!-- Scroll Indicator -->
+    <div class="absolute bottom-8 left-1/2 -translate-x-1/2 animate-bounce">
+      <div class="w-6 h-10 border-2 border-white/40 rounded-full flex items-start justify-center p-2">
+        <div class="w-1 h-2 bg-white/60 rounded-full animate-scroll-down"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Brand Statement -->
+  <section class="py-20 bg-navy-900 text-white">
+    <div class="container-custom">
+      <div class="max-w-4xl mx-auto text-center">
+        <p class="text-gold-matte text-sm font-medium tracking-[0.2em] uppercase mb-6">FashionMarket</p>
+        <h2 class="font-serif text-3xl sm:text-4xl lg:text-5xl font-medium leading-tight mb-8">
+          "La verdadera elegancia está en los detalles. Cada pieza cuenta una historia de 
+          <span class="text-gold-matte">artesanía y distinción</span>."
+        </h2>
+        <div class="flex flex-wrap items-center justify-center gap-8 text-charcoal-400 text-sm">
+          <span class="flex items-center gap-2">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5 13l4 4L19 7" />
+            </svg>
+            Materiales Premium
+          </span>
+          <span class="flex items-center gap-2">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5 13l4 4L19 7" />
+            </svg>
+            Diseño Exclusivo
+          </span>
+          <span class="flex items-center gap-2">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5 13l4 4L19 7" />
+            </svg>
+            Envío Gratuito
+          </span>
+        </div>
+      </div>
+    </div>
+  </section>
+  
+  <!-- Categories Section - Diseño Magazine -->
+  <section class="py-24 bg-ivory">
+    <div class="container-custom">
+      <div class="flex flex-col lg:flex-row items-start lg:items-end justify-between mb-16">
+        <div>
+          <span class="text-gold-matte text-sm font-medium tracking-[0.2em] uppercase mb-4 block">Colecciones</span>
+          <h2 class="font-serif text-4xl lg:text-5xl font-medium text-navy-900">
+            Explora por Categoría
+          </h2>
+        </div>
+        <p class="text-charcoal-500 max-w-md mt-4 lg:mt-0 lg:text-right">
+          Cada categoría ha sido curada pensando en el hombre que aprecia la calidad y el estilo atemporal.
+        </p>
+      </div>
+      
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {categories?.map((category, index) => (
+          <a 
+            href={`/categoria/${category.slug}`}
+            class:list={[
+              "group relative overflow-hidden",
+              index === 0 ? "lg:row-span-2 aspect-[3/4] lg:aspect-auto lg:h-full" : "aspect-[4/3]"
+            ]}
+          >
+            <img 
+              src={category.image_url || 'https://images.unsplash.com/photo-1617137968427-85924c800a22?w=800&q=80'}
+              alt={category.name}
+              class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+            />
+            <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-80 group-hover:opacity-90 transition-opacity duration-300"></div>
+            
+            <div class="absolute inset-0 flex flex-col justify-end p-8">
+              <span class="text-gold-matte text-xs font-medium tracking-[0.2em] uppercase mb-2">
+                {category.description || 'Colección exclusiva'}
+              </span>
+              <h3 class="font-serif text-3xl lg:text-4xl font-medium text-white mb-4">
+                {category.name}
+              </h3>
+              <div class="flex items-center gap-2 text-white/80 text-sm font-medium group-hover:text-gold-matte transition-colors">
+                <span>Descubrir</span>
+                <svg class="w-4 h-4 transition-transform group-hover:translate-x-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                </svg>
+              </div>
+            </div>
+          </a>
+        ))}
+      </div>
+    </div>
+  </section>
+  
+  <!-- Featured Products -->
+  <section class="py-24 bg-white">
+    <div class="container-custom">
+      <div class="flex flex-col sm:flex-row items-start sm:items-end justify-between mb-16">
+        <div>
+          <span class="text-gold-matte text-sm font-medium tracking-[0.2em] uppercase mb-4 block">Selección</span>
+          <h2 class="font-serif text-4xl lg:text-5xl font-medium text-navy-900">
+            Productos Destacados
+          </h2>
+        </div>
+        <a href="/tienda" class="mt-6 sm:mt-0 group inline-flex items-center gap-2 text-sm font-medium text-navy-900 hover:text-gold-matte transition-colors">
+          Ver toda la colección
+          <svg class="w-4 h-4 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+          </svg>
+        </a>
+      </div>
+      
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+        {featuredProducts?.map((product) => (
+          <ProductCard product={product} />
+        ))}
+      </div>
+      
+      {(!featuredProducts || featuredProducts.length === 0) && (
+        <div class="text-center py-16">
+          <p class="text-charcoal-500 text-lg">
+            Próximamente nuevos productos destacados.
+          </p>
+        </div>
+      )}
+    </div>
+  </section>
+
+  <!-- Parallax Feature Section -->
+  <section class="relative h-[70vh] min-h-[500px] flex items-center justify-center overflow-hidden">
+    <div class="absolute inset-0">
+      <img 
+        src="https://images.unsplash.com/photo-1490578474895-699cd4e2cf59?w=1920&q=80" 
+        alt="Estilo premium"
+        class="w-full h-full object-cover"
+        style="object-position: center 30%;"
+      />
+      <div class="absolute inset-0 bg-navy-900/70"></div>
+    </div>
+    
+    <div class="relative z-10 text-center px-4 max-w-3xl mx-auto">
+      <span class="text-gold-matte text-sm font-medium tracking-[0.2em] uppercase mb-6 block">
+        Experiencia Premium
+      </span>
+      <h2 class="font-serif text-4xl sm:text-5xl lg:text-6xl font-medium text-white leading-tight mb-8">
+        El Arte de Vestir Bien
+      </h2>
+      <p class="text-white/80 text-lg mb-10 leading-relaxed">
+        Más que ropa, ofrecemos una experiencia. Cada prenda está pensada para hacerte sentir seguro, 
+        elegante y auténtico.
+      </p>
+      <a href="/tienda" class="inline-flex items-center gap-3 px-8 py-4 bg-gold-matte text-navy-900 font-medium text-sm tracking-wide transition-all duration-300 hover:bg-white">
+        Comenzar a Explorar
+      </a>
+    </div>
+  </section>
+  
+  <!-- Brand Values - Iconos Premium -->
+  <section class="py-24 bg-cream">
+    <div class="container-custom">
+      <div class="text-center mb-16">
+        <span class="text-gold-matte text-sm font-medium tracking-[0.2em] uppercase mb-4 block">Nuestro Compromiso</span>
+        <h2 class="font-serif text-4xl lg:text-5xl font-medium text-navy-900">
+          ¿Por Qué Elegirnos?
+        </h2>
+      </div>
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+        <div class="bg-white p-8 text-center group hover:shadow-elevated transition-shadow duration-300">
+          <div class="w-20 h-20 mx-auto mb-6 bg-navy-900 text-gold-matte flex items-center justify-center transition-colors group-hover:bg-gold-matte group-hover:text-navy-900">
+            <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+            </svg>
+          </div>
+          <h3 class="font-serif text-xl font-medium text-navy-900 mb-3">
+            Envío Premium
+          </h3>
+          <p class="text-charcoal-500 text-sm leading-relaxed">
+            Entrega gratuita en pedidos +100€. Packaging exclusivo y sostenible.
+          </p>
+        </div>
+        
+        <div class="bg-white p-8 text-center group hover:shadow-elevated transition-shadow duration-300">
+          <div class="w-20 h-20 mx-auto mb-6 bg-navy-900 text-gold-matte flex items-center justify-center transition-colors group-hover:bg-gold-matte group-hover:text-navy-900">
+            <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+            </svg>
+          </div>
+          <h3 class="font-serif text-xl font-medium text-navy-900 mb-3">
+            Calidad Garantizada
+          </h3>
+          <p class="text-charcoal-500 text-sm leading-relaxed">
+            30 días de garantía de satisfacción. Devolución sin complicaciones.
+          </p>
+        </div>
+        
+        <div class="bg-white p-8 text-center group hover:shadow-elevated transition-shadow duration-300">
+          <div class="w-20 h-20 mx-auto mb-6 bg-navy-900 text-gold-matte flex items-center justify-center transition-colors group-hover:bg-gold-matte group-hover:text-navy-900">
+            <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <h3 class="font-serif text-xl font-medium text-navy-900 mb-3">
+            Entrega Rápida
+          </h3>
+          <p class="text-charcoal-500 text-sm leading-relaxed">
+            Recibe tu pedido en 24-48h. Seguimiento en tiempo real.
+          </p>
+        </div>
+        
+        <div class="bg-white p-8 text-center group hover:shadow-elevated transition-shadow duration-300">
+          <div class="w-20 h-20 mx-auto mb-6 bg-navy-900 text-gold-matte flex items-center justify-center transition-colors group-hover:bg-gold-matte group-hover:text-navy-900">
+            <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z" />
+            </svg>
+          </div>
+          <h3 class="font-serif text-xl font-medium text-navy-900 mb-3">
+            Asesoría Personal
+          </h3>
+          <p class="text-charcoal-500 text-sm leading-relaxed">
+            Nuestros estilistas te ayudan a encontrar tu estilo perfecto.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Newsletter Section -->
+  <section class="py-12 bg-navy-900">
+    <div class="max-w-lg mx-auto px-6 text-center">
+      <span class="text-gold-matte text-xs font-medium tracking-[0.25em] uppercase mb-3 block">NEWSLETTER</span>
+      
+      <h2 class="text-2xl font-serif font-medium text-cream mb-4" style="color: #F5F5DC;">
+        Únete al Club FashionMarket
+      </h2>
+      
+      <p class="text-charcoal-300 mb-6 text-sm leading-relaxed">
+        Recibe acceso anticipado a nuevas colecciones, ofertas exclusivas y consejos de estilo directamente en tu inbox.
+      </p>
+      
+      <form class="flex flex-col sm:flex-row gap-2.5 max-w-sm mx-auto">
+        <input 
+          type="email" 
+          placeholder="Tu email"
+          class="flex-1 px-4 py-2.5 bg-navy-800/50 border border-navy-700 text-white placeholder:text-charcoal-400 text-sm focus:outline-none focus:border-gold-matte transition-colors"
+        />
+        <button 
+          type="submit"
+          class="px-6 py-2.5 bg-gold-matte text-navy-900 font-medium text-sm hover:bg-gold-dark transition-colors whitespace-nowrap"
+        >
+          Suscribirse
+        </button>
+      </form>
+      
+      <p class="text-charcoal-500 text-xs mt-3">
+        Al suscribirte aceptas nuestra política de privacidad. No spam, lo prometemos.
+      </p>
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  @keyframes scroll-down {
+    0%, 100% { transform: translateY(0); opacity: 1; }
+    50% { transform: translateY(4px); opacity: 0.5; }
+  }
+  
+  .animate-scroll-down {
+    animation: scroll-down 1.5s ease-in-out infinite;
+  }
+  
+  .animate-fade-in-up {
+    opacity: 0;
+    animation: fadeInUp 0.8s ease-out forwards;
+  }
+  
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+</style>

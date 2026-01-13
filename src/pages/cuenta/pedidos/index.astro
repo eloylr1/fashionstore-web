@@ -1,0 +1,230 @@
+---
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * FASHIONMARKET - Mis Pedidos
+ * Historial de pedidos del usuario
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
+
+export const prerender = false;
+
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import { supabase } from '../../../lib/supabase/client';
+
+// Verificar autenticación
+const accessToken = Astro.cookies.get('sb-access-token')?.value;
+const refreshToken = Astro.cookies.get('sb-refresh-token')?.value;
+
+if (!accessToken || !refreshToken || !supabase) {
+  return Astro.redirect('/login?redirect=/cuenta/pedidos');
+}
+
+const sb = supabase as any;
+
+const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
+  access_token: accessToken,
+  refresh_token: refreshToken,
+});
+
+if (sessionError || !sessionData.user) {
+  return Astro.redirect('/login?redirect=/cuenta/pedidos');
+}
+
+const user = sessionData.user;
+
+// Obtener pedidos
+const { data: orders } = await sb
+  .from('orders')
+  .select(`
+    *,
+    order_items (*)
+  `)
+  .eq('user_id', user.id)
+  .order('created_at', { ascending: false });
+
+const getStatusColor = (status: string) => {
+  const colors: Record<string, string> = {
+    pending: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+    paid: 'bg-blue-100 text-blue-800 border-blue-200',
+    processing: 'bg-purple-100 text-purple-800 border-purple-200',
+    shipped: 'bg-indigo-100 text-indigo-800 border-indigo-200',
+    delivered: 'bg-green-100 text-green-800 border-green-200',
+    cancelled: 'bg-red-100 text-red-800 border-red-200',
+    refunded: 'bg-gray-100 text-gray-800 border-gray-200',
+  };
+  return colors[status] || 'bg-gray-100 text-gray-800 border-gray-200';
+};
+
+const getStatusLabel = (status: string) => {
+  const labels: Record<string, string> = {
+    pending: 'Pendiente de pago',
+    paid: 'Pagado',
+    processing: 'En preparación',
+    shipped: 'Enviado',
+    delivered: 'Entregado',
+    cancelled: 'Cancelado',
+    refunded: 'Reembolsado',
+  };
+  return labels[status] || status;
+};
+
+const formatPrice = (cents: number) => {
+  return new Intl.NumberFormat('es-ES', {
+    style: 'currency',
+    currency: 'EUR',
+  }).format(cents / 100);
+};
+
+const formatDate = (date: string) => {
+  return new Date(date).toLocaleDateString('es-ES', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+};
+---
+
+<BaseLayout title="Mis Pedidos | FashionMarket">
+  <main class="min-h-screen bg-cream py-8 lg:py-12">
+    <div class="container-custom max-w-4xl">
+      <!-- Breadcrumb -->
+      <nav class="mb-6">
+        <ol class="flex items-center gap-2 text-sm text-charcoal-500">
+          <li><a href="/" class="hover:text-navy-900 transition-colors">Inicio</a></li>
+          <li>/</li>
+          <li><a href="/cuenta" class="hover:text-navy-900 transition-colors">Mi Cuenta</a></li>
+          <li>/</li>
+          <li class="text-navy-900 font-medium">Mis Pedidos</li>
+        </ol>
+      </nav>
+
+      <div class="bg-white rounded-lg shadow-sm">
+        <!-- Header -->
+        <div class="p-6 border-b border-charcoal-100">
+          <h1 class="text-2xl font-serif text-navy-900">Mis Pedidos</h1>
+          <p class="text-charcoal-500 mt-1">Historial y seguimiento de tus pedidos</p>
+        </div>
+
+        <!-- Lista de pedidos -->
+        <div class="divide-y divide-charcoal-100">
+          {(!orders || orders.length === 0) ? (
+            <div class="p-12 text-center">
+              <svg class="w-20 h-20 mx-auto text-charcoal-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+              </svg>
+              <h2 class="text-lg font-medium text-navy-900 mb-2">No tienes pedidos aún</h2>
+              <p class="text-charcoal-500 mb-6">Cuando realices tu primera compra, aparecerá aquí</p>
+              <a 
+                href="/tienda" 
+                class="inline-flex items-center gap-2 px-6 py-3 bg-navy-900 text-white rounded-md hover:bg-navy-800 transition-colors"
+              >
+                Explorar tienda
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                </svg>
+              </a>
+            </div>
+          ) : (
+            orders.map((order: any) => (
+              <div class="p-6">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+                  <div>
+                    <div class="flex items-center gap-3 mb-1">
+                      <span class="font-medium text-navy-900 text-lg">{order.order_number}</span>
+                      <span class={`px-3 py-1 text-xs font-medium rounded-full border ${getStatusColor(order.status)}`}>
+                        {getStatusLabel(order.status)}
+                      </span>
+                    </div>
+                    <p class="text-sm text-charcoal-500">
+                      Realizado el {formatDate(order.created_at)}
+                    </p>
+                  </div>
+                  <div class="text-right">
+                    <p class="text-lg font-semibold text-navy-900">{formatPrice(order.total)}</p>
+                    <p class="text-sm text-charcoal-500">{order.order_items?.length || 0} artículo(s)</p>
+                  </div>
+                </div>
+
+                {/* Items del pedido */}
+                {order.order_items && order.order_items.length > 0 && (
+                  <div class="bg-cream/50 rounded-lg p-4 mb-4">
+                    <div class="flex flex-wrap gap-3">
+                      {order.order_items.slice(0, 3).map((item: any) => (
+                        <div class="flex items-center gap-3 bg-white rounded-lg p-2 pr-4">
+                          <div class="w-12 h-12 bg-charcoal-100 rounded flex items-center justify-center">
+                            {item.product_image ? (
+                              <img src={item.product_image} alt={item.product_name} class="w-full h-full object-cover rounded" />
+                            ) : (
+                              <svg class="w-6 h-6 text-charcoal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                              </svg>
+                            )}
+                          </div>
+                          <div class="text-sm">
+                            <p class="font-medium text-navy-900 line-clamp-1">{item.product_name}</p>
+                            <p class="text-charcoal-500">x{item.quantity}</p>
+                          </div>
+                        </div>
+                      ))}
+                      {order.order_items.length > 3 && (
+                        <div class="flex items-center justify-center px-4 text-sm text-charcoal-500">
+                          +{order.order_items.length - 3} más
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Seguimiento */}
+                {order.status === 'shipped' && order.tracking_number && (
+                  <div class="bg-indigo-50 rounded-lg p-4 mb-4 flex items-center gap-3">
+                    <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                    </svg>
+                    <div>
+                      <p class="text-sm font-medium text-indigo-900">Número de seguimiento</p>
+                      <p class="text-indigo-700 font-mono">{order.tracking_number}</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Acciones */}
+                <div class="flex flex-wrap gap-3">
+                  <a 
+                    href={`/cuenta/pedidos/${order.id}`}
+                    class="inline-flex items-center gap-2 px-4 py-2 bg-navy-900 text-white text-sm rounded-lg hover:bg-navy-800 transition-colors"
+                  >
+                    Ver detalles
+                  </a>
+                  {order.status === 'delivered' && (
+                    <a 
+                      href={`/cuenta/devoluciones?order=${order.id}`}
+                      class="inline-flex items-center gap-2 px-4 py-2 border border-charcoal-200 text-charcoal-700 text-sm rounded-lg hover:bg-charcoal-50 transition-colors"
+                    >
+                      Solicitar devolución
+                    </a>
+                  )}
+                  {order.status === 'shipped' && (
+                    <button 
+                      type="button"
+                      class="inline-flex items-center gap-2 px-4 py-2 border border-charcoal-200 text-charcoal-700 text-sm rounded-lg hover:bg-charcoal-50 transition-colors"
+                    >
+                      Seguir envío
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        <!-- Volver -->
+        <div class="p-6 border-t border-charcoal-100">
+          <a href="/cuenta" class="text-charcoal-600 hover:text-navy-900 transition-colors">
+            ← Volver a Mi Cuenta
+          </a>
+        </div>
+      </div>
+    </div>
+  </main>
+</BaseLayout>

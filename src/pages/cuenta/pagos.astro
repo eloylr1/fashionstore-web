@@ -1,0 +1,418 @@
+---
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * FASHIONMARKET - Métodos de Pago
+ * Gestión de métodos de pago guardados
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
+
+export const prerender = false;
+
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { supabase } from '../../lib/supabase/client';
+
+// Verificar autenticación
+const accessToken = Astro.cookies.get('sb-access-token')?.value;
+const refreshToken = Astro.cookies.get('sb-refresh-token')?.value;
+
+if (!accessToken || !refreshToken || !supabase) {
+  return Astro.redirect('/login?redirect=/cuenta/pagos');
+}
+
+const sb = supabase as any;
+
+const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
+  access_token: accessToken,
+  refresh_token: refreshToken,
+});
+
+if (sessionError || !sessionData.user) {
+  return Astro.redirect('/login?redirect=/cuenta/pagos');
+}
+
+const user = sessionData.user;
+
+// Obtener métodos de pago
+const { data: paymentMethods } = await sb
+  .from('payment_methods')
+  .select('*')
+  .eq('user_id', user.id)
+  .order('is_default', { ascending: false })
+  .order('created_at', { ascending: false });
+
+const getBrandIcon = (brand: string) => {
+  const icons: Record<string, string> = {
+    visa: '/icons/visa.svg',
+    mastercard: '/icons/mastercard.svg',
+    amex: '/icons/amex.svg',
+  };
+  return icons[brand?.toLowerCase()] || '';
+};
+
+const getBrandColor = (brand: string) => {
+  const colors: Record<string, string> = {
+    visa: 'bg-blue-500',
+    mastercard: 'bg-red-500',
+    amex: 'bg-gray-700',
+  };
+  return colors[brand?.toLowerCase()] || 'bg-gray-500';
+};
+---
+
+<BaseLayout title="Métodos de Pago | FashionMarket">
+  <main class="min-h-screen bg-cream py-8 lg:py-12">
+    <div class="container-custom max-w-4xl">
+      <!-- Breadcrumb -->
+      <nav class="mb-6">
+        <ol class="flex items-center gap-2 text-sm text-charcoal-500">
+          <li><a href="/" class="hover:text-navy-900 transition-colors">Inicio</a></li>
+          <li>/</li>
+          <li><a href="/cuenta" class="hover:text-navy-900 transition-colors">Mi Cuenta</a></li>
+          <li>/</li>
+          <li class="text-navy-900 font-medium">Métodos de Pago</li>
+        </ol>
+      </nav>
+
+      <div class="bg-white rounded-lg shadow-sm">
+        <!-- Header -->
+        <div class="p-6 border-b border-charcoal-100 flex items-center justify-between">
+          <div>
+            <h1 class="text-2xl font-serif text-navy-900">Métodos de Pago</h1>
+            <p class="text-charcoal-500 mt-1">Gestiona tus tarjetas y métodos guardados</p>
+          </div>
+          <button
+            type="button"
+            id="add-card-btn"
+            class="px-4 py-2 bg-navy-900 text-white rounded-lg hover:bg-navy-800 transition-colors flex items-center gap-2"
+          >
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+            </svg>
+            Añadir tarjeta
+          </button>
+        </div>
+
+        <!-- Info de seguridad -->
+        <div class="p-4 bg-blue-50 border-b border-blue-100">
+          <div class="flex items-start gap-3">
+            <svg class="w-5 h-5 text-blue-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+            </svg>
+            <div>
+              <p class="text-sm font-medium text-blue-900">Tus datos están seguros</p>
+              <p class="text-sm text-blue-700">Nunca almacenamos los datos completos de tu tarjeta. Utilizamos tokenización segura con encriptación de nivel bancario.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Lista de métodos de pago -->
+        <div class="p-6">
+          {(!paymentMethods || paymentMethods.length === 0) ? (
+            <div class="text-center py-12">
+              <svg class="w-20 h-20 mx-auto text-charcoal-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+              </svg>
+              <h2 class="text-lg font-medium text-navy-900 mb-2">No tienes métodos de pago guardados</h2>
+              <p class="text-charcoal-500 mb-6">Cuando añadas una tarjeta durante una compra, podrás guardarla aquí para futuras compras más rápidas.</p>
+              
+              <!-- Métodos de pago aceptados -->
+              <div class="mt-8 pt-8 border-t border-charcoal-100">
+                <p class="text-sm text-charcoal-500 mb-4">Métodos de pago aceptados</p>
+                <div class="flex items-center justify-center gap-6">
+                  <div class="flex items-center gap-2 px-4 py-2 bg-charcoal-50 rounded-lg">
+                    <svg class="w-8 h-8 text-blue-600" viewBox="0 0 48 48" fill="currentColor">
+                      <path d="M44 12H4v24h40V12zm-20 18H8v-2h16v2zm12-4H8v-2h28v2z"/>
+                    </svg>
+                    <span class="text-sm font-medium">Visa</span>
+                  </div>
+                  <div class="flex items-center gap-2 px-4 py-2 bg-charcoal-50 rounded-lg">
+                    <svg class="w-8 h-8 text-red-500" viewBox="0 0 48 48" fill="currentColor">
+                      <circle cx="19" cy="24" r="10"/>
+                      <circle cx="29" cy="24" r="10" fill-opacity="0.7"/>
+                    </svg>
+                    <span class="text-sm font-medium">Mastercard</span>
+                  </div>
+                  <div class="flex items-center gap-2 px-4 py-2 bg-charcoal-50 rounded-lg">
+                    <svg class="w-8 h-8 text-blue-900" viewBox="0 0 48 48" fill="currentColor">
+                      <path d="M24 8l-8 14h16L24 8zm-8 18l8 14 8-14H16z"/>
+                    </svg>
+                    <span class="text-sm font-medium">PayPal</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div class="space-y-4">
+              {paymentMethods.map((method: any) => (
+                <div class={`border rounded-lg p-4 ${method.is_default ? 'border-gold-matte bg-gold-matte/5' : 'border-charcoal-200'}`}>
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-4">
+                      <div class={`w-12 h-8 ${getBrandColor(method.brand)} rounded flex items-center justify-center text-white text-xs font-bold`}>
+                        {method.brand?.toUpperCase().slice(0, 4) || 'CARD'}
+                      </div>
+                      <div>
+                        <p class="font-medium text-navy-900">
+                          {method.label || `${method.brand} •••• ${method.last_four}`}
+                        </p>
+                        <p class="text-sm text-charcoal-500">
+                          Expira {method.expiry_month}/{method.expiry_year}
+                        </p>
+                      </div>
+                    </div>
+                    <div class="flex items-center gap-3">
+                      {method.is_default && (
+                        <span class="px-2 py-1 bg-gold-matte text-white text-xs rounded">
+                          Predeterminada
+                        </span>
+                      )}
+                      <button class="text-charcoal-500 hover:text-red-500 transition-colors" title="Eliminar">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <!-- Volver -->
+        <div class="p-6 border-t border-charcoal-100">
+          <a href="/cuenta" class="text-charcoal-600 hover:text-navy-900 transition-colors">
+            ← Volver a Mi Cuenta
+          </a>
+        </div>
+      </div>
+
+      <!-- Info adicional -->
+      <div class="mt-6 bg-white rounded-lg shadow-sm p-6">
+        <h2 class="text-lg font-serif text-navy-900 mb-4">Preguntas frecuentes</h2>
+        <div class="space-y-4">
+          <div>
+            <h3 class="font-medium text-navy-900">¿Es seguro guardar mi tarjeta?</h3>
+            <p class="text-sm text-charcoal-500 mt-1">Sí, utilizamos encriptación de nivel bancario y nunca almacenamos los datos completos de tu tarjeta.</p>
+          </div>
+          <div>
+            <h3 class="font-medium text-navy-900">¿Puedo eliminar mi tarjeta en cualquier momento?</h3>
+            <p class="text-sm text-charcoal-500 mt-1">Sí, puedes eliminar tus métodos de pago guardados cuando quieras desde esta sección.</p>
+          </div>
+          <div>
+            <h3 class="font-medium text-navy-900">¿Qué métodos de pago aceptan?</h3>
+            <p class="text-sm text-charcoal-500 mt-1">Aceptamos Visa, Mastercard, American Express, PayPal y Bizum.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Modal para añadir tarjeta -->
+  <div id="add-card-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+    <div class="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+      <!-- Header del modal -->
+      <div class="p-6 border-b border-charcoal-100 flex items-center justify-between">
+        <h2 class="text-xl font-serif text-navy-900">Añadir tarjeta</h2>
+        <button id="close-modal" type="button" class="text-charcoal-400 hover:text-navy-900 transition-colors">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+      <!-- Formulario de Stripe -->
+      <div class="p-6">
+        <div id="loading-stripe" class="flex items-center justify-center py-8">
+          <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-navy-900"></div>
+        </div>
+
+        <form id="payment-form" class="hidden">
+          <div id="card-element" class="p-4 border-2 border-charcoal-200 rounded-lg mb-4"></div>
+          
+          <div id="card-errors" class="text-red-600 text-sm mb-4 hidden"></div>
+
+          <div class="mb-4">
+            <label class="flex items-center gap-2 text-sm text-charcoal-700 cursor-pointer">
+              <input type="checkbox" id="save-card" checked class="rounded border-charcoal-300 text-navy-900 focus:ring-gold-matte">
+              <span>Guardar tarjeta para futuras compras</span>
+            </label>
+          </div>
+
+          <button
+            type="submit"
+            id="submit-card"
+            class="w-full bg-navy-900 text-white py-3 rounded-lg font-semibold hover:bg-navy-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            <span id="button-text">Añadir tarjeta</span>
+            <span id="button-loading" class="hidden">
+              <span class="inline-flex items-center justify-center gap-2">
+                <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                Procesando...
+              </span>
+            </span>
+          </button>
+        </form>
+
+        <p class="text-xs text-charcoal-500 text-center mt-4">
+          🔒 Conexión segura mediante Stripe. No almacenamos los datos completos de tu tarjeta.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Cargar Stripe desde CDN -->
+  <script src="https://js.stripe.com/v3/"></script>
+  
+  <script define:vars={{ 
+    stripeKey: import.meta.env.PUBLIC_STRIPE_PUBLISHABLE_KEY,
+    userId: user.id
+  }}>
+    let stripe = null;
+    let cardElement = null;
+
+    const addCardBtn = document.getElementById('add-card-btn');
+    const modal = document.getElementById('add-card-modal');
+    const closeModalBtn = document.getElementById('close-modal');
+    const form = document.getElementById('payment-form');
+    const cardErrors = document.getElementById('card-errors');
+    const submitBtn = document.getElementById('submit-card');
+    const buttonText = document.getElementById('button-text');
+    const buttonLoading = document.getElementById('button-loading');
+    const loadingStripe = document.getElementById('loading-stripe');
+
+    // Inicializar Stripe
+    function initStripe() {
+      if (!stripeKey) {
+        alert('Stripe no está configurado. Por favor, configura PUBLIC_STRIPE_PUBLISHABLE_KEY en tu archivo .env');
+        return;
+      }
+
+      // Usar Stripe global del CDN
+      stripe = window.Stripe(stripeKey);
+      
+      const elements = stripe.elements();
+      cardElement = elements.create('card', {
+        style: {
+          base: {
+            fontSize: '16px',
+            color: '#1a1a2e',
+            fontFamily: 'system-ui, sans-serif',
+            '::placeholder': {
+              color: '#9ca3af',
+            },
+          },
+          invalid: {
+            color: '#ef4444',
+          },
+        },
+        hidePostalCode: true,
+      });
+
+      cardElement.mount('#card-element');
+
+      // Mostrar formulario cuando esté listo
+      loadingStripe.classList.add('hidden');
+      form.classList.remove('hidden');
+
+      cardElement.on('change', (event) => {
+        if (event.error) {
+          cardErrors.textContent = event.error.message;
+          cardErrors.classList.remove('hidden');
+        } else {
+          cardErrors.textContent = '';
+          cardErrors.classList.add('hidden');
+        }
+      });
+    }
+
+    // Abrir modal
+    addCardBtn?.addEventListener('click', () => {
+      modal?.classList.remove('hidden');
+      modal?.classList.add('flex');
+      if (!stripe) {
+        initStripe();
+      }
+    });
+
+    // Cerrar modal
+    closeModalBtn?.addEventListener('click', () => {
+      modal?.classList.add('hidden');
+      modal?.classList.remove('flex');
+    });
+
+    // Cerrar al hacer clic fuera del modal
+    modal?.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+      }
+    });
+
+    // Cerrar con ESC
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !modal?.classList.contains('hidden')) {
+        modal?.classList.add('hidden');
+        modal?.classList.remove('flex');
+      }
+    });
+
+    // Enviar formulario
+    form?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      if (!stripe || !cardElement) return;
+
+      submitBtn.disabled = true;
+      buttonText.classList.add('hidden');
+      buttonLoading.classList.remove('hidden');
+      cardErrors.classList.add('hidden');
+
+      try {
+        // Crear método de pago
+        const { error, paymentMethod } = await stripe.createPaymentMethod({
+          type: 'card',
+          card: cardElement,
+        });
+
+        if (error) {
+          cardErrors.textContent = error.message;
+          cardErrors.classList.remove('hidden');
+        } else {
+          // Guardar en base de datos usando fetch con las cookies del navegador
+          const response = await fetch('/api/stripe/save-payment-method', {
+            method: 'POST',
+            headers: { 
+              'Content-Type': 'application/json',
+            },
+            credentials: 'include',
+            body: JSON.stringify({
+              paymentMethodId: paymentMethod.id,
+              brand: paymentMethod.card?.brand,
+              last4: paymentMethod.card?.last4,
+              expMonth: paymentMethod.card?.exp_month,
+              expYear: paymentMethod.card?.exp_year,
+              userId: userId,
+            }),
+          });
+
+          const data = await response.json();
+
+          if (response.ok) {
+            window.location.reload();
+          } else {
+            cardErrors.textContent = data.error || 'Error al guardar la tarjeta';
+            cardErrors.classList.remove('hidden');
+          }
+        }
+      } catch (err) {
+        console.error('Error:', err);
+        cardErrors.textContent = err.message || 'Error inesperado al procesar la tarjeta';
+        cardErrors.classList.remove('hidden');
+      } finally {
+        submitBtn.disabled = false;
+        buttonText.classList.remove('hidden');
+        buttonLoading.classList.add('hidden');
+      }
+    });
+  </script>
+</BaseLayout>

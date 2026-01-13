@@ -1,0 +1,257 @@
+---
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * FASHIONMARKET - Admin Dashboard
+ * Panel principal de administración (SSR Protegido)
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
+
+export const prerender = false; // SSR
+
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import { supabase, isSupabaseConfigured } from '../../lib/supabase/client';
+import { supabaseAdmin, isSupabaseAdminConfigured } from '../../lib/supabase/server';
+
+// Verificar autenticación (solo si Supabase está configurado)
+if (isSupabaseAdminConfigured() && supabaseAdmin) {
+  const accessToken = Astro.cookies.get('sb-access-token')?.value;
+  const userRole = Astro.cookies.get('user-role')?.value;
+
+  if (!accessToken) {
+    return Astro.redirect('/admin/acceso-seguro');
+  }
+
+  // Verificar que sea admin
+  if (userRole !== 'admin') {
+    return Astro.redirect('/admin/acceso-seguro');
+  }
+
+  // Verificar que el token sea válido
+  const { data: { user }, error } = await supabaseAdmin.auth.getUser(accessToken);
+
+  if (error || !user) {
+    Astro.cookies.delete('sb-access-token', { path: '/' });
+    Astro.cookies.delete('sb-refresh-token', { path: '/' });
+    Astro.cookies.delete('user-role', { path: '/' });
+    return Astro.redirect('/admin/acceso-seguro');
+  }
+}
+
+// Datos de demostración
+let productsCount = 4;
+let categoriesCount = 3;
+let lowStockProducts: any[] = [];
+let recentProducts = [
+  { id: '1', name: 'Traje Italiano Slim Fit', slug: 'traje-italiano-slim-fit', price: 599.00, images: ['/placeholder-product.svg'], category_id: '1', featured: true, stock: 10, sizes: ['S','M','L','XL'], colors: ['Navy', 'Charcoal'], description: 'Traje de corte italiano', material: 'Lana 100%', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+  { id: '2', name: 'Camisa Oxford Premium', slug: 'camisa-oxford-premium', price: 89.00, images: ['/placeholder-product.svg'], category_id: '2', featured: true, stock: 25, sizes: ['S','M','L','XL'], colors: ['White', 'Light Blue'], description: 'Camisa oxford clásica', material: 'Algodón 100%', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+];
+
+// Obtener estadísticas reales si Supabase está configurado
+if (isSupabaseConfigured() && supabase) {
+  const { count: realProductsCount } = await supabase
+    .from('products')
+    .select('*', { count: 'exact', head: true });
+
+  const { count: realCategoriesCount } = await supabase
+    .from('categories')
+    .select('*', { count: 'exact', head: true });
+
+  const { data: realLowStock } = await supabase
+    .from('products')
+    .select('id, name, stock')
+    .lt('stock', 10)
+    .order('stock', { ascending: true })
+    .limit(5);
+
+  const { data: realRecent } = await supabase
+    .from('products')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(5);
+
+  if (realProductsCount !== null) productsCount = realProductsCount;
+  if (realCategoriesCount !== null) categoriesCount = realCategoriesCount;
+  if (realLowStock) lowStockProducts = realLowStock;
+  if (realRecent) recentProducts = realRecent;
+}
+---
+
+<AdminLayout title="Dashboard">
+  <div class="space-y-8">
+    <!-- Welcome -->
+    <div>
+      <h2 class="font-serif text-2xl font-medium text-navy-900">
+        Bienvenido de nuevo
+      </h2>
+      <p class="text-charcoal-500 mt-1">
+        Aquí tienes un resumen de tu tienda
+      </p>
+    </div>
+    
+    <!-- Stats Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <!-- Products -->
+      <div class="bg-white p-6 border border-charcoal-100">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-sm text-charcoal-500">Productos</p>
+            <p class="text-3xl font-serif font-medium text-navy-900 mt-1">
+              {productsCount || 0}
+            </p>
+          </div>
+          <div class="w-12 h-12 bg-navy-100 flex items-center justify-center">
+            <svg class="w-6 h-6 text-navy-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+            </svg>
+          </div>
+        </div>
+        <a href="/admin/productos" class="inline-block mt-4 text-sm text-navy-700 hover:text-leather transition-colors">
+          Ver todos →
+        </a>
+      </div>
+      
+      <!-- Categories -->
+      <div class="bg-white p-6 border border-charcoal-100">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-sm text-charcoal-500">Categorías</p>
+            <p class="text-3xl font-serif font-medium text-navy-900 mt-1">
+              {categoriesCount || 0}
+            </p>
+          </div>
+          <div class="w-12 h-12 bg-leather/10 flex items-center justify-center">
+            <svg class="w-6 h-6 text-leather" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+            </svg>
+          </div>
+        </div>
+        <a href="/admin/categorias" class="inline-block mt-4 text-sm text-navy-700 hover:text-leather transition-colors">
+          Gestionar →
+        </a>
+      </div>
+      
+      <!-- Low Stock Alert -->
+      <div class="bg-white p-6 border border-charcoal-100">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-sm text-charcoal-500">Stock bajo</p>
+            <p class="text-3xl font-serif font-medium text-warning mt-1">
+              {lowStockProducts?.length || 0}
+            </p>
+          </div>
+          <div class="w-12 h-12 bg-warning/10 flex items-center justify-center">
+            <svg class="w-6 h-6 text-warning" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+        </div>
+        <p class="mt-4 text-sm text-charcoal-500">
+          Productos con menos de 10 unidades
+        </p>
+      </div>
+      
+      <!-- Orders (placeholder) -->
+      <div class="bg-white p-6 border border-charcoal-100">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-sm text-charcoal-500">Pedidos hoy</p>
+            <p class="text-3xl font-serif font-medium text-success mt-1">
+              0
+            </p>
+          </div>
+          <div class="w-12 h-12 bg-success/10 flex items-center justify-center">
+            <svg class="w-6 h-6 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+            </svg>
+          </div>
+        </div>
+        <p class="mt-4 text-sm text-charcoal-400">
+          Stripe pendiente de configurar
+        </p>
+      </div>
+    </div>
+    
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <!-- Recent Products -->
+      <div class="bg-white border border-charcoal-100">
+        <div class="px-6 py-4 border-b border-charcoal-100 flex items-center justify-between">
+          <h3 class="font-medium text-navy-900">Productos recientes</h3>
+          <a href="/admin/productos/nuevo" class="text-sm text-navy-700 hover:text-leather transition-colors">
+            + Nuevo
+          </a>
+        </div>
+        
+        <div class="divide-y divide-charcoal-100">
+          {recentProducts && recentProducts.length > 0 ? (
+            recentProducts.map((product) => (
+              <a 
+                href={`/admin/productos/${product.id}`}
+                class="flex items-center gap-4 px-6 py-4 hover:bg-charcoal-50 transition-colors"
+              >
+                <div class="w-12 h-12 bg-cream flex-shrink-0">
+                  <img 
+                    src={product.images[0] || '/placeholder-product.svg'} 
+                    alt={product.name}
+                    class="w-full h-full object-cover"
+                  />
+                </div>
+                <div class="flex-1 min-w-0">
+                  <p class="text-sm font-medium text-navy-900 truncate">
+                    {product.name}
+                  </p>
+                  <p class="text-xs text-charcoal-500">
+                    Stock: {product.stock}
+                  </p>
+                </div>
+                <p class="text-sm font-medium text-charcoal-700">
+                  {(product.price / 100).toFixed(2)}€
+                </p>
+              </a>
+            ))
+          ) : (
+            <div class="px-6 py-8 text-center text-charcoal-500">
+              No hay productos todavía
+            </div>
+          )}
+        </div>
+      </div>
+      
+      <!-- Low Stock Alert List -->
+      <div class="bg-white border border-charcoal-100">
+        <div class="px-6 py-4 border-b border-charcoal-100">
+          <h3 class="font-medium text-navy-900">Alertas de stock</h3>
+        </div>
+        
+        <div class="divide-y divide-charcoal-100">
+          {lowStockProducts && lowStockProducts.length > 0 ? (
+            lowStockProducts.map((product) => (
+              <div class="flex items-center justify-between px-6 py-4">
+                <div>
+                  <p class="text-sm font-medium text-navy-900">
+                    {product.name}
+                  </p>
+                  <p class="text-xs text-error">
+                    Solo {product.stock} unidades
+                  </p>
+                </div>
+                <a 
+                  href={`/admin/productos/${product.id}`}
+                  class="text-sm text-navy-700 hover:text-leather transition-colors"
+                >
+                  Editar
+                </a>
+              </div>
+            ))
+          ) : (
+            <div class="px-6 py-8 text-center text-charcoal-500">
+              <svg class="w-12 h-12 mx-auto text-success mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Todo el inventario tiene stock suficiente
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  </div>
+</AdminLayout>

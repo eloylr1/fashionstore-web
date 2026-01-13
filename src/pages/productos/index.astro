@@ -1,0 +1,180 @@
+---
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * FASHIONMARKET - Product Listing (Catálogo de productos)
+ * Listado de todos los productos (SSG)
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
+
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import ProductCard from '../../components/product/ProductCard.astro';
+import { supabase, isSupabaseConfigured } from '../../lib/supabase/client';
+
+// Datos de demostración
+const demoProducts = [
+  { id: '1', name: 'Traje Italiano Slim Fit', slug: 'traje-italiano-slim-fit', price: 59900, images: ['https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=600&q=80'], category_id: '1', featured: true, stock: 10, sizes: ['S','M','L','XL'], colors: ['Navy', 'Charcoal'], description: 'Traje de corte italiano', material: 'Lana 100%', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+  { id: '2', name: 'Camisa Oxford Premium', slug: 'camisa-oxford-premium', price: 8900, images: ['https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=600&q=80'], category_id: '2', featured: true, stock: 25, sizes: ['S','M','L','XL'], colors: ['White', 'Light Blue'], description: 'Camisa oxford clásica', material: 'Algodón 100%', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+  { id: '3', name: 'Cinturón de Cuero', slug: 'cinturon-cuero', price: 7500, images: ['https://images.unsplash.com/photo-1624222247344-550fb60583dc?w=600&q=80'], category_id: '3', featured: true, stock: 50, sizes: ['85cm','90cm','95cm','100cm'], colors: ['Brown', 'Black'], description: 'Cinturón artesanal', material: 'Cuero genuino', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+  { id: '4', name: 'Blazer Casual Lino', slug: 'blazer-casual-lino', price: 29900, images: ['https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=600&q=80'], category_id: '1', featured: true, stock: 15, sizes: ['S','M','L','XL'], colors: ['Beige', 'Navy'], description: 'Blazer de verano', material: 'Lino 100%', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+  { id: '5', name: 'Pantalón Chino Slim', slug: 'pantalon-chino-slim', price: 7900, images: ['https://images.unsplash.com/photo-1473966968600-fa801b869a1a?w=600&q=80'], category_id: '3', featured: false, stock: 30, sizes: ['S','M','L','XL','XXL'], colors: ['Beige', 'Navy'], description: 'Pantalón chino elegante', material: 'Algodón 98%, Elastano 2%', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+  { id: '6', name: 'Camisa de Lino', slug: 'camisa-lino', price: 9900, images: ['https://images.unsplash.com/photo-1598033129183-c4f50c736f10?w=600&q=80'], category_id: '2', featured: false, stock: 20, sizes: ['S','M','L','XL'], colors: ['White', 'Beige'], description: 'Camisa ligera para verano', material: 'Lino 100%', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+];
+
+const demoCategories = [
+  { id: '1', name: 'Trajes', slug: 'trajes', image_url: 'https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=800&q=80', description: 'Trajes de vestir premium' },
+  { id: '2', name: 'Camisas', slug: 'camisas', image_url: 'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=800&q=80', description: 'Camisas de alta calidad' },
+  { id: '3', name: 'Accesorios', slug: 'accesorios', image_url: 'https://images.unsplash.com/photo-1624222247344-550fb60583dc?w=800&q=80', description: 'Complementos elegantes' },
+];
+
+// Obtener datos reales si Supabase está configurado
+let products = demoProducts;
+let categories = demoCategories;
+
+if (isSupabaseConfigured() && supabase) {
+  const { data: realProducts } = await supabase
+    .from('products')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  const { data: realCategories } = await supabase
+    .from('categories')
+    .select('*')
+    .order('name');
+  
+  if (realProducts?.length) products = realProducts;
+  if (realCategories?.length) categories = realCategories;
+}
+---
+
+<BaseLayout 
+  title="Productos"
+  description="Explora nuestra colección completa de moda masculina premium. Camisas, pantalones, trajes y más."
+>
+  <div class="container-custom py-12">
+    <!-- Breadcrumb -->
+    <nav class="mb-8">
+      <ol class="flex items-center gap-2 text-sm text-charcoal-500">
+        <li><a href="/" class="hover:text-navy-900 transition-colors">Inicio</a></li>
+        <li>/</li>
+        <li class="text-navy-900">Productos</li>
+      </ol>
+    </nav>
+    
+    <!-- Header -->
+    <div class="mb-10">
+      <h1 class="font-serif text-4xl font-medium text-navy-900 mb-4">
+        Nuestra Colección
+      </h1>
+      <p class="text-charcoal-500 max-w-2xl">
+        Descubre todas nuestras prendas premium. Cada pieza ha sido seleccionada 
+        cuidadosamente para ofrecerte la máxima calidad y estilo.
+      </p>
+    </div>
+    
+    <div class="flex flex-col lg:flex-row gap-10">
+      <!-- Sidebar Filters -->
+      <aside class="lg:w-64 flex-shrink-0">
+        <div class="sticky top-24 space-y-8">
+          <!-- Categories Filter -->
+          <div>
+            <h3 class="font-medium text-navy-900 mb-4">Categorías</h3>
+            <ul class="space-y-2">
+              <li>
+                <a 
+                  href="/productos"
+                  class="text-sm text-navy-900 font-medium"
+                >
+                  Todos los productos
+                </a>
+              </li>
+              {categories?.map((category) => (
+                <li>
+                  <a 
+                    href={`/categoria/${category.slug}`}
+                    class="text-sm text-charcoal-600 hover:text-navy-900 transition-colors"
+                  >
+                    {category.name}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+          
+          <!-- Price Filter -->
+          <div>
+            <h3 class="font-medium text-navy-900 mb-4">Precio</h3>
+            <ul class="space-y-2">
+              <li>
+                <button class="text-sm text-charcoal-600 hover:text-navy-900 transition-colors">
+                  Menos de 50€
+                </button>
+              </li>
+              <li>
+                <button class="text-sm text-charcoal-600 hover:text-navy-900 transition-colors">
+                  50€ - 100€
+                </button>
+              </li>
+              <li>
+                <button class="text-sm text-charcoal-600 hover:text-navy-900 transition-colors">
+                  100€ - 200€
+                </button>
+              </li>
+              <li>
+                <button class="text-sm text-charcoal-600 hover:text-navy-900 transition-colors">
+                  Más de 200€
+                </button>
+              </li>
+            </ul>
+          </div>
+          
+          <!-- Size Filter -->
+          <div>
+            <h3 class="font-medium text-navy-900 mb-4">Talla</h3>
+            <div class="flex flex-wrap gap-2">
+              {['XS', 'S', 'M', 'L', 'XL', 'XXL'].map((size) => (
+                <button class="w-10 h-10 border border-charcoal-200 text-sm text-charcoal-600 hover:border-navy-900 hover:text-navy-900 transition-colors">
+                  {size}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </aside>
+      
+      <!-- Products Grid -->
+      <main class="flex-1">
+        <!-- Sort & Count -->
+        <div class="flex items-center justify-between mb-6 pb-6 border-b border-charcoal-100">
+          <p class="text-sm text-charcoal-500">
+            {products?.length || 0} productos
+          </p>
+          <select class="select-elegant w-auto pr-10">
+            <option>Ordenar por: Novedades</option>
+            <option>Precio: Menor a mayor</option>
+            <option>Precio: Mayor a menor</option>
+            <option>Más populares</option>
+          </select>
+        </div>
+        
+        <!-- Grid -->
+        {products && products.length > 0 ? (
+          <div class="product-grid">
+            {products.map((product) => (
+              <ProductCard product={product} />
+            ))}
+          </div>
+        ) : (
+          <div class="text-center py-16">
+            <svg class="w-16 h-16 mx-auto text-charcoal-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+            </svg>
+            <h3 class="font-serif text-xl text-navy-900 mb-2">No hay productos disponibles</h3>
+            <p class="text-charcoal-500">
+              Vuelve pronto, estamos preparando nuevas prendas para ti.
+            </p>
+          </div>
+        )}
+      </main>
+    </div>
+  </div>
+</BaseLayout>

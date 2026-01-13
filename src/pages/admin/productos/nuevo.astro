@@ -1,0 +1,356 @@
+---
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * FASHIONMARKET - Admin New Product
+ * Formulario de creación de producto (SSR Protegido)
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
+
+export const prerender = false; // SSR
+
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import ImageUploader from '../../../components/admin/ImageUploader';
+import { supabase, isSupabaseConfigured } from '../../../lib/supabase/client';
+import { supabaseAdmin, isSupabaseAdminConfigured } from '../../../lib/supabase/server';
+
+// Verificar autenticación (solo si Supabase está configurado)
+if (isSupabaseAdminConfigured() && supabaseAdmin) {
+  const accessToken = Astro.cookies.get('sb-access-token')?.value;
+  const userRole = Astro.cookies.get('user-role')?.value;
+
+  if (!accessToken || userRole !== 'admin') {
+    return Astro.redirect('/admin/acceso-seguro');
+  }
+
+  const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(accessToken);
+
+  if (authError || !user) {
+    return Astro.redirect('/admin/acceso-seguro');
+  }
+}
+
+// Datos de demostración
+let categories: any[] = [
+  { id: '1', name: 'Trajes', slug: 'trajes', image_url: '/placeholder-category.svg', description: 'Trajes de vestir premium' },
+  { id: '2', name: 'Camisas', slug: 'camisas', image_url: '/placeholder-category.svg', description: 'Camisas de alta calidad' },
+  { id: '3', name: 'Accesorios', slug: 'accesorios', image_url: '/placeholder-category.svg', description: 'Complementos elegantes' },
+];
+
+// Obtener categorías reales para el select
+if (isSupabaseConfigured() && supabase) {
+  const { data: realCategories } = await supabase
+    .from('categories')
+    .select('*')
+    .order('name');
+  
+  if (realCategories?.length) categories = realCategories;
+}
+
+const sizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
+---
+
+<AdminLayout title="Nuevo Producto">
+  <div class="max-w-4xl">
+    <!-- Back -->
+    <a 
+      href="/admin/productos"
+      class="inline-flex items-center gap-2 text-sm text-charcoal-600 hover:text-navy-900 transition-colors mb-6"
+    >
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+      </svg>
+      Volver a productos
+    </a>
+    
+    <form id="product-form" class="space-y-8">
+      <!-- Basic Info -->
+      <div class="bg-white border border-charcoal-100 p-6">
+        <h2 class="font-medium text-navy-900 mb-6">Información básica</h2>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div class="md:col-span-2">
+            <label for="name" class="block text-sm font-medium text-charcoal-700 mb-2">
+              Nombre del producto *
+            </label>
+            <input
+              type="text"
+              id="name"
+              name="name"
+              required
+              class="input-elegant"
+              placeholder="Ej: Camisa Oxford Clásica"
+            />
+          </div>
+          
+          <div>
+            <label for="slug" class="block text-sm font-medium text-charcoal-700 mb-2">
+              Slug (URL) *
+            </label>
+            <input
+              type="text"
+              id="slug"
+              name="slug"
+              required
+              pattern="^[a-z0-9]+(?:-[a-z0-9]+)*$"
+              class="input-elegant"
+              placeholder="camisa-oxford-clasica"
+            />
+            <p class="text-xs text-charcoal-400 mt-1">
+              Solo letras minúsculas, números y guiones
+            </p>
+          </div>
+          
+          <div>
+            <label for="category_id" class="block text-sm font-medium text-charcoal-700 mb-2">
+              Categoría *
+            </label>
+            <select
+              id="category_id"
+              name="category_id"
+              required
+              class="select-elegant"
+            >
+              <option value="">Seleccionar categoría</option>
+              {categories?.map((cat) => (
+                <option value={cat.id}>{cat.name}</option>
+              ))}
+            </select>
+          </div>
+          
+          <div class="md:col-span-2">
+            <label for="description" class="block text-sm font-medium text-charcoal-700 mb-2">
+              Descripción *
+            </label>
+            <textarea
+              id="description"
+              name="description"
+              required
+              rows="4"
+              class="input-elegant resize-none"
+              placeholder="Describe el producto en detalle..."
+            ></textarea>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Pricing & Stock -->
+      <div class="bg-white border border-charcoal-100 p-6">
+        <h2 class="font-medium text-navy-900 mb-6">Precio e inventario</h2>
+        
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div>
+            <label for="price" class="block text-sm font-medium text-charcoal-700 mb-2">
+              Precio (€) *
+            </label>
+            <input
+              type="number"
+              id="price"
+              name="price"
+              required
+              min="0"
+              step="0.01"
+              class="input-elegant"
+              placeholder="59.99"
+            />
+            <p class="text-xs text-charcoal-400 mt-1">
+              Se guardará en céntimos
+            </p>
+          </div>
+          
+          <div>
+            <label for="stock" class="block text-sm font-medium text-charcoal-700 mb-2">
+              Stock *
+            </label>
+            <input
+              type="number"
+              id="stock"
+              name="stock"
+              required
+              min="0"
+              class="input-elegant"
+              placeholder="50"
+            />
+          </div>
+          
+          <div class="flex items-end">
+            <label class="flex items-center gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                id="featured"
+                name="featured"
+                class="w-5 h-5 text-navy-900 border-charcoal-300 rounded focus:ring-navy-700"
+              />
+              <span class="text-sm font-medium text-charcoal-700">
+                Producto destacado
+              </span>
+            </label>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Sizes & Details -->
+      <div class="bg-white border border-charcoal-100 p-6">
+        <h2 class="font-medium text-navy-900 mb-6">Tallas y detalles</h2>
+        
+        <div class="space-y-6">
+          <div>
+            <label class="block text-sm font-medium text-charcoal-700 mb-3">
+              Tallas disponibles *
+            </label>
+            <div class="flex flex-wrap gap-3">
+              {sizes.map((size) => (
+                <label class="cursor-pointer">
+                  <input
+                    type="checkbox"
+                    name="sizes"
+                    value={size}
+                    class="peer sr-only"
+                  />
+                  <span class="inline-flex items-center justify-center w-12 h-12 border border-charcoal-200 text-sm font-medium text-charcoal-600 peer-checked:border-navy-900 peer-checked:bg-navy-900 peer-checked:text-white transition-colors">
+                    {size}
+                  </span>
+                </label>
+              ))}
+            </div>
+          </div>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label for="colors" class="block text-sm font-medium text-charcoal-700 mb-2">
+                Colores <span class="text-charcoal-400">(separados por coma)</span>
+              </label>
+              <input
+                type="text"
+                id="colors"
+                name="colors"
+                class="input-elegant"
+                placeholder="Ej: Azul marino, Gris carbón, Negro"
+              />
+            </div>
+            
+            <div>
+              <label for="material" class="block text-sm font-medium text-charcoal-700 mb-2">
+                Material
+              </label>
+              <input
+                type="text"
+                id="material"
+                name="material"
+                class="input-elegant"
+                placeholder="Ej: 100% Algodón"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Images -->
+      <div class="bg-white border border-charcoal-100 p-6">
+        <ImageUploader client:load onImagesChange={() => {}} />
+        <input type="hidden" id="images" name="images" value="[]" />
+      </div>
+      
+      <!-- Submit -->
+      <div class="flex items-center justify-end gap-4">
+        <a href="/admin/productos" class="btn-secondary">
+          Cancelar
+        </a>
+        <button type="submit" class="btn-primary" id="submit-btn">
+          Crear producto
+        </button>
+      </div>
+    </form>
+  </div>
+  
+  <script>
+    import { supabase, isSupabaseConfigured } from '../../../lib/supabase/client';
+    
+    // Auto-generate slug from name
+    const nameInput = document.getElementById('name') as HTMLInputElement;
+    const slugInput = document.getElementById('slug') as HTMLInputElement;
+    
+    nameInput.addEventListener('input', () => {
+      const slug = nameInput.value
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '');
+      
+      slugInput.value = slug;
+    });
+    
+    // Form submission
+    const form = document.getElementById('product-form') as HTMLFormElement;
+    const submitBtn = document.getElementById('submit-btn') as HTMLButtonElement;
+    
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      if (!isSupabaseConfigured() || !supabase) {
+        alert('Supabase no está configurado. Configure las variables de entorno.');
+        return;
+      }
+      
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Creando...';
+      
+      try {
+        const formData = new FormData(form);
+        
+        // Get selected sizes
+        const sizes = Array.from(
+          document.querySelectorAll('input[name="sizes"]:checked')
+        ).map((input) => (input as HTMLInputElement).value);
+        
+        if (sizes.length === 0) {
+          throw new Error('Selecciona al menos una talla');
+        }
+        
+        // Get images from ImageUploader (stored in hidden input)
+        const imagesInput = document.getElementById('images') as HTMLInputElement;
+        const images = JSON.parse(imagesInput.value || '[]');
+        
+        // Get colors from input (comma-separated)
+        const colorsInput = formData.get('colors') as string;
+        const colors = colorsInput ? colorsInput.split(',').map(c => c.trim()).filter(Boolean) : [];
+        
+        // Convert price to cents
+        const priceInEuros = parseFloat(formData.get('price') as string);
+        const priceInCents = Math.round(priceInEuros * 100);
+        
+        const productData = {
+          name: formData.get('name') as string,
+          slug: formData.get('slug') as string,
+          description: formData.get('description') as string,
+          category_id: formData.get('category_id') as string,
+          price: priceInCents,
+          stock: parseInt(formData.get('stock') as string),
+          featured: formData.get('featured') === 'on',
+          sizes,
+          colors,
+          material: (formData.get('material') as string) || null,
+          images,
+        };
+        
+        const { error } = await supabase
+          .from('products')
+          .insert([productData] as any);
+        
+        if (error) throw error;
+        
+        window.location.href = '/admin/productos';
+      } catch (error: any) {
+        alert(error.message || 'Error al crear el producto');
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Crear producto';
+      }
+    });
+    
+    // Listen for image changes from ImageUploader
+    window.addEventListener('imagesUpdated', ((e: CustomEvent) => {
+      const imagesInput = document.getElementById('images') as HTMLInputElement;
+      imagesInput.value = JSON.stringify(e.detail);
+    }) as EventListener);
+  </script>
+</AdminLayout>

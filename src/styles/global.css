@@ -1,0 +1,270 @@
+/* Fuentes: Playfair Display (Serif moderna) + Inter (Sans-serif limpia) */
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap');
+
+@import "tailwindcss";
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   FASHIONMARKET - DESIGN SYSTEM
+   Estética: Minimalismo Sofisticado para Moda Masculina Premium
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   THEME TOKENS - Paleta de Colores Sobria
+   ───────────────────────────────────────────────────────────────────────────── */
+@theme {
+  /* Colores Primarios */
+  --color-navy-900: #0a1628;
+  --color-navy-800: #1a2744;
+  --color-navy-700: #2a3a5c;
+  --color-navy-600: #3d4f73;
+  --color-navy-500: #526489;
+  
+  /* Grises Carbón */
+  --color-charcoal-900: #1a1a1a;
+  --color-charcoal-800: #2d2d2d;
+  --color-charcoal-700: #404040;
+  --color-charcoal-600: #525252;
+  --color-charcoal-500: #6b6b6b;
+  --color-charcoal-400: #8a8a8a;
+  --color-charcoal-300: #a8a8a8;
+  --color-charcoal-200: #d4d4d4;
+  --color-charcoal-100: #ebebeb;
+  
+  /* Blancos y Neutros */
+  --color-ivory: #faf9f7;
+  --color-cream: #f5f3ef;
+  --color-white: #ffffff;
+  
+  /* Acentos Premium */
+  --color-leather: #8b5a2b;
+  --color-leather-light: #a67c52;
+  --color-gold-matte: #b8a067;
+  --color-gold-dark: #96814e;
+  
+  /* Estados */
+  --color-success: #2d5a3d;
+  --color-error: #8b2635;
+  --color-warning: #8b6914;
+  
+  /* Tipografías */
+  --font-serif: 'Playfair Display', Georgia, serif;
+  --font-sans: 'Inter', system-ui, sans-serif;
+  
+  /* Espaciado personalizado */
+  --spacing-18: 4.5rem;
+  --spacing-22: 5.5rem;
+  
+  /* Transiciones fluidas */
+  --transition-elegant: cubic-bezier(0.4, 0, 0.2, 1);
+  
+  /* Sombras sutiles */
+  --shadow-subtle: 0 1px 3px rgba(10, 22, 40, 0.08);
+  --shadow-elevated: 0 4px 20px rgba(10, 22, 40, 0.12);
+  --shadow-modal: 0 10px 40px rgba(10, 22, 40, 0.2);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   BASE STYLES
+   ───────────────────────────────────────────────────────────────────────────── */
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--color-ivory);
+  color: var(--color-charcoal-800);
+  line-height: 1.6;
+}
+
+/* Headings con tipografía Serif */
+h1, h2, h3, h4 {
+  font-family: var(--font-serif);
+  font-weight: 500;
+  color: var(--color-navy-900);
+  letter-spacing: -0.02em;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   UTILITY CLASSES
+   ───────────────────────────────────────────────────────────────────────────── */
+.font-serif {
+  font-family: var(--font-serif);
+}
+
+.font-sans {
+  font-family: var(--font-sans);
+}
+
+/* Botones Premium */
+.btn-primary {
+  @apply inline-flex items-center justify-center px-6 py-3 
+         bg-navy-900 text-white font-medium text-sm tracking-wide
+         transition-all duration-300 ease-out
+         hover:bg-navy-800 active:scale-[0.98];
+}
+
+.btn-secondary {
+  @apply inline-flex items-center justify-center px-6 py-3 
+         border border-charcoal-300 text-charcoal-800 font-medium text-sm
+         tracking-wide transition-all duration-300 ease-out
+         hover:border-charcoal-800 hover:bg-charcoal-800 hover:text-white;
+}
+
+.btn-accent {
+  @apply inline-flex items-center justify-center px-6 py-3 
+         bg-leather text-white font-medium text-sm tracking-wide
+         transition-all duration-300 ease-out
+         hover:bg-leather-light active:scale-[0.98];
+}
+
+/* Links elegantes */
+.link-underline {
+  @apply relative inline-block;
+}
+
+.link-underline::after {
+  content: '';
+  @apply absolute bottom-0 left-0 w-0 h-px bg-current 
+         transition-all duration-300 ease-out;
+}
+
+.link-underline:hover::after {
+  @apply w-full;
+}
+
+/* Contenedor principal */
+.container-custom {
+  @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+}
+
+/* Grid de productos */
+.product-grid {
+  @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6;
+}
+
+/* Cards de producto */
+.product-card {
+  position: relative;
+  background-color: var(--color-white);
+  overflow: hidden;
+  transition-property: box-shadow;
+  transition-duration: 300ms;
+  transition-timing-function: ease-out;
+}
+
+.product-card:hover {
+  box-shadow: var(--shadow-elevated);
+}
+
+.product-card-image {
+  aspect-ratio: 3/4;
+  overflow: hidden;
+  background-color: var(--color-cream);
+}
+
+.product-card-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  transition-property: transform;
+  transition-duration: 700ms;
+  transition-timing-function: ease-out;
+}
+
+.product-card:hover .product-card-image img {
+  transform: scale(1.05);
+}
+
+/* Slide-over del carrito */
+.slide-over-backdrop {
+  @apply fixed inset-0 bg-navy-900/40 backdrop-blur-sm z-40
+         transition-opacity duration-300;
+}
+
+.slide-over-panel {
+  @apply fixed right-0 top-0 h-full w-full max-w-md bg-white z-50
+         shadow-modal transform transition-transform duration-500;
+}
+
+/* Input fields elegantes */
+.input-elegant {
+  @apply w-full px-4 py-3 border border-charcoal-200 
+         bg-white text-charcoal-800 text-sm
+         transition-all duration-200
+         focus:outline-none focus:border-navy-700 focus:ring-1 focus:ring-navy-700;
+}
+
+/* Select fields */
+.select-elegant {
+  @apply w-full px-4 py-3 border border-charcoal-200 
+         bg-white text-charcoal-800 text-sm appearance-none
+         bg-no-repeat cursor-pointer
+         transition-all duration-200
+         focus:outline-none focus:border-navy-700 focus:ring-1 focus:ring-navy-700;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236b6b6b'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+  background-position: right 1rem center;
+  background-size: 1.25rem;
+}
+
+/* Badge de cantidad */
+.cart-badge {
+  @apply absolute -top-1.5 -right-1.5 w-5 h-5 
+         bg-leather text-white text-xs font-medium
+         flex items-center justify-center rounded-full;
+}
+
+/* Animaciones de entrada */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.5s var(--transition-elegant) forwards;
+}
+
+.animate-slide-in-right {
+  animation: slideInRight 0.4s var(--transition-elegant) forwards;
+}
+
+/* Focus visible para accesibilidad */
+:focus-visible {
+  @apply outline-2 outline-offset-2 outline-navy-700;
+}
+
+/* Scrollbar personalizado */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-cream);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-charcoal-300);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-charcoal-400);
+}

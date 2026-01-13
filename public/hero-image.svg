@@ -1,0 +1,22 @@
+<svg width="1920" height="1080" viewBox="0 0 1920 1080" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="heroGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0a1628"/>
+      <stop offset="100%" style="stop-color:#1a2744"/>
+    </linearGradient>
+  </defs>
+  <rect width="1920" height="1080" fill="url(#heroGrad)"/>
+  
+  <!-- Decorative elements -->
+  <circle cx="1400" cy="300" r="200" fill="#2a3a5c" opacity="0.3"/>
+  <circle cx="1600" cy="600" r="150" fill="#b8a067" opacity="0.1"/>
+  
+  <!-- Man silhouette suggestion -->
+  <ellipse cx="1200" cy="800" rx="150" ry="250" fill="#1a2744"/>
+  <circle cx="1200" cy="400" r="80" fill="#1a2744"/>
+  
+  <!-- Text -->
+  <text x="200" y="450" font-family="Playfair Display, serif" font-size="72" fill="#ffffff" font-weight="600">Moda Masculina</text>
+  <text x="200" y="540" font-family="Playfair Display, serif" font-size="72" fill="#b8a067" font-weight="600">Premium</text>
+  <text x="200" y="620" font-family="Inter, sans-serif" font-size="24" fill="#d4d4d4">Elegancia en cada detalle</text>
+</svg>

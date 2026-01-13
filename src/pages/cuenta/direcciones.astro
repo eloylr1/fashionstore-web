@@ -1,0 +1,391 @@
+---
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * FASHIONMARKET - Direcciones de Envío
+ * Gestión de direcciones del usuario
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
+
+export const prerender = false;
+
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { supabase } from '../../lib/supabase/client';
+
+// Verificar autenticación
+const accessToken = Astro.cookies.get('sb-access-token')?.value;
+const refreshToken = Astro.cookies.get('sb-refresh-token')?.value;
+
+if (!accessToken || !refreshToken || !supabase) {
+  return Astro.redirect('/login?redirect=/cuenta/direcciones');
+}
+
+const sb = supabase as any;
+
+const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
+  access_token: accessToken,
+  refresh_token: refreshToken,
+});
+
+if (sessionError || !sessionData.user) {
+  return Astro.redirect('/login?redirect=/cuenta/direcciones');
+}
+
+const user = sessionData.user;
+
+let successMessage = '';
+let errorMessage = '';
+
+// Manejar acciones POST
+if (Astro.request.method === 'POST') {
+  const formData = await Astro.request.formData();
+  const action = formData.get('action');
+
+  if (action === 'add' || action === 'edit') {
+    const addressId = formData.get('address_id')?.toString();
+    const addressData = {
+      user_id: user.id,
+      label: formData.get('label')?.toString() || 'Casa',
+      full_name: formData.get('full_name')?.toString() || '',
+      phone: formData.get('phone')?.toString() || '',
+      address_line1: formData.get('address_line1')?.toString() || '',
+      address_line2: formData.get('address_line2')?.toString() || '',
+      city: formData.get('city')?.toString() || '',
+      province: formData.get('province')?.toString() || '',
+      postal_code: formData.get('postal_code')?.toString() || '',
+      country: 'España',
+      is_default: formData.get('is_default') === 'on',
+    };
+
+    if (action === 'add') {
+      const { error } = await sb.from('addresses').insert(addressData);
+      if (error) {
+        errorMessage = 'Error al añadir la dirección';
+      } else {
+        successMessage = 'Dirección añadida correctamente';
+      }
+    } else if (addressId) {
+      const { error } = await sb
+        .from('addresses')
+        .update(addressData)
+        .eq('id', addressId)
+        .eq('user_id', user.id);
+      if (error) {
+        errorMessage = 'Error al actualizar la dirección';
+      } else {
+        successMessage = 'Dirección actualizada correctamente';
+      }
+    }
+
+    // Si es default, quitar default de las demás
+    if (addressData.is_default) {
+      await sb
+        .from('addresses')
+        .update({ is_default: false })
+        .eq('user_id', user.id)
+        .neq('id', addressId || '');
+    }
+  }
+
+  if (action === 'delete') {
+    const addressId = formData.get('address_id')?.toString();
+    if (addressId) {
+      const { error } = await sb
+        .from('addresses')
+        .delete()
+        .eq('id', addressId)
+        .eq('user_id', user.id);
+      
+      if (error) {
+        errorMessage = 'Error al eliminar la dirección';
+      } else {
+        successMessage = 'Dirección eliminada correctamente';
+      }
+    }
+  }
+}
+
+// Obtener direcciones
+const { data: addresses } = await sb
+  .from('addresses')
+  .select('*')
+  .eq('user_id', user.id)
+  .order('is_default', { ascending: false })
+  .order('created_at', { ascending: false });
+
+const provinces = [
+  'Álava', 'Albacete', 'Alicante', 'Almería', 'Asturias', 'Ávila', 'Badajoz', 'Barcelona',
+  'Burgos', 'Cáceres', 'Cádiz', 'Cantabria', 'Castellón', 'Ciudad Real', 'Córdoba', 'Cuenca',
+  'Gerona', 'Granada', 'Guadalajara', 'Guipúzcoa', 'Huelva', 'Huesca', 'Islas Baleares',
+  'Jaén', 'La Coruña', 'La Rioja', 'Las Palmas', 'León', 'Lérida', 'Lugo', 'Madrid', 'Málaga',
+  'Murcia', 'Navarra', 'Orense', 'Palencia', 'Pontevedra', 'Salamanca', 'Santa Cruz de Tenerife',
+  'Segovia', 'Sevilla', 'Soria', 'Tarragona', 'Teruel', 'Toledo', 'Valencia', 'Valladolid',
+  'Vizcaya', 'Zamora', 'Zaragoza', 'Ceuta', 'Melilla'
+];
+---
+
+<BaseLayout title="Mis Direcciones | FashionMarket">
+  <main class="min-h-screen bg-cream py-8 lg:py-12">
+    <div class="container-custom max-w-4xl">
+      <!-- Breadcrumb -->
+      <nav class="mb-6">
+        <ol class="flex items-center gap-2 text-sm text-charcoal-500">
+          <li><a href="/" class="hover:text-navy-900 transition-colors">Inicio</a></li>
+          <li>/</li>
+          <li><a href="/cuenta" class="hover:text-navy-900 transition-colors">Mi Cuenta</a></li>
+          <li>/</li>
+          <li class="text-navy-900 font-medium">Direcciones</li>
+        </ol>
+      </nav>
+
+      <div class="bg-white rounded-lg shadow-sm">
+        <!-- Header -->
+        <div class="p-6 border-b border-charcoal-100 flex items-center justify-between">
+          <div>
+            <h1 class="text-2xl font-serif text-navy-900">Mis Direcciones</h1>
+            <p class="text-charcoal-500 mt-1">Gestiona tus direcciones de envío</p>
+          </div>
+          <button
+            type="button"
+            id="add-address-btn"
+            class="px-4 py-2 bg-navy-900 text-white rounded-lg hover:bg-navy-800 transition-colors flex items-center gap-2"
+          >
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+            </svg>
+            Añadir dirección
+          </button>
+        </div>
+
+        <!-- Mensajes -->
+        <div class="p-6 pb-0">
+          {successMessage && (
+            <div class="p-4 bg-green-50 border border-green-200 rounded-lg text-green-700 mb-4">
+              {successMessage}
+            </div>
+          )}
+
+          {errorMessage && (
+            <div class="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 mb-4">
+              {errorMessage}
+            </div>
+          )}
+        </div>
+
+        <!-- Lista de direcciones -->
+        <div class="p-6">
+          {(!addresses || addresses.length === 0) ? (
+            <div class="text-center py-12">
+              <svg class="w-16 h-16 mx-auto text-charcoal-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              <p class="text-charcoal-500 mb-4">No tienes direcciones guardadas</p>
+              <button
+                type="button"
+                id="add-first-address-btn"
+                class="inline-flex items-center gap-2 px-6 py-3 bg-navy-900 text-white rounded-md hover:bg-navy-800 transition-colors"
+              >
+                Añadir primera dirección
+              </button>
+            </div>
+          ) : (
+            <div class="grid md:grid-cols-2 gap-4">
+              {addresses.map((address: any) => (
+                <div class={`border rounded-lg p-4 ${address.is_default ? 'border-gold-matte bg-gold-matte/5' : 'border-charcoal-200'}`}>
+                  <div class="flex items-start justify-between mb-3">
+                    <div class="flex items-center gap-2">
+                      <span class="font-medium text-navy-900">{address.label}</span>
+                      {address.is_default && (
+                        <span class="px-2 py-0.5 bg-gold-matte text-white text-xs rounded">
+                          Predeterminada
+                        </span>
+                      )}
+                    </div>
+                    <div class="flex items-center gap-2">
+                      <button
+                        type="button"
+                        class="edit-address-btn text-charcoal-500 hover:text-navy-900 transition-colors"
+                        data-address={JSON.stringify(address)}
+                      >
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                      </button>
+                      <form method="POST" class="inline" onsubmit="return confirm('¿Eliminar esta dirección?')">
+                        <input type="hidden" name="action" value="delete" />
+                        <input type="hidden" name="address_id" value={address.id} />
+                        <button type="submit" class="text-red-500 hover:text-red-700 transition-colors">
+                          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      </form>
+                    </div>
+                  </div>
+                  <div class="text-sm text-charcoal-600 space-y-1">
+                    <p class="font-medium">{address.full_name}</p>
+                    <p>{address.address_line1}</p>
+                    {address.address_line2 && <p>{address.address_line2}</p>}
+                    <p>{address.postal_code} {address.city}, {address.province}</p>
+                    <p>{address.country}</p>
+                    <p class="text-charcoal-500">Tel: {address.phone}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <!-- Volver -->
+        <div class="p-6 border-t border-charcoal-100">
+          <a href="/cuenta" class="text-charcoal-600 hover:text-navy-900 transition-colors">
+            ← Volver a Mi Cuenta
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal para añadir/editar dirección -->
+    <div id="address-modal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50 p-4">
+      <div class="bg-white rounded-lg w-full max-w-lg max-h-[90vh] overflow-y-auto">
+        <div class="p-6 border-b border-charcoal-100 flex items-center justify-between">
+          <h2 id="modal-title" class="text-xl font-serif text-navy-900">Añadir dirección</h2>
+          <button type="button" id="close-modal" class="text-charcoal-500 hover:text-navy-900">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        <form method="POST" class="p-6 space-y-4">
+          <input type="hidden" name="action" id="form-action" value="add" />
+          <input type="hidden" name="address_id" id="address-id" value="" />
+
+          <div class="grid grid-cols-2 gap-4">
+            <div class="col-span-2">
+              <label class="block text-sm font-medium text-navy-900 mb-1">Etiqueta</label>
+              <select name="label" id="label" class="w-full px-4 py-2 border border-charcoal-200 rounded-lg focus:ring-2 focus:ring-gold-matte">
+                <option value="Casa">Casa</option>
+                <option value="Trabajo">Trabajo</option>
+                <option value="Otro">Otro</option>
+              </select>
+            </div>
+
+            <div class="col-span-2">
+              <label class="block text-sm font-medium text-navy-900 mb-1">Nombre completo *</label>
+              <input type="text" name="full_name" id="full_name" required 
+                class="w-full px-4 py-2 border border-charcoal-200 rounded-lg focus:ring-2 focus:ring-gold-matte" />
+            </div>
+
+            <div class="col-span-2">
+              <label class="block text-sm font-medium text-navy-900 mb-1">Teléfono *</label>
+              <input type="tel" name="phone" id="phone" required 
+                class="w-full px-4 py-2 border border-charcoal-200 rounded-lg focus:ring-2 focus:ring-gold-matte" />
+            </div>
+
+            <div class="col-span-2">
+              <label class="block text-sm font-medium text-navy-900 mb-1">Dirección *</label>
+              <input type="text" name="address_line1" id="address_line1" required placeholder="Calle, número, piso..."
+                class="w-full px-4 py-2 border border-charcoal-200 rounded-lg focus:ring-2 focus:ring-gold-matte" />
+            </div>
+
+            <div class="col-span-2">
+              <label class="block text-sm font-medium text-navy-900 mb-1">Dirección adicional</label>
+              <input type="text" name="address_line2" id="address_line2" placeholder="Urbanización, portal..."
+                class="w-full px-4 py-2 border border-charcoal-200 rounded-lg focus:ring-2 focus:ring-gold-matte" />
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-navy-900 mb-1">Código Postal *</label>
+              <input type="text" name="postal_code" id="postal_code" required maxlength="5"
+                class="w-full px-4 py-2 border border-charcoal-200 rounded-lg focus:ring-2 focus:ring-gold-matte" />
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-navy-900 mb-1">Ciudad *</label>
+              <input type="text" name="city" id="city" required
+                class="w-full px-4 py-2 border border-charcoal-200 rounded-lg focus:ring-2 focus:ring-gold-matte" />
+            </div>
+
+            <div class="col-span-2">
+              <label class="block text-sm font-medium text-navy-900 mb-1">Provincia *</label>
+              <select name="province" id="province" required 
+                class="w-full px-4 py-2 border border-charcoal-200 rounded-lg focus:ring-2 focus:ring-gold-matte">
+                <option value="">Seleccionar provincia</option>
+                {provinces.map(p => <option value={p}>{p}</option>)}
+              </select>
+            </div>
+
+            <div class="col-span-2">
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" name="is_default" id="is_default" class="w-4 h-4 rounded border-charcoal-300 text-gold-matte focus:ring-gold-matte" />
+                <span class="text-sm text-charcoal-600">Usar como dirección predeterminada</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="flex gap-3 pt-4">
+            <button type="button" id="cancel-btn" class="flex-1 px-4 py-2 border border-charcoal-200 rounded-lg hover:bg-charcoal-50 transition-colors">
+              Cancelar
+            </button>
+            <button type="submit" class="flex-1 px-4 py-2 bg-navy-900 text-white rounded-lg hover:bg-navy-800 transition-colors">
+              Guardar dirección
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const modal = document.getElementById('address-modal');
+    const modalTitle = document.getElementById('modal-title');
+    const addBtns = document.querySelectorAll('#add-address-btn, #add-first-address-btn');
+    const closeBtn = document.getElementById('close-modal');
+    const cancelBtn = document.getElementById('cancel-btn');
+    const editBtns = document.querySelectorAll('.edit-address-btn');
+
+    const formAction = document.getElementById('form-action') as HTMLInputElement;
+    const addressId = document.getElementById('address-id') as HTMLInputElement;
+
+    const openModal = (isEdit = false, data: any = null) => {
+      if (modalTitle) {
+        modalTitle.textContent = isEdit ? 'Editar dirección' : 'Añadir dirección';
+      }
+      if (formAction) formAction.value = isEdit ? 'edit' : 'add';
+      if (addressId) addressId.value = data?.id || '';
+
+      // Llenar formulario si es edición
+      const fields = ['label', 'full_name', 'phone', 'address_line1', 'address_line2', 'postal_code', 'city', 'province'];
+      fields.forEach(field => {
+        const input = document.getElementById(field) as HTMLInputElement | HTMLSelectElement;
+        if (input) input.value = data?.[field] || '';
+      });
+
+      const isDefault = document.getElementById('is_default') as HTMLInputElement;
+      if (isDefault) isDefault.checked = data?.is_default || false;
+
+      modal?.classList.remove('hidden');
+      modal?.classList.add('flex');
+    };
+
+    const closeModal = () => {
+      modal?.classList.add('hidden');
+      modal?.classList.remove('flex');
+    };
+
+    addBtns.forEach(btn => btn?.addEventListener('click', () => openModal()));
+    closeBtn?.addEventListener('click', closeModal);
+    cancelBtn?.addEventListener('click', closeModal);
+
+    editBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const data = JSON.parse(btn.getAttribute('data-address') || '{}');
+        openModal(true, data);
+      });
+    });
+
+    modal?.addEventListener('click', (e) => {
+      if (e.target === modal) closeModal();
+    });
+  </script>
+</BaseLayout>
