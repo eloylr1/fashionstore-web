@@ -1,0 +1,335 @@
+---
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * FASHIONMARKET - Admin Customers
+ * Gestión de clientes registrados
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
+
+export const prerender = false;
+
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { supabase, isSupabaseConfigured } from '../../../lib/supabase/client';
+
+// Verificar autenticación
+const accessToken = Astro.cookies.get('sb-access-token')?.value;
+const userRole = Astro.cookies.get('user-role')?.value;
+
+if (!accessToken || userRole !== 'admin') {
+  return Astro.redirect('/admin/acceso-seguro');
+}
+
+// Obtener clientes (solo rol 'customer', excluyendo admins)
+let customers: any[] = [];
+
+if (isSupabaseConfigured() && supabase) {
+  try {
+    const { data } = await supabase
+      .from('profiles')
+      .select('*')
+      .neq('role', 'admin')
+      .order('created_at', { ascending: false });
+    
+    customers = data || [];
+  } catch (error) {
+    console.error('Error fetching customers:', error);
+  }
+}
+
+// Función para formatear fecha
+function formatDate(dateString: string) {
+  if (!dateString) return 'N/A';
+  return new Date(dateString).toLocaleDateString('es-ES', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric'
+  });
+}
+
+// Calcular nuevos clientes (últimos 30 días)
+const thirtyDaysAgo = new Date();
+thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+const newCustomersCount = customers.filter(c => new Date(c.created_at) >= thirtyDaysAgo).length;
+---
+
+<AdminLayout title="Clientes">
+  <div class="space-y-6">
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div>
+        <p class="text-charcoal-500">
+          {customers.length} clientes registrados
+        </p>
+      </div>
+      
+      <!-- Búsqueda -->
+      <div class="relative">
+        <input 
+          type="text"
+          id="search-customers"
+          placeholder="Buscar clientes..."
+          class="w-64 px-4 py-2 pl-10 border border-charcoal-200 text-sm focus:border-navy-500 focus:ring-2 focus:ring-navy-500/20 outline-none"
+        />
+        <svg class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-charcoal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+      </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+      <div class="bg-white border border-charcoal-100 p-6">
+        <div class="flex items-center gap-4">
+          <div class="w-12 h-12 bg-gradient-to-br from-navy-100 to-navy-200 flex items-center justify-center">
+            <svg class="w-6 h-6 text-navy-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+          </div>
+          <div>
+            <p class="text-2xl font-bold text-navy-900">{customers.length}</p>
+            <p class="text-sm text-charcoal-500">Total clientes</p>
+          </div>
+        </div>
+      </div>
+      
+      <div class="bg-white border border-charcoal-100 p-6">
+        <div class="flex items-center gap-4">
+          <div class="w-12 h-12 bg-gradient-to-br from-green-100 to-green-200 flex items-center justify-center">
+            <svg class="w-6 h-6 text-green-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <div>
+            <p class="text-2xl font-bold text-navy-900">{customers.filter(c => c.email_verified).length}</p>
+            <p class="text-sm text-charcoal-500">Verificados</p>
+          </div>
+        </div>
+      </div>
+      
+      <div class="bg-white border border-charcoal-100 p-6">
+        <div class="flex items-center gap-4">
+          <div class="w-12 h-12 bg-gradient-to-br from-amber-100 to-amber-200 flex items-center justify-center">
+            <svg class="w-6 h-6 text-amber-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <div>
+            <p class="text-2xl font-bold text-navy-900">
+              {newCustomersCount}
+            </p>
+            <p class="text-sm text-charcoal-500">Nuevos (30 días)</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Customers Table -->
+    {customers.length > 0 ? (
+      <div class="bg-white border border-charcoal-100 overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full">
+            <thead>
+              <tr class="bg-charcoal-50 border-b border-charcoal-100">
+                <th class="text-left px-6 py-4 text-xs font-semibold uppercase tracking-wider text-charcoal-600">
+                  Cliente
+                </th>
+                <th class="text-left px-6 py-4 text-xs font-semibold uppercase tracking-wider text-charcoal-600">
+                  Email
+                </th>
+                <th class="text-left px-6 py-4 text-xs font-semibold uppercase tracking-wider text-charcoal-600">
+                  Teléfono
+                </th>
+                <th class="text-left px-6 py-4 text-xs font-semibold uppercase tracking-wider text-charcoal-600">
+                  Registro
+                </th>
+                <th class="text-left px-6 py-4 text-xs font-semibold uppercase tracking-wider text-charcoal-600">
+                  Rol
+                </th>
+                <th class="text-right px-6 py-4 text-xs font-semibold uppercase tracking-wider text-charcoal-600">
+                  Acciones
+                </th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-charcoal-100">
+              {customers.map((customer, index) => (
+                <tr class="hover:bg-charcoal-50/50 transition-colors customer-row" data-search={`${customer.full_name || ''} ${customer.email || ''}`.toLowerCase()}>
+                  <td class="px-6 py-4">
+                    <div class="flex items-center gap-3">
+                      <div class="w-10 h-10 bg-navy-100 flex items-center justify-center flex-shrink-0">
+                        <span class="text-navy-700 font-semibold">
+                          {(customer.full_name || customer.email || '?').charAt(0).toUpperCase()}
+                        </span>
+                      </div>
+                      <div>
+                        <p class="text-sm font-semibold text-navy-900">{customer.full_name || 'Sin nombre'}</p>
+                        <p class="text-xs text-charcoal-400">ID: #{index + 1}</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="px-6 py-4">
+                    <span class="text-sm text-charcoal-600">{customer.email || 'N/A'}</span>
+                  </td>
+                  <td class="px-6 py-4">
+                    <span class="text-sm text-charcoal-600">{customer.phone || 'N/A'}</span>
+                  </td>
+                  <td class="px-6 py-4">
+                    <span class="text-sm text-charcoal-600">
+                      {formatDate(customer.created_at)}
+                    </span>
+                  </td>
+                  <td class="px-6 py-4">
+                    <span class={`inline-flex items-center px-2.5 py-1 text-xs font-medium rounded-full ${
+                      customer.role === 'admin' 
+                        ? 'bg-purple-100 text-purple-700' 
+                        : 'bg-charcoal-100 text-charcoal-600'
+                    }`}>
+                      {customer.role === 'admin' ? 'Admin' : 'Cliente'}
+                    </span>
+                  </td>
+                  <td class="px-6 py-4 text-right">
+                    <button 
+                      type="button"
+                      data-customer-id={customer.id}
+                      class="view-customer-btn p-2 text-charcoal-400 hover:text-navy-700 hover:bg-navy-50 transition-colors"
+                      title="Ver detalles"
+                    >
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      </svg>
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    ) : (
+      <div class="bg-white border border-charcoal-100 p-12 text-center">
+        <div class="w-16 h-16 mx-auto bg-charcoal-100 flex items-center justify-center mb-4">
+          <svg class="w-8 h-8 text-charcoal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+          </svg>
+        </div>
+        <h4 class="text-lg font-medium text-navy-900 mb-2">No hay clientes</h4>
+        <p class="text-charcoal-500">Los usuarios registrados aparecerán aquí</p>
+      </div>
+    )}
+  </div>
+
+  <!-- Modal Detalles del Cliente -->
+  <div id="customer-modal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50">
+    <div class="bg-white w-full max-w-lg mx-4 shadow-2xl">
+      <div class="px-6 py-4 border-b border-charcoal-100 flex items-center justify-between">
+        <h3 class="text-lg font-semibold text-navy-900">Detalles del Cliente</h3>
+        <button type="button" id="close-customer-modal" class="p-2 text-charcoal-400 hover:text-charcoal-600">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+      
+      <div id="customer-details" class="p-6">
+        <!-- Se llena dinámicamente -->
+      </div>
+    </div>
+  </div>
+</AdminLayout>
+
+<script define:vars={{ customers }}>
+  // Datos de clientes disponibles en el script
+  const customersData = customers;
+
+  // Búsqueda de clientes
+  const searchInput = document.getElementById('search-customers');
+  searchInput?.addEventListener('input', () => {
+    const searchTerm = searchInput.value.toLowerCase();
+    document.querySelectorAll('.customer-row').forEach(row => {
+      const searchData = row.getAttribute('data-search') || '';
+      if (searchData.includes(searchTerm)) {
+        row.style.display = '';
+      } else {
+        row.style.display = 'none';
+      }
+    });
+  });
+
+  // Modal de detalles
+  const customerModal = document.getElementById('customer-modal');
+  const customerDetails = document.getElementById('customer-details');
+
+  function formatDateModal(dateString) {
+    if (!dateString) return 'N/A';
+    return new Date(dateString).toLocaleDateString('es-ES', {
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  }
+
+  document.querySelectorAll('.view-customer-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const customerId = btn.getAttribute('data-customer-id');
+      const customer = customersData.find(c => c.id === customerId);
+      
+      if (customer && customerDetails) {
+        customerDetails.innerHTML = `
+          <div class="flex items-center gap-4 mb-6 pb-6 border-b border-charcoal-100">
+            <div class="w-16 h-16 bg-navy-100 flex items-center justify-center flex-shrink-0">
+              <span class="text-navy-700 font-bold text-2xl">
+                ${(customer.full_name || customer.email || '?').charAt(0).toUpperCase()}
+              </span>
+            </div>
+            <div>
+              <h4 class="text-xl font-semibold text-navy-900">${customer.full_name || 'Sin nombre'}</h4>
+              <p class="text-sm text-charcoal-500">${customer.email || 'Sin email'}</p>
+            </div>
+          </div>
+          
+          <div class="space-y-4">
+            <div class="flex justify-between items-center py-2 border-b border-charcoal-100">
+              <span class="text-sm text-charcoal-500">ID de Usuario</span>
+              <span class="text-sm font-medium text-navy-900">${customer.id.slice(0, 8)}...</span>
+            </div>
+            <div class="flex justify-between items-center py-2 border-b border-charcoal-100">
+              <span class="text-sm text-charcoal-500">Email</span>
+              <span class="text-sm font-medium text-navy-900">${customer.email || 'N/A'}</span>
+            </div>
+            <div class="flex justify-between items-center py-2 border-b border-charcoal-100">
+              <span class="text-sm text-charcoal-500">Teléfono</span>
+              <span class="text-sm font-medium text-navy-900">${customer.phone || 'N/A'}</span>
+            </div>
+            <div class="flex justify-between items-center py-2 border-b border-charcoal-100">
+              <span class="text-sm text-charcoal-500">Fecha de Registro</span>
+              <span class="text-sm font-medium text-navy-900">${formatDateModal(customer.created_at)}</span>
+            </div>
+            <div class="flex justify-between items-center py-2">
+              <span class="text-sm text-charcoal-500">Rol</span>
+              <span class="inline-flex items-center px-2.5 py-1 text-xs font-medium rounded-full bg-charcoal-100 text-charcoal-600">
+                Cliente
+              </span>
+            </div>
+          </div>
+        `;
+      }
+      
+      customerModal?.classList.remove('hidden');
+      customerModal?.classList.add('flex');
+    });
+  });
+
+  document.getElementById('close-customer-modal')?.addEventListener('click', () => {
+    customerModal?.classList.add('hidden');
+    customerModal?.classList.remove('flex');
+  });
+
+  customerModal?.addEventListener('click', (e) => {
+    if (e.target === customerModal) {
+      customerModal.classList.add('hidden');
+      customerModal.classList.remove('flex');
+    }
+  });
+</script>

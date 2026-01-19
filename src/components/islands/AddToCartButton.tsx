@@ -7,6 +7,7 @@
 
 import { useState } from 'react';
 import { addToCart, formatPrice } from '../../stores/cart';
+import SizeRecommenderModal from '../product/SizeRecommenderModal';
 import type { Product } from '../../lib/supabase/database.types';
 
 interface AddToCartButtonProps {
@@ -55,6 +56,12 @@ export default function AddToCartButton({ product }: AddToCartButtonProps) {
     }
   };
 
+  // Handler para seleccionar talla desde el recomendador
+  const handleSizeRecommendation = (size: string) => {
+    setSelectedSize(size);
+    setError(null);
+  };
+
   const isOutOfStock = product.stock < 1;
 
   return (
@@ -73,12 +80,20 @@ export default function AddToCartButton({ product }: AddToCartButtonProps) {
           <label className="text-sm font-medium text-charcoal-700">
             Talla
           </label>
-          <button 
-            type="button"
-            className="text-xs text-charcoal-500 hover:text-navy-900 underline transition-colors"
-          >
-            Guía de tallas
-          </button>
+          <div className="flex items-center gap-3">
+            {/* Recomendador de talla */}
+            <SizeRecommenderModal 
+              availableSizes={product.sizes} 
+              onSelectSize={handleSizeRecommendation}
+            />
+            <span className="text-charcoal-300">|</span>
+            <button 
+              type="button"
+              className="text-xs text-charcoal-500 hover:text-navy-900 underline transition-colors"
+            >
+              Guía de tallas
+            </button>
+          </div>
         </div>
         
         <div className="grid grid-cols-5 gap-2">

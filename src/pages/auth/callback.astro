@@ -76,13 +76,33 @@ import '../../styles/global.css';
       const errorState = document.getElementById('error-state');
       const errorMessage = document.getElementById('error-message');
       
-      async function handleEmailConfirmation() {
+      async function handleAuthCallback() {
         if (!isSupabaseConfigured() || !supabase) {
           showError('Supabase no está configurado');
           return;
         }
         
-        // Supabase maneja automáticamente el token en la URL
+        // Verificar parámetros de la URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const hashParams = new URLSearchParams(window.location.hash.substring(1));
+        
+        const provider = urlParams.get('provider');
+        const code = urlParams.get('code');
+        const accessTokenInHash = hashParams.get('access_token');
+        const type = hashParams.get('type');
+        
+        const isOAuthCallback = provider || code || accessTokenInHash;
+        const isEmailConfirmation = type === 'signup' || type === 'email_change' || type === 'recovery';
+        
+        // Si hay un code de OAuth, intercambiarlo por sesión
+        if (code) {
+          const { data: exchangeData, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+          if (exchangeError) {
+            console.error('Error exchanging code:', exchangeError);
+          }
+        }
+        
+        // Obtener la sesión actual
         const { data, error } = await supabase.auth.getSession();
         
         if (error) {
@@ -91,25 +111,68 @@ import '../../styles/global.css';
         }
         
         if (data.session) {
-          // Email confirmado exitosamente
-          showSuccess();
-        } else {
-          // Intentar extraer el token de la URL (para links de confirmación)
-          const hashParams = new URLSearchParams(window.location.hash.substring(1));
-          const accessToken = hashParams.get('access_token');
-          const refreshToken = hashParams.get('refresh_token');
-          const type = hashParams.get('type');
+          const user = data.session.user;
+          const userProvider = user.app_metadata?.provider || 'email';
           
-          if (type === 'signup' || type === 'email_change' || type === 'recovery') {
-            if (accessToken) {
-              showSuccess();
-            } else {
-              showError('Token de confirmación inválido');
+          // Es un login OAuth (Google, Facebook, etc.)
+          if (userProvider !== 'email' || isOAuthCallback) {
+            try {
+              // Asegurar que el perfil existe
+              const ensureResponse = await fetch('/api/auth/ensure-profile', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  user_id: user.id,
+                  email: user.email,
+                  full_name: user.user_metadata?.full_name || user.user_metadata?.name,
+                  avatar_url: user.user_metadata?.avatar_url || user.user_metadata?.picture,
+                  provider: userProvider
+                }),
+              });
+              
+              const profileResult = await ensureResponse.json();
+              
+              // Guardar nombre del usuario en localStorage
+              const userName = user.user_metadata?.full_name || 
+                              user.user_metadata?.name || 
+                              user.email?.split('@')[0] || 
+                              'Usuario';
+              localStorage.setItem('user-name', userName);
+              
+              // Guardar sesión en cookies
+              const loginResponse = await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  access_token: data.session.access_token,
+                  refresh_token: data.session.refresh_token,
+                  role: profileResult.role || 'customer',
+                }),
+              });
+              
+              if (loginResponse.ok) {
+                // ¡Éxito! Redirigir a la cuenta
+                window.location.href = '/cuenta';
+                return;
+              } else {
+                showError('Error al guardar la sesión');
+              }
+            } catch (err) {
+              console.error('Error en OAuth callback:', err);
+              showError('Error al procesar la autenticación');
             }
           } else {
-            // Puede que ya esté confirmado, redirigir al login
-            window.location.href = '/login?confirmed=true';
+            // Es confirmación de email normal
+            showSuccess();
           }
+        } else if (isEmailConfirmation && accessTokenInHash) {
+          // Email confirmado pero sin sesión activa
+          showSuccess();
+        } else if (isOAuthCallback) {
+          showError('Error al autenticar. Por favor, inténtalo de nuevo.');
+        } else {
+          // No hay sesión, redirigir al login
+          window.location.href = '/login';
         }
       }
       
@@ -125,7 +188,7 @@ import '../../styles/global.css';
       }
       
       // Ejecutar al cargar
-      handleEmailConfirmation();
+      handleAuthCallback();
     </script>
   </body>
 </html>

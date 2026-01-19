@@ -23,7 +23,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     path: '/',
     httpOnly: true,
     secure: import.meta.env.PROD,
-    sameSite: 'strict',
+    sameSite: 'lax',
     maxAge: 60 * 60 * 24 * 7, // 7 días
   });
   
@@ -31,7 +31,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     path: '/',
     httpOnly: true,
     secure: import.meta.env.PROD,
-    sameSite: 'strict',
+    sameSite: 'lax',
     maxAge: 60 * 60 * 24 * 7, // 7 días
   });
   
@@ -41,7 +41,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       path: '/',
       httpOnly: false,
       secure: import.meta.env.PROD,
-      sameSite: 'strict',
+      sameSite: 'lax',
       maxAge: 60 * 60 * 24 * 7, // 7 días
     });
   }

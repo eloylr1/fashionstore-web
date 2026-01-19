@@ -12,10 +12,10 @@ export const prerender = false; // SSR
 import '../../styles/global.css';
 
 // Si ya está autenticado como admin, redirigir al panel
-const accessToken = Astro.cookies.get('sb-access-token');
-const userRole = Astro.cookies.get('user-role');
+const accessToken = Astro.cookies.get('sb-access-token')?.value;
+const userRole = Astro.cookies.get('user-role')?.value;
 
-if (accessToken && userRole?.value === 'admin') {
+if (accessToken && userRole === 'admin') {
   return Astro.redirect('/admin');
 }
 ---
@@ -33,7 +33,7 @@ if (accessToken && userRole?.value === 'admin') {
   <body class="min-h-screen bg-gradient-to-br from-navy-900 via-navy-800 to-charcoal-900 flex items-center justify-center p-4">
     <!-- Background Pattern -->
     <div class="absolute inset-0 opacity-5">
-      <div class="absolute inset-0" style="background-image: url('data:image/svg+xml,%3Csvg width=\"60\" height=\"60\" viewBox=\"0 0 60 60\" xmlns=\"http://www.w3.org/2000/svg\"%3E%3Cg fill=\"none\" fill-rule=\"evenodd\"%3E%3Cg fill=\"%23ffffff\" fill-opacity=\"0.4\"%3E%3Cpath d=\"M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E');"></div>
+      <div class="absolute inset-0 bg-pattern"></div>
     </div>
 
     <div class="relative w-full max-w-md">
@@ -264,8 +264,12 @@ if (accessToken && userRole?.value === 'admin') {
               errorMessage.textContent = 'Credenciales incorrectas. Verifica tu email y contraseña.';
             } else if (error.message.includes('Acceso denegado')) {
               errorMessage.textContent = error.message;
+            } else if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+              errorMessage.textContent = 'Error de conexión con el servidor. Verifica tu conexión a internet.';
+            } else if (error.message.includes('Email not confirmed')) {
+              errorMessage.textContent = 'Email no confirmado. Revisa tu bandeja de entrada.';
             } else {
-              errorMessage.textContent = 'Error al iniciar sesión. Inténtalo de nuevo.';
+              errorMessage.textContent = `Error: ${error.message}`;
             }
             errorMessage.classList.remove('hidden');
           }

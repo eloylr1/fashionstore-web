@@ -2,7 +2,7 @@
 /**
  * ═══════════════════════════════════════════════════════════════════════════
  * FASHIONMARKET - Layout de Administración
- * Layout para el panel de administración (SSR protegido)
+ * Layout profesional para el panel de administración (SSR protegido)
  * ═══════════════════════════════════════════════════════════════════════════
  */
 
@@ -23,26 +23,60 @@ const { title } = Astro.props;
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="robots" content="noindex, nofollow" />
+    <meta name="theme-color" content="#1e3a5f" />
     <title>{title} | Admin - FashionMarket</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    
+    <style>
+      /* Custom scrollbar for admin */
+      ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+      ::-webkit-scrollbar-track {
+        background: #f5f5f4;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #d4d4d4;
+        border-radius: 4px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #a3a3a3;
+      }
+      
+      /* Smooth transitions */
+      * {
+        scroll-behavior: smooth;
+      }
+    </style>
   </head>
   
-  <body class="min-h-screen bg-cream">
+  <body class="min-h-screen bg-gradient-to-br from-charcoal-50 to-cream antialiased">
     <div class="flex h-screen overflow-hidden">
       <!-- Sidebar -->
       <AdminSidebar />
       
-      <!-- Main Content -->
+      <!-- Main Content Area -->
       <div class="flex-1 flex flex-col overflow-hidden">
         <!-- Admin Header -->
         <AdminHeader title={title} />
         
         <!-- Page Content -->
-        <main class="flex-1 overflow-y-auto p-6 lg:p-8">
-          <slot />
+        <main class="flex-1 overflow-y-auto">
+          <div class="p-6 lg:p-8 max-w-[1800px] mx-auto">
+            <slot />
+          </div>
         </main>
+        
+        <!-- Footer -->
+        <footer class="border-t border-charcoal-100 bg-white px-6 py-3">
+          <div class="flex items-center justify-between text-xs text-charcoal-400">
+            <p>© 2026 FashionMarket. Panel de Administración.</p>
+            <p>v1.0.0</p>
+          </div>
+        </footer>
       </div>
     </div>
   </body>

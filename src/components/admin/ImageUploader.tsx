@@ -1,30 +1,32 @@
 /**
  * ═══════════════════════════════════════════════════════════════════════════
- * FASHIONMARKET - ImageUploader Component (Isla React)
- * Componente de drag & drop para subir imágenes a Supabase Storage
+ * FASHIONMARKET - ImageUploader Component (Cloudinary)
+ * Componente de drag & drop para subir imágenes a Cloudinary
  * ═══════════════════════════════════════════════════════════════════════════
  */
 
 import { useState, useCallback } from 'react';
-import { supabase, isSupabaseConfigured } from '../../lib/supabase/client';
 
 interface ImageUploaderProps {
   onImagesChange?: (urls: string[]) => void;
   existingImages?: string[];
   maxImages?: number;
-  inputName?: string; // Nombre del input hidden para el form
+  inputName?: string;
+  folder?: string;
 }
 
 export default function ImageUploader({ 
   onImagesChange, 
   existingImages = [], 
   maxImages = 6,
-  inputName = 'images'
+  inputName = 'images',
+  folder = 'products'
 }: ImageUploaderProps) {
   const [images, setImages] = useState<string[]>(existingImages);
   const [isUploading, setIsUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<string>('');
   
   // Actualizar input hidden para forms
   const updateHiddenInput = (urls: string[]) => {
@@ -35,39 +37,36 @@ export default function ImageUploader({
     onImagesChange?.(urls);
   };
 
-  const uploadImage = async (file: File): Promise<string | null> => {
-    if (!isSupabaseConfigured() || !supabase) {
-      setError('Supabase no está configurado');
-      return null;
-    }
+  // Subir imágenes a Cloudinary via API
+  const uploadToCloudinary = async (files: File[]): Promise<string[]> => {
+    const formData = new FormData();
     
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${crypto.randomUUID()}.${fileExt}`;
-    const filePath = `products/${fileName}`;
+    files.forEach(file => {
+      formData.append('images', file);
+    });
+    formData.append('folder', folder);
 
-    const { error: uploadError } = await supabase.storage
-      .from('products-images')
-      .upload(filePath, file);
+    const response = await fetch('/api/cloudinary/upload', {
+      method: 'POST',
+      body: formData
+    });
 
-    if (uploadError) {
-      console.error('Upload error:', uploadError);
-      return null;
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Error al subir imágenes');
     }
 
-    const { data: { publicUrl } } = supabase.storage
-      .from('products-images')
-      .getPublicUrl(filePath);
-
-    return publicUrl;
+    const data = await response.json();
+    return data.urls;
   };
 
   const handleFiles = useCallback(async (files: FileList) => {
     const validFiles = Array.from(files).filter(
-      file => file.type.startsWith('image/') && file.size <= 5 * 1024 * 1024
+      file => file.type.startsWith('image/') && file.size <= 10 * 1024 * 1024 // 10MB max
     );
 
     if (validFiles.length === 0) {
-      setError('Solo se permiten imágenes de hasta 5MB');
+      setError('Solo se permiten imágenes de hasta 10MB');
       return;
     }
 
@@ -78,16 +77,24 @@ export default function ImageUploader({
 
     setError(null);
     setIsUploading(true);
+    setUploadProgress(`Subiendo ${validFiles.length} imagen(es)...`);
 
-    const uploadPromises = validFiles.map(file => uploadImage(file));
-    const results = await Promise.all(uploadPromises);
-    const successfulUploads = results.filter((url): url is string => url !== null);
-
-    const newImages = [...images, ...successfulUploads];
-    setImages(newImages);
-    updateHiddenInput(newImages);
-    setIsUploading(false);
-  }, [images, maxImages, updateHiddenInput]);
+    try {
+      const uploadedUrls = await uploadToCloudinary(validFiles);
+      
+      const newImages = [...images, ...uploadedUrls];
+      setImages(newImages);
+      updateHiddenInput(newImages);
+      setUploadProgress('¡Imágenes subidas correctamente!');
+      
+      setTimeout(() => setUploadProgress(''), 3000);
+    } catch (err) {
+      console.error('Error uploading:', err);
+      setError(err instanceof Error ? err.message : 'Error al subir las imágenes');
+    } finally {
+      setIsUploading(false);
+    }
+  }, [images, maxImages, folder]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -120,18 +127,13 @@ export default function ImageUploader({
     updateHiddenInput(newImages);
   };
 
-  const reorderImages = (fromIndex: number, toIndex: number) => {
-    const newImages = [...images];
-    const [removed] = newImages.splice(fromIndex, 1);
-    newImages.splice(toIndex, 0, removed);
-    setImages(newImages);
-    updateHiddenInput(newImages);
-  };
-
   return (
     <div className="space-y-4">
-      <label className="block text-sm font-medium text-charcoal-700">
+      <label className="block text-sm font-medium" style={{ color: '#404040' }}>
         Imágenes del producto
+        <span className="text-xs font-normal ml-2" style={{ color: '#8a8a8a' }}>
+          (Cloudinary - máx. {maxImages} imágenes, 10MB cada una)
+        </span>
       </label>
       
       {/* Drop Zone */}
@@ -139,136 +141,165 @@ export default function ImageUploader({
         onDrop={handleDrop}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
-        className={`
-          border-2 border-dashed rounded-lg p-8 text-center transition-colors
-          ${isDragging 
-            ? 'border-navy-500 bg-navy-50' 
-            : 'border-charcoal-200 hover:border-charcoal-300'
-          }
-          ${isUploading ? 'opacity-50 pointer-events-none' : ''}
-        `}
+        style={{
+          border: `2px dashed ${isDragging ? '#0a1628' : '#d4d4d4'}`,
+          backgroundColor: isDragging ? '#f5f3ef' : 'transparent',
+          borderRadius: '8px',
+          padding: '32px',
+          textAlign: 'center',
+          transition: 'all 0.2s ease',
+          opacity: isUploading ? 0.5 : 1,
+          pointerEvents: isUploading ? 'none' : 'auto'
+        }}
       >
         <input
           type="file"
           accept="image/*"
           multiple
           onChange={handleFileInput}
-          className="hidden"
-          id="image-upload"
+          style={{ display: 'none' }}
+          id="image-upload-cloudinary"
           disabled={isUploading || images.length >= maxImages}
         />
         
-        <label 
-          htmlFor="image-upload"
-          className="cursor-pointer"
-        >
-          <svg 
-            className="mx-auto h-12 w-12 text-charcoal-400" 
-            fill="none" 
-            stroke="currentColor" 
-            viewBox="0 0 24 24"
-          >
-            <path 
-              strokeLinecap="round" 
-              strokeLinejoin="round" 
-              strokeWidth="1.5" 
-              d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" 
-            />
-          </svg>
-          
-          <p className="mt-4 text-sm text-charcoal-600">
-            {isUploading ? (
-              <span className="flex items-center justify-center gap-2">
-                <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                Subiendo imágenes...
-              </span>
-            ) : (
-              <>
-                <span className="font-medium text-navy-700">Arrastra imágenes aquí</span>
-                <br />
-                o haz clic para seleccionar
-              </>
-            )}
-          </p>
-          
-          <p className="mt-2 text-xs text-charcoal-400">
-            PNG, JPG hasta 5MB. Máximo {maxImages} imágenes.
-          </p>
-        </label>
+        {isUploading ? (
+          <div className="space-y-2">
+            <div className="animate-spin w-8 h-8 border-2 border-t-transparent rounded-full mx-auto" style={{ borderColor: '#b8a067', borderTopColor: 'transparent' }}></div>
+            <p style={{ color: '#0a1628' }}>{uploadProgress}</p>
+          </div>
+        ) : (
+          <>
+            <svg 
+              className="mx-auto mb-4" 
+              style={{ width: '48px', height: '48px', color: '#8a8a8a' }}
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            <p style={{ color: '#404040', marginBottom: '8px' }}>
+              Arrastra y suelta imágenes aquí
+            </p>
+            <p style={{ color: '#8a8a8a', fontSize: '14px', marginBottom: '16px' }}>
+              o
+            </p>
+            <label
+              htmlFor="image-upload-cloudinary"
+              style={{
+                display: 'inline-block',
+                padding: '10px 20px',
+                backgroundColor: '#0a1628',
+                color: '#ffffff',
+                fontSize: '14px',
+                fontWeight: '500',
+                cursor: images.length >= maxImages ? 'not-allowed' : 'pointer',
+                opacity: images.length >= maxImages ? 0.5 : 1
+              }}
+            >
+              Seleccionar archivos
+            </label>
+            <p style={{ color: '#8a8a8a', fontSize: '12px', marginTop: '12px' }}>
+              PNG, JPG, WEBP hasta 10MB
+            </p>
+          </>
+        )}
       </div>
-      
+
+      {/* Mensaje de éxito */}
+      {uploadProgress && !isUploading && (
+        <div style={{ padding: '12px', backgroundColor: '#e8f5e9', borderRadius: '8px', color: '#2d5a3d', fontSize: '14px' }}>
+          ✓ {uploadProgress}
+        </div>
+      )}
+
       {/* Error */}
       {error && (
-        <p className="text-sm text-error">{error}</p>
+        <div style={{ padding: '12px', backgroundColor: '#ffebee', borderRadius: '8px', color: '#8b2635', fontSize: '14px' }}>
+          ⚠ {error}
+        </div>
       )}
-      
-      {/* Image Preview Grid */}
+
+      {/* Vista previa de imágenes */}
       {images.length > 0 && (
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
           {images.map((url, index) => (
             <div 
-              key={url}
-              className="relative aspect-square bg-cream overflow-hidden group"
+              key={index} 
+              className="relative group"
+              style={{ aspectRatio: '1', borderRadius: '8px', overflow: 'hidden', backgroundColor: '#f5f3ef' }}
             >
               <img
                 src={url}
                 alt={`Imagen ${index + 1}`}
-                className="w-full h-full object-cover"
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
               />
               
-              {/* Overlay con acciones */}
-              <div className="absolute inset-0 bg-navy-900/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                {index > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => reorderImages(index, index - 1)}
-                    className="p-2 bg-white rounded-full text-charcoal-700 hover:bg-charcoal-100"
-                    title="Mover izquierda"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
-                    </svg>
-                  </button>
-                )}
-                
-                <button
-                  type="button"
-                  onClick={() => removeImage(index)}
-                  className="p-2 bg-error rounded-full text-white hover:bg-red-700"
-                  title="Eliminar"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                  </svg>
-                </button>
-                
-                {index < images.length - 1 && (
-                  <button
-                    type="button"
-                    onClick={() => reorderImages(index, index + 1)}
-                    className="p-2 bg-white rounded-full text-charcoal-700 hover:bg-charcoal-100"
-                    title="Mover derecha"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
-                    </svg>
-                  </button>
-                )}
-              </div>
-              
-              {/* Principal badge */}
+              {/* Badge de posición */}
               {index === 0 && (
-                <span className="absolute top-2 left-2 bg-navy-900 text-white text-xs px-2 py-1">
+                <span 
+                  style={{
+                    position: 'absolute',
+                    top: '8px',
+                    left: '8px',
+                    padding: '4px 8px',
+                    backgroundColor: '#b8a067',
+                    color: '#0a1628',
+                    fontSize: '10px',
+                    fontWeight: '600',
+                    textTransform: 'uppercase'
+                  }}
+                >
                   Principal
                 </span>
               )}
+              
+              {/* Botón eliminar */}
+              <button
+                type="button"
+                onClick={() => removeImage(index)}
+                style={{
+                  position: 'absolute',
+                  top: '8px',
+                  right: '8px',
+                  width: '28px',
+                  height: '28px',
+                  borderRadius: '50%',
+                  backgroundColor: '#8b2635',
+                  color: '#ffffff',
+                  border: 'none',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  opacity: 0,
+                  transition: 'opacity 0.2s ease'
+                }}
+                className="group-hover:opacity-100"
+                onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
+                onMouseLeave={(e) => e.currentTarget.style.opacity = '0'}
+              >
+                <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
             </div>
           ))}
         </div>
       )}
+
+      {/* Contador de imágenes */}
+      <p style={{ color: '#8a8a8a', fontSize: '12px', textAlign: 'right' }}>
+        {images.length} de {maxImages} imágenes
+      </p>
+
+      {/* Input hidden para el formulario */}
+      <input
+        type="hidden"
+        id={inputName}
+        name={inputName}
+        value={JSON.stringify(images)}
+      />
     </div>
   );
 }

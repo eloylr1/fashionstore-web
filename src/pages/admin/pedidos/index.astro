@@ -1,0 +1,289 @@
+---
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * FASHIONMARKET - Admin Orders
+ * Gestión de pedidos
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
+
+export const prerender = false;
+
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { supabase, isSupabaseConfigured } from '../../../lib/supabase/client';
+
+// Verificar autenticación
+const accessToken = Astro.cookies.get('sb-access-token')?.value;
+const userRole = Astro.cookies.get('user-role')?.value;
+
+if (!accessToken || userRole !== 'admin') {
+  return Astro.redirect('/admin/acceso-seguro');
+}
+
+// Obtener pedidos
+let orders: any[] = [];
+
+if (isSupabaseConfigured() && supabase) {
+  try {
+    const { data } = await supabase
+      .from('orders')
+      .select(`
+        *,
+        profiles (
+          full_name,
+          email
+        )
+      `)
+      .order('created_at', { ascending: false });
+    
+    orders = data || [];
+  } catch (error) {
+    console.error('Error fetching orders:', error);
+  }
+}
+
+// Función para formatear fecha
+function formatDate(dateString: string) {
+  return new Date(dateString).toLocaleDateString('es-ES', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+}
+
+// Estados de pedidos
+const orderStatuses: Record<string, { label: string; color: string; bg: string }> = {
+  'pending': { label: 'Pendiente', color: 'text-amber-700', bg: 'bg-amber-100' },
+  'paid': { label: 'Pagado', color: 'text-emerald-700', bg: 'bg-emerald-100' },
+  'processing': { label: 'Procesando', color: 'text-blue-700', bg: 'bg-blue-100' },
+  'shipped': { label: 'Enviado', color: 'text-purple-700', bg: 'bg-purple-100' },
+  'delivered': { label: 'Entregado', color: 'text-green-700', bg: 'bg-green-100' },
+  'cancelled': { label: 'Cancelado', color: 'text-red-700', bg: 'bg-red-100' },
+  'refunded': { label: 'Reembolsado', color: 'text-gray-700', bg: 'bg-gray-100' },
+};
+---
+
+<AdminLayout title="Pedidos">
+  <div class="space-y-6">
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div>
+        <p class="text-charcoal-500">
+          {orders.length} pedidos en total
+        </p>
+      </div>
+      
+      <!-- Filtros -->
+      <div class="flex items-center gap-3">
+        <select 
+          id="status-filter"
+          class="px-4 py-2 border border-charcoal-200 text-sm focus:border-navy-500 focus:ring-2 focus:ring-navy-500/20 outline-none"
+        >
+          <option value="">Todos los estados</option>
+          <option value="pending">Pendientes</option>
+          <option value="paid">Pagados</option>
+          <option value="processing">Procesando</option>
+          <option value="shipped">Enviados</option>
+          <option value="delivered">Entregados</option>
+          <option value="cancelled">Cancelados</option>
+          <option value="refunded">Reembolsados</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Orders Table -->
+    {orders.length > 0 ? (
+      <div class="bg-white border border-charcoal-100 overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full">
+            <thead>
+              <tr class="bg-charcoal-50 border-b border-charcoal-100">
+                <th class="text-left px-6 py-4 text-xs font-semibold uppercase tracking-wider text-charcoal-600">
+                  Pedido
+                </th>
+                <th class="text-left px-6 py-4 text-xs font-semibold uppercase tracking-wider text-charcoal-600">
+                  Cliente
+                </th>
+                <th class="text-left px-6 py-4 text-xs font-semibold uppercase tracking-wider text-charcoal-600">
+                  Fecha
+                </th>
+                <th class="text-left px-6 py-4 text-xs font-semibold uppercase tracking-wider text-charcoal-600">
+                  Total
+                </th>
+                <th class="text-left px-6 py-4 text-xs font-semibold uppercase tracking-wider text-charcoal-600">
+                  Estado
+                </th>
+                <th class="text-right px-6 py-4 text-xs font-semibold uppercase tracking-wider text-charcoal-600">
+                  Acciones
+                </th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-charcoal-100">
+              {orders.map((order, index) => {
+                const status = orderStatuses[order.status] || orderStatuses['pending'];
+                return (
+                  <tr class="hover:bg-charcoal-50/50 transition-colors order-row" data-status={order.status}>
+                    <td class="px-6 py-4">
+                      <div>
+                        <p class="text-sm font-semibold text-navy-900">Pedido #{index + 1}</p>
+                        <p class="text-xs text-charcoal-400">{order.items?.length || 0} productos</p>
+                      </div>
+                    </td>
+                    <td class="px-6 py-4">
+                      <div>
+                        <p class="text-sm font-medium text-charcoal-700">{order.profiles?.full_name || 'Cliente'}</p>
+                        <p class="text-xs text-charcoal-400">{order.profiles?.email || ''}</p>
+                      </div>
+                    </td>
+                    <td class="px-6 py-4">
+                      <span class="text-sm text-charcoal-600">
+                        {formatDate(order.created_at)}
+                      </span>
+                    </td>
+                    <td class="px-6 py-4">
+                      <span class="text-sm font-semibold text-navy-900">
+                        {(order.total / 100).toFixed(2)}€
+                      </span>
+                    </td>
+                    <td class="px-6 py-4">
+                      <span class={`inline-flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-full ${status.bg} ${status.color}`}>
+                        <span class="w-1.5 h-1.5 rounded-full bg-current"></span>
+                        {status.label}
+                      </span>
+                    </td>
+                    <td class="px-6 py-4 text-right">
+                      <div class="flex items-center justify-end gap-2">
+                        <button 
+                          type="button"
+                          data-order-id={order.id}
+                          class="view-order-btn p-2 text-charcoal-400 hover:text-navy-700 hover:bg-navy-50 transition-colors"
+                          title="Ver detalles"
+                        >
+                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                          </svg>
+                        </button>
+                        <select 
+                          data-order-id={order.id}
+                          class="status-select px-3 py-1.5 text-xs border border-charcoal-200 focus:border-navy-500 focus:ring-1 focus:ring-navy-500/20 outline-none"
+                        >
+                          {Object.entries(orderStatuses).map(([value, { label }]) => (
+                            <option value={value} selected={order.status === value}>{label}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    ) : (
+      <div class="bg-white border border-charcoal-100 p-12 text-center">
+        <div class="w-16 h-16 mx-auto bg-charcoal-100 flex items-center justify-center mb-4">
+          <svg class="w-8 h-8 text-charcoal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+          </svg>
+        </div>
+        <h4 class="text-lg font-medium text-navy-900 mb-2">No hay pedidos</h4>
+        <p class="text-charcoal-500">Los pedidos de tus clientes aparecerán aquí</p>
+      </div>
+    )}
+  </div>
+
+  <!-- Modal Detalles de Pedido -->
+  <div id="order-modal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50">
+    <div class="bg-white w-full max-w-2xl mx-4 shadow-2xl max-h-[90vh] overflow-y-auto">
+      <div class="px-6 py-4 border-b border-charcoal-100 flex items-center justify-between sticky top-0 bg-white">
+        <h3 class="text-lg font-semibold text-navy-900">Detalles del Pedido</h3>
+        <button type="button" id="close-order-modal" class="p-2 text-charcoal-400 hover:text-charcoal-600">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+      
+      <div id="order-details" class="p-6">
+        <!-- Se llena dinámicamente -->
+      </div>
+    </div>
+  </div>
+</AdminLayout>
+
+<script>
+  // Filtrar por estado
+  const statusFilter = document.getElementById('status-filter') as HTMLSelectElement;
+  statusFilter?.addEventListener('change', () => {
+    const filterValue = statusFilter.value;
+    document.querySelectorAll('.order-row').forEach(row => {
+      const rowStatus = row.getAttribute('data-status');
+      if (!filterValue || rowStatus === filterValue) {
+        (row as HTMLElement).style.display = '';
+      } else {
+        (row as HTMLElement).style.display = 'none';
+      }
+    });
+  });
+
+  // Cambiar estado de pedido
+  document.querySelectorAll('.status-select').forEach(select => {
+    select.addEventListener('change', async (e) => {
+      const target = e.target as HTMLSelectElement;
+      const orderId = target.getAttribute('data-order-id');
+      const newStatus = target.value;
+
+      try {
+        const response = await fetch(`/api/admin/orders/${orderId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: newStatus }),
+        });
+
+        if (response.ok) {
+          window.location.reload();
+        } else {
+          alert('Error al actualizar el estado');
+        }
+      } catch (error) {
+        alert('Error al actualizar el estado');
+      }
+    });
+  });
+
+  // Modal de detalles
+  const orderModal = document.getElementById('order-modal');
+  const orderDetails = document.getElementById('order-details');
+
+  document.querySelectorAll('.view-order-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const orderId = btn.getAttribute('data-order-id');
+      // Por ahora mostramos información básica
+      if (orderDetails) {
+        orderDetails.innerHTML = `
+          <div class="text-center py-8">
+            <p class="text-charcoal-500">ID del Pedido: <strong>${orderId?.slice(0, 8).toUpperCase()}</strong></p>
+            <p class="text-sm text-charcoal-400 mt-2">Los detalles completos se mostrarán aquí cuando se implementen los pedidos</p>
+          </div>
+        `;
+      }
+      orderModal?.classList.remove('hidden');
+      orderModal?.classList.add('flex');
+    });
+  });
+
+  document.getElementById('close-order-modal')?.addEventListener('click', () => {
+    orderModal?.classList.add('hidden');
+    orderModal?.classList.remove('flex');
+  });
+
+  orderModal?.addEventListener('click', (e) => {
+    if (e.target === orderModal) {
+      orderModal.classList.add('hidden');
+      orderModal.classList.remove('flex');
+    }
+  });
+</script>

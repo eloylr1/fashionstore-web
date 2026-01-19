@@ -196,13 +196,33 @@ const formatDate = (date: string) => {
                   >
                     Ver detalles
                   </a>
-                  {order.status === 'delivered' && (
-                    <a 
-                      href={`/cuenta/devoluciones?order=${order.id}`}
-                      class="inline-flex items-center gap-2 px-4 py-2 border border-charcoal-200 text-charcoal-700 text-sm rounded-lg hover:bg-charcoal-50 transition-colors"
+                  {/* Botón cancelar - Solo para pedidos "paid" (antes de envío) */}
+                  {order.status === 'paid' && (
+                    <button 
+                      type="button"
+                      data-order-id={order.id}
+                      data-order-number={order.order_number}
+                      class="cancel-order-btn inline-flex items-center gap-2 px-4 py-2 border border-red-200 text-red-600 text-sm rounded-lg hover:bg-red-50 transition-colors"
                     >
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                      Cancelar pedido
+                    </button>
+                  )}
+                  {/* Botón devolución - Solo para pedidos "delivered" */}
+                  {order.status === 'delivered' && (
+                    <button 
+                      type="button"
+                      data-order-id={order.id}
+                      data-order-number={order.order_number}
+                      class="return-order-btn inline-flex items-center gap-2 px-4 py-2 border border-charcoal-200 text-charcoal-700 text-sm rounded-lg hover:bg-charcoal-50 transition-colors"
+                    >
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                      </svg>
                       Solicitar devolución
-                    </a>
+                    </button>
                   )}
                   {order.status === 'shipped' && (
                     <button 
@@ -227,4 +247,239 @@ const formatDate = (date: string) => {
       </div>
     </div>
   </main>
+
+  <!-- Modal de Cancelación -->
+  <div id="cancel-modal" class="fixed inset-0 z-50 hidden" role="dialog" aria-modal="true" aria-labelledby="cancel-modal-title">
+    <div class="absolute inset-0 bg-black/60 backdrop-blur-sm modal-backdrop"></div>
+    <div class="absolute inset-0 flex items-center justify-center p-4">
+      <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden">
+        <div class="p-6">
+          <div class="flex items-center justify-center w-12 h-12 mx-auto mb-4 rounded-full bg-red-100">
+            <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <h3 id="cancel-modal-title" class="text-xl font-serif text-navy-900 text-center mb-2">
+            ¿Cancelar pedido?
+          </h3>
+          <p class="text-charcoal-600 text-center mb-2">
+            Estás a punto de cancelar el pedido:
+          </p>
+          <p id="cancel-order-number" class="text-center font-mono font-bold text-navy-900 mb-4"></p>
+          <p class="text-sm text-charcoal-500 text-center mb-6">
+            El stock de los productos se restaurará automáticamente. Esta acción no se puede deshacer.
+          </p>
+          <div id="cancel-error" class="hidden mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm"></div>
+          <div class="flex gap-3">
+            <button type="button" id="cancel-modal-close" class="flex-1 px-4 py-3 border border-charcoal-200 rounded-lg text-charcoal-700 hover:bg-charcoal-50 transition-colors">
+              No, mantener
+            </button>
+            <button type="button" id="cancel-confirm-btn" class="flex-1 px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center justify-center gap-2">
+              <span>Sí, cancelar</span>
+              <svg id="cancel-spinner" class="hidden w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de Devolución -->
+  <div id="return-modal" class="fixed inset-0 z-50 hidden" role="dialog" aria-modal="true" aria-labelledby="return-modal-title">
+    <div class="absolute inset-0 bg-black/60 backdrop-blur-sm modal-backdrop"></div>
+    <div class="absolute inset-0 flex items-center justify-center p-4">
+      <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden">
+        <div class="bg-gradient-to-br from-navy-900 to-navy-800 px-6 py-5">
+          <div class="flex items-center justify-between">
+            <h3 id="return-modal-title" class="text-xl font-serif text-white">
+              Solicitar devolución
+            </h3>
+            <button type="button" id="return-modal-close" class="p-2 text-white/70 hover:text-white transition-colors">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          <p class="text-white/70 text-sm mt-1">Pedido: <span id="return-order-number" class="font-mono"></span></p>
+        </div>
+        
+        <div class="p-6 space-y-5">
+          <!-- Paso 1: Envío -->
+          <div class="flex gap-4">
+            <div class="flex-shrink-0 w-10 h-10 bg-gold-matte/10 rounded-full flex items-center justify-center">
+              <span class="text-gold-matte font-bold">1</span>
+            </div>
+            <div>
+              <h4 class="font-medium text-navy-900 mb-1">Envía los artículos</h4>
+              <p class="text-sm text-charcoal-600">
+                Debes enviar los artículos en su embalaje original a:
+              </p>
+              <div class="mt-2 p-3 bg-cream rounded-lg">
+                <p class="font-medium text-navy-900">FashionMarket - Devoluciones</p>
+                <p class="text-sm text-charcoal-600">Calle de la Moda 123</p>
+                <p class="text-sm text-charcoal-600">Polígono Industrial</p>
+                <p class="text-sm text-charcoal-600">28001 Madrid, España</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Paso 2: Email -->
+          <div class="flex gap-4">
+            <div class="flex-shrink-0 w-10 h-10 bg-gold-matte/10 rounded-full flex items-center justify-center">
+              <span class="text-gold-matte font-bold">2</span>
+            </div>
+            <div>
+              <h4 class="font-medium text-navy-900 mb-1">Etiqueta de devolución</h4>
+              <p class="text-sm text-charcoal-600">
+                Hemos enviado un correo con la etiqueta de devolución a tu email asociado. 
+                Imprímela y pégala en el paquete.
+              </p>
+              <div class="mt-2 flex items-center gap-2 text-sm text-green-600">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+                Correo enviado a tu dirección
+              </div>
+            </div>
+          </div>
+
+          <!-- Paso 3: Reembolso -->
+          <div class="flex gap-4">
+            <div class="flex-shrink-0 w-10 h-10 bg-gold-matte/10 rounded-full flex items-center justify-center">
+              <span class="text-gold-matte font-bold">3</span>
+            </div>
+            <div>
+              <h4 class="font-medium text-navy-900 mb-1">Reembolso</h4>
+              <p class="text-sm text-charcoal-600">
+                Una vez recibido y validado el paquete, el reembolso se procesará en tu método de pago original 
+                en un plazo de <strong>5 a 7 días hábiles</strong>.
+              </p>
+            </div>
+          </div>
+
+          <!-- Info adicional -->
+          <div class="bg-amber-50 border border-amber-200 rounded-lg p-4">
+            <div class="flex gap-3">
+              <svg class="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <p class="text-sm text-amber-800">
+                Tienes <strong>30 días</strong> desde la entrega para realizar la devolución. 
+                Los artículos deben estar sin usar y con las etiquetas originales.
+              </p>
+            </div>
+          </div>
+
+          <button type="button" id="return-understood-btn" class="w-full px-4 py-3 bg-navy-900 text-white rounded-lg hover:bg-navy-800 transition-colors font-medium">
+            Entendido
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Variables para los modales
+    let currentOrderId: string | null = null;
+
+    // Elementos DOM
+    const cancelModal = document.getElementById('cancel-modal');
+    const returnModal = document.getElementById('return-modal');
+    const cancelOrderNumber = document.getElementById('cancel-order-number');
+    const returnOrderNumber = document.getElementById('return-order-number');
+    const cancelConfirmBtn = document.getElementById('cancel-confirm-btn') as HTMLButtonElement;
+    const cancelSpinner = document.getElementById('cancel-spinner');
+    const cancelError = document.getElementById('cancel-error');
+
+    // Función para abrir modal de cancelación
+    document.querySelectorAll('.cancel-order-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const orderId = (btn as HTMLElement).dataset.orderId;
+        const orderNumber = (btn as HTMLElement).dataset.orderNumber;
+        currentOrderId = orderId || null;
+        
+        if (cancelOrderNumber) cancelOrderNumber.textContent = orderNumber || '';
+        cancelError?.classList.add('hidden');
+        cancelModal?.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+      });
+    });
+
+    // Función para abrir modal de devolución
+    document.querySelectorAll('.return-order-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const orderNumber = (btn as HTMLElement).dataset.orderNumber;
+        if (returnOrderNumber) returnOrderNumber.textContent = orderNumber || '';
+        returnModal?.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+        
+        // TODO: Aquí se enviaría el email de devolución
+        console.log('📧 Email de devolución enviado para pedido:', orderNumber);
+      });
+    });
+
+    // Cerrar modales
+    const closeModal = (modal: HTMLElement | null) => {
+      modal?.classList.add('hidden');
+      document.body.style.overflow = '';
+      currentOrderId = null;
+    };
+
+    document.getElementById('cancel-modal-close')?.addEventListener('click', () => closeModal(cancelModal));
+    document.getElementById('return-modal-close')?.addEventListener('click', () => closeModal(returnModal));
+    document.getElementById('return-understood-btn')?.addEventListener('click', () => closeModal(returnModal));
+
+    // Cerrar con backdrop click
+    document.querySelectorAll('.modal-backdrop').forEach(backdrop => {
+      backdrop.addEventListener('click', () => {
+        closeModal(cancelModal);
+        closeModal(returnModal);
+      });
+    });
+
+    // Cerrar con ESC
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        closeModal(cancelModal);
+        closeModal(returnModal);
+      }
+    });
+
+    // Confirmar cancelación - Llama a la RPC de Supabase
+    cancelConfirmBtn?.addEventListener('click', async () => {
+      if (!currentOrderId) return;
+
+      cancelConfirmBtn.disabled = true;
+      cancelSpinner?.classList.remove('hidden');
+      cancelError?.classList.add('hidden');
+
+      try {
+        const response = await fetch('/api/orders/cancel', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ order_id: currentOrderId }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+          throw new Error(data.error || data.message || 'Error al cancelar el pedido');
+        }
+
+        // Éxito - recargar página
+        window.location.reload();
+      } catch (error: any) {
+        if (cancelError) {
+          cancelError.textContent = error.message || 'Error inesperado. Inténtalo de nuevo.';
+          cancelError.classList.remove('hidden');
+        }
+      } finally {
+        cancelConfirmBtn.disabled = false;
+        cancelSpinner?.classList.add('hidden');
+      }
+    });
+  </script>
 </BaseLayout>

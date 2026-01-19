@@ -106,8 +106,8 @@ npm install
 2. Copia `.env.example` a `.env` y rellena las credenciales:
 
 ```env
-SUPABASE_URL=https://tu-proyecto.supabase.co
-SUPABASE_ANON_KEY=tu-anon-key
+PUBLIC_SUPABASE_URL=https://tu-proyecto.supabase.co
+PUBLIC_SUPABASE_ANON_KEY=tu-anon-key
 SUPABASE_SERVICE_ROLE_KEY=tu-service-role-key
 ```
 
@@ -156,7 +156,7 @@ npm run dev
 ```
 
 - Tienda: http://localhost:4321
-- Admin: http://localhost:4321/admin (login requerido)
+- Admin: http://localhost:4321/admin/acceso-seguro (login requerido)
 
 ## 🎨 Sistema de Diseño
 

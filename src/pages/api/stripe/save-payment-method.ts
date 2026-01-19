@@ -10,57 +10,54 @@ import { createClient } from '@supabase/supabase-js';
 
 export const POST: APIRoute = async ({ request, cookies }) => {
   try {
-    // Verificar autenticación
-    const accessToken = cookies.get('sb-access-token')?.value;
-    const refreshToken = cookies.get('sb-refresh-token')?.value;
+    const body = await request.json();
+    const { paymentMethodId, brand, last4, expMonth, expYear, userId } = body;
 
-    if (!accessToken || !refreshToken) {
-      console.error('Missing tokens:', { accessToken: !!accessToken, refreshToken: !!refreshToken });
+    // Si no hay userId en el body, verificar las cookies
+    let finalUserId = userId;
+    
+    if (!finalUserId) {
+      const accessToken = cookies.get('sb-access-token')?.value;
+      const refreshToken = cookies.get('sb-refresh-token')?.value;
+      
+      if (accessToken && refreshToken) {
+        const supabaseClient = createClient(
+          import.meta.env.PUBLIC_SUPABASE_URL,
+          import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
+          { auth: { persistSession: false } }
+        );
+        
+        const { data: sessionData } = await supabaseClient.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+        });
+        
+        if (sessionData?.user) {
+          finalUserId = sessionData.user.id;
+        }
+      }
+    }
+
+    // Si sigue sin haber userId, error
+    if (!finalUserId) {
+      console.error('No user ID available');
       return new Response(
         JSON.stringify({ error: 'No autenticado. Por favor, inicia sesión nuevamente.' }),
         { status: 401, headers: { 'Content-Type': 'application/json' } }
       );
     }
 
-    const supabase = createClient(
+    console.log('Saving payment method for user:', finalUserId);
+    
+    // Usar service role para operaciones de BD (más seguro)
+    const supabaseAdmin = createClient(
       import.meta.env.PUBLIC_SUPABASE_URL,
-      import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
-      {
-        auth: {
-          persistSession: false
-        }
-      }
+      import.meta.env.SUPABASE_SERVICE_ROLE_KEY,
+      { auth: { persistSession: false } }
     );
 
-    const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
-      access_token: accessToken,
-      refresh_token: refreshToken,
-    });
-
-    if (sessionError || !sessionData.user) {
-      console.error('Session error:', sessionError);
-      return new Response(
-        JSON.stringify({ error: 'Sesión inválida. Por favor, inicia sesión nuevamente.' }),
-        { status: 401, headers: { 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const { paymentMethodId, brand, last4, expMonth, expYear, userId } = await request.json();
-
-    // Usar el userId del body si las cookies fallan
-    const finalUserId = sessionData?.user?.id || userId;
-
-    if (!finalUserId) {
-      return new Response(
-        JSON.stringify({ error: 'No se pudo identificar al usuario' }),
-        { status: 401, headers: { 'Content-Type': 'application/json' } }
-      );
-    }
-
-    console.log('Saving payment method for user:', finalUserId);
-
-    // Insertar en base de datos
-    const { data, error: insertError } = await (supabase as any)
+    // Insertar en base de datos usando el cliente admin
+    const { data, error: insertError } = await supabaseAdmin
       .from('payment_methods')
       .insert({
         user_id: finalUserId,

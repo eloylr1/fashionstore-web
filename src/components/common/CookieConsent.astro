@@ -1,0 +1,345 @@
+---
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * FASHIONMARKET - Cookie Consent Banner
+ * Banner de consentimiento de cookies (RGPD/GDPR)
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
+---
+
+<!-- Cookie Consent Banner -->
+<div 
+  id="cookie-consent-banner" 
+  class="fixed bottom-0 left-0 right-0 z-[9999] transform translate-y-full transition-transform duration-500 ease-out"
+  role="dialog"
+  aria-labelledby="cookie-title"
+  aria-describedby="cookie-description"
+>
+  <div class="bg-navy-900 text-white shadow-2xl border-t border-gold-matte/20">
+    <div class="container-custom py-4 lg:py-5">
+      <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        
+        <!-- Texto -->
+        <div class="flex-1 pr-4">
+          <div class="flex items-start gap-3">
+            <!-- Icono de cookie -->
+            <div class="flex-shrink-0 w-10 h-10 bg-gold-matte/20 rounded-full flex items-center justify-center mt-0.5">
+              <svg class="w-5 h-5 text-gold-matte" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10c0-.34-.02-.68-.05-1.01-.34.05-.68.08-1.02.08-3.31 0-6-2.69-6-6 0-.34.03-.68.08-1.02C14.68 4.02 14.34 4 14 4c-1.1 0-2-.9-2-2zm-2 15a1 1 0 110-2 1 1 0 010 2zm1-4a1 1 0 110-2 1 1 0 010 2zm3 2a1 1 0 110-2 1 1 0 010 2zm2-5a1 1 0 110-2 1 1 0 010 2z"/>
+              </svg>
+            </div>
+            
+            <div>
+              <h3 id="cookie-title" class="font-semibold text-base lg:text-lg mb-1">
+                🍪 Usamos cookies
+              </h3>
+              <p id="cookie-description" class="text-sm text-white/80 leading-relaxed">
+                Utilizamos cookies propias y de terceros para mejorar tu experiencia de navegación, 
+                analizar el tráfico del sitio y personalizar el contenido. Al hacer clic en "Aceptar todas", 
+                consientes el uso de todas las cookies. 
+                <a href="/politica-cookies" class="text-gold-matte hover:underline">Más información</a>
+              </p>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Botones -->
+        <div class="flex flex-col sm:flex-row gap-2 lg:flex-shrink-0">
+          <button 
+            id="cookie-reject-btn"
+            class="px-5 py-2.5 text-sm font-medium border border-white/30 rounded-lg hover:bg-white/10 transition-colors"
+          >
+            Solo necesarias
+          </button>
+          <button 
+            id="cookie-settings-btn"
+            class="px-5 py-2.5 text-sm font-medium border border-white/30 rounded-lg hover:bg-white/10 transition-colors"
+          >
+            Configurar
+          </button>
+          <button 
+            id="cookie-accept-btn"
+            class="px-6 py-2.5 text-sm font-semibold bg-gold-matte text-navy-900 rounded-lg hover:bg-gold-matte/90 transition-colors"
+          >
+            Aceptar todas
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de Configuración de Cookies -->
+<div 
+  id="cookie-settings-modal" 
+  class="fixed inset-0 z-[10000] hidden"
+  role="dialog"
+  aria-labelledby="settings-title"
+  aria-modal="true"
+>
+  <!-- Backdrop -->
+  <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" id="cookie-modal-backdrop"></div>
+  
+  <!-- Modal Content -->
+  <div class="absolute inset-0 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-hidden">
+      <!-- Header -->
+      <div class="bg-navy-900 text-white px-6 py-4">
+        <div class="flex items-center justify-between">
+          <h2 id="settings-title" class="text-lg font-semibold">Configuración de Cookies</h2>
+          <button id="cookie-modal-close" class="p-1 hover:bg-white/10 rounded-lg transition-colors">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      </div>
+      
+      <!-- Body -->
+      <div class="px-6 py-5 max-h-[60vh] overflow-y-auto">
+        <p class="text-charcoal-600 text-sm mb-6">
+          Elige qué tipos de cookies deseas aceptar. Las cookies necesarias no se pueden desactivar 
+          ya que son esenciales para el funcionamiento del sitio.
+        </p>
+        
+        <!-- Cookie Categories -->
+        <div class="space-y-4">
+          <!-- Necesarias -->
+          <div class="border border-charcoal-200 rounded-lg p-4">
+            <div class="flex items-center justify-between">
+              <div class="flex-1">
+                <h3 class="font-semibold text-navy-900">Necesarias</h3>
+                <p class="text-xs text-charcoal-500 mt-1">
+                  Esenciales para el funcionamiento del sitio web. Incluyen autenticación, carrito de compras y seguridad.
+                </p>
+              </div>
+              <div class="ml-4">
+                <span class="px-3 py-1 bg-charcoal-100 text-charcoal-600 text-xs rounded-full">Siempre activas</span>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Analíticas -->
+          <div class="border border-charcoal-200 rounded-lg p-4">
+            <div class="flex items-center justify-between">
+              <div class="flex-1">
+                <h3 class="font-semibold text-navy-900">Analíticas</h3>
+                <p class="text-xs text-charcoal-500 mt-1">
+                  Nos ayudan a entender cómo usas el sitio para mejorar tu experiencia.
+                </p>
+              </div>
+              <div class="ml-4">
+                <label class="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" id="cookie-analytics" class="sr-only peer" checked>
+                  <div class="w-11 h-6 bg-charcoal-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-gold-matte/50 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gold-matte"></div>
+                </label>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Marketing -->
+          <div class="border border-charcoal-200 rounded-lg p-4">
+            <div class="flex items-center justify-between">
+              <div class="flex-1">
+                <h3 class="font-semibold text-navy-900">Marketing</h3>
+                <p class="text-xs text-charcoal-500 mt-1">
+                  Permiten mostrarte anuncios relevantes y medir la efectividad de las campañas.
+                </p>
+              </div>
+              <div class="ml-4">
+                <label class="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" id="cookie-marketing" class="sr-only peer">
+                  <div class="w-11 h-6 bg-charcoal-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-gold-matte/50 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gold-matte"></div>
+                </label>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Personalización -->
+          <div class="border border-charcoal-200 rounded-lg p-4">
+            <div class="flex items-center justify-between">
+              <div class="flex-1">
+                <h3 class="font-semibold text-navy-900">Personalización</h3>
+                <p class="text-xs text-charcoal-500 mt-1">
+                  Recuerdan tus preferencias para ofrecerte una experiencia personalizada.
+                </p>
+              </div>
+              <div class="ml-4">
+                <label class="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" id="cookie-personalization" class="sr-only peer" checked>
+                  <div class="w-11 h-6 bg-charcoal-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-gold-matte/50 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gold-matte"></div>
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Footer -->
+      <div class="px-6 py-4 bg-charcoal-50 border-t border-charcoal-200 flex justify-end gap-3">
+        <button 
+          id="cookie-save-settings"
+          class="px-6 py-2.5 text-sm font-semibold bg-navy-900 text-white rounded-lg hover:bg-navy-800 transition-colors"
+        >
+          Guardar preferencias
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ═══════════════════════════════════════════════════════════════════════════
+  // COOKIE CONSENT LOGIC
+  // ═══════════════════════════════════════════════════════════════════════════
+  
+  const COOKIE_CONSENT_KEY = 'fm_cookie_consent';
+  const COOKIE_PREFERENCES_KEY = 'fm_cookie_preferences';
+  
+  interface CookiePreferences {
+    necessary: boolean;
+    analytics: boolean;
+    marketing: boolean;
+    personalization: boolean;
+    timestamp: number;
+  }
+  
+  // Check if consent was already given
+  function hasConsent(): boolean {
+    return localStorage.getItem(COOKIE_CONSENT_KEY) !== null;
+  }
+  
+  // Get saved preferences
+  function getPreferences(): CookiePreferences | null {
+    const saved = localStorage.getItem(COOKIE_PREFERENCES_KEY);
+    return saved ? JSON.parse(saved) : null;
+  }
+  
+  // Save consent
+  function saveConsent(preferences: CookiePreferences): void {
+    localStorage.setItem(COOKIE_CONSENT_KEY, 'true');
+    localStorage.setItem(COOKIE_PREFERENCES_KEY, JSON.stringify(preferences));
+    
+    // Dispatch event for other scripts to react
+    window.dispatchEvent(new CustomEvent('cookieConsentUpdated', { detail: preferences }));
+  }
+  
+  // Show banner with animation
+  function showBanner(): void {
+    const banner = document.getElementById('cookie-consent-banner');
+    if (banner) {
+      // Small delay to ensure CSS is applied
+      requestAnimationFrame(() => {
+        banner.classList.remove('translate-y-full');
+        banner.classList.add('translate-y-0');
+      });
+    }
+  }
+  
+  // Hide banner with animation
+  function hideBanner(): void {
+    const banner = document.getElementById('cookie-consent-banner');
+    if (banner) {
+      banner.classList.remove('translate-y-0');
+      banner.classList.add('translate-y-full');
+    }
+  }
+  
+  // Show settings modal
+  function showSettingsModal(): void {
+    const modal = document.getElementById('cookie-settings-modal');
+    if (modal) {
+      modal.classList.remove('hidden');
+      document.body.style.overflow = 'hidden';
+      
+      // Load saved preferences into checkboxes
+      const prefs = getPreferences();
+      if (prefs) {
+        (document.getElementById('cookie-analytics') as HTMLInputElement).checked = prefs.analytics;
+        (document.getElementById('cookie-marketing') as HTMLInputElement).checked = prefs.marketing;
+        (document.getElementById('cookie-personalization') as HTMLInputElement).checked = prefs.personalization;
+      }
+    }
+  }
+  
+  // Hide settings modal
+  function hideSettingsModal(): void {
+    const modal = document.getElementById('cookie-settings-modal');
+    if (modal) {
+      modal.classList.add('hidden');
+      document.body.style.overflow = '';
+    }
+  }
+  
+  // Accept all cookies
+  function acceptAll(): void {
+    const preferences: CookiePreferences = {
+      necessary: true,
+      analytics: true,
+      marketing: true,
+      personalization: true,
+      timestamp: Date.now()
+    };
+    saveConsent(preferences);
+    hideBanner();
+    hideSettingsModal();
+  }
+  
+  // Reject optional cookies (only necessary)
+  function rejectOptional(): void {
+    const preferences: CookiePreferences = {
+      necessary: true,
+      analytics: false,
+      marketing: false,
+      personalization: false,
+      timestamp: Date.now()
+    };
+    saveConsent(preferences);
+    hideBanner();
+    hideSettingsModal();
+  }
+  
+  // Save custom preferences
+  function saveSettings(): void {
+    const preferences: CookiePreferences = {
+      necessary: true,
+      analytics: (document.getElementById('cookie-analytics') as HTMLInputElement)?.checked ?? false,
+      marketing: (document.getElementById('cookie-marketing') as HTMLInputElement)?.checked ?? false,
+      personalization: (document.getElementById('cookie-personalization') as HTMLInputElement)?.checked ?? false,
+      timestamp: Date.now()
+    };
+    saveConsent(preferences);
+    hideBanner();
+    hideSettingsModal();
+  }
+  
+  // Initialize on DOM ready
+  document.addEventListener('DOMContentLoaded', () => {
+    // Show banner if no consent
+    if (!hasConsent()) {
+      // Small delay for better UX
+      setTimeout(showBanner, 1000);
+    }
+    
+    // Event listeners
+    document.getElementById('cookie-accept-btn')?.addEventListener('click', acceptAll);
+    document.getElementById('cookie-reject-btn')?.addEventListener('click', rejectOptional);
+    document.getElementById('cookie-settings-btn')?.addEventListener('click', showSettingsModal);
+    document.getElementById('cookie-modal-close')?.addEventListener('click', hideSettingsModal);
+    document.getElementById('cookie-modal-backdrop')?.addEventListener('click', hideSettingsModal);
+    document.getElementById('cookie-save-settings')?.addEventListener('click', saveSettings);
+    
+    // Close modal on ESC
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        hideSettingsModal();
+      }
+    });
+  });
+  
+  // Expose function to open settings (for footer link)
+  (window as any).openCookieSettings = () => {
+    showSettingsModal();
+    showBanner();
+  };
+</script>

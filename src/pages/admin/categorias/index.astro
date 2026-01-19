@@ -1,0 +1,340 @@
+---
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * FASHIONMARKET - Admin Categories
+ * Gestión de categorías de productos
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
+
+export const prerender = false;
+
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { supabase, isSupabaseConfigured } from '../../../lib/supabase/client';
+
+// Verificar autenticación
+const accessToken = Astro.cookies.get('sb-access-token')?.value;
+const userRole = Astro.cookies.get('user-role')?.value;
+
+if (!accessToken || userRole !== 'admin') {
+  return Astro.redirect('/admin/acceso-seguro');
+}
+
+// Obtener categorías
+let categories: any[] = [];
+let productsPerCategory: Record<string, number> = {};
+
+if (isSupabaseConfigured() && supabase) {
+  try {
+    const { data } = await supabase
+      .from('categories')
+      .select('*')
+      .order('name', { ascending: true });
+    
+    categories = data || [];
+
+    // Contar productos por categoría
+    for (const cat of categories) {
+      const { count } = await supabase
+        .from('products')
+        .select('*', { count: 'exact', head: true })
+        .eq('category_id', cat.id);
+      productsPerCategory[cat.id] = count || 0;
+    }
+  } catch (error) {
+    console.error('Error fetching categories:', error);
+  }
+}
+---
+
+<AdminLayout title="Categorías">
+  <div class="space-y-6">
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div>
+        <p class="text-charcoal-500">
+          {categories.length} categorías en total
+        </p>
+      </div>
+      
+      <button 
+        type="button"
+        id="new-category-btn"
+        class="inline-flex items-center gap-2 px-5 py-2.5 bg-navy-900 text-white text-sm font-medium hover:bg-navy-800 transition-all duration-200 shadow-lg shadow-navy-900/20"
+      >
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+        </svg>
+        Nueva Categoría
+      </button>
+    </div>
+
+    <!-- Categories Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {categories.length > 0 ? (
+        categories.map((category) => (
+          <div class="bg-white border border-charcoal-100 p-6 hover:shadow-lg hover:border-navy-200 transition-all duration-300 group">
+            <div class="flex items-start justify-between mb-4">
+              <div class="w-12 h-12 bg-gradient-to-br from-navy-100 to-navy-200 flex items-center justify-center">
+                <svg class="w-6 h-6 text-navy-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                </svg>
+              </div>
+              <div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button 
+                  type="button"
+                  data-edit-category={category.id}
+                  data-category-name={category.name}
+                  data-category-slug={category.slug}
+                  class="p-2 text-charcoal-400 hover:text-navy-700 hover:bg-navy-50 transition-colors"
+                  title="Editar"
+                >
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                  </svg>
+                </button>
+                <button 
+                  type="button"
+                  data-delete-category={category.id}
+                  class="p-2 text-charcoal-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                  title="Eliminar"
+                >
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+            
+            <h3 class="text-lg font-semibold text-navy-900 mb-1">{category.name}</h3>
+            <p class="text-sm text-charcoal-400 mb-4">/{category.slug}</p>
+            
+            <div class="flex items-center justify-between pt-4 border-t border-charcoal-100">
+              <span class="text-sm text-charcoal-500">
+                {productsPerCategory[category.id] || 0} productos
+              </span>
+              <a 
+                href={`/categoria/${category.slug}`}
+                target="_blank"
+                class="text-sm font-medium text-navy-700 hover:text-leather transition-colors inline-flex items-center gap-1"
+              >
+                Ver en tienda
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                </svg>
+              </a>
+            </div>
+          </div>
+        ))
+      ) : (
+        <div class="col-span-full bg-white border border-charcoal-100 p-12 text-center">
+          <div class="w-16 h-16 mx-auto bg-charcoal-100 flex items-center justify-center mb-4">
+            <svg class="w-8 h-8 text-charcoal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+            </svg>
+          </div>
+          <h4 class="text-lg font-medium text-navy-900 mb-2">No hay categorías</h4>
+          <p class="text-charcoal-500 mb-6">Crea tu primera categoría para organizar tus productos</p>
+          <button 
+            type="button"
+            id="new-category-btn-empty"
+            class="inline-flex items-center gap-2 px-5 py-2.5 bg-navy-900 text-white text-sm font-medium hover:bg-navy-800 transition-colors"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+            </svg>
+            Crear Categoría
+          </button>
+        </div>
+      )}
+    </div>
+  </div>
+
+  <!-- Modal Nueva/Editar Categoría -->
+  <div id="category-modal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50">
+    <div class="bg-white w-full max-w-md mx-4 shadow-2xl">
+      <div class="px-6 py-4 border-b border-charcoal-100 flex items-center justify-between">
+        <h3 id="modal-title" class="text-lg font-semibold text-navy-900">Nueva Categoría</h3>
+        <button type="button" id="close-modal" class="p-2 text-charcoal-400 hover:text-charcoal-600">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+      
+      <form id="category-form" class="p-6 space-y-4">
+        <input type="hidden" id="category-id" name="id" value="">
+        
+        <div>
+          <label for="category-name" class="block text-sm font-medium text-charcoal-700 mb-1">
+            Nombre de la categoría
+          </label>
+          <input 
+            type="text" 
+            id="category-name" 
+            name="name"
+            required
+            class="w-full px-4 py-2.5 border border-charcoal-200 focus:border-navy-500 focus:ring-2 focus:ring-navy-500/20 transition-all outline-none"
+            placeholder="Ej: Camisas"
+          />
+        </div>
+        
+        <div>
+          <label for="category-slug" class="block text-sm font-medium text-charcoal-700 mb-1">
+            Slug (URL)
+          </label>
+          <input 
+            type="text" 
+            id="category-slug" 
+            name="slug"
+            required
+            class="w-full px-4 py-2.5 border border-charcoal-200 focus:border-navy-500 focus:ring-2 focus:ring-navy-500/20 transition-all outline-none"
+            placeholder="Ej: camisas"
+          />
+          <p class="text-xs text-charcoal-400 mt-1">Se generará automáticamente del nombre</p>
+        </div>
+        
+        <div class="pt-4 flex gap-3">
+          <button 
+            type="button" 
+            id="cancel-modal"
+            class="flex-1 px-4 py-2.5 border border-charcoal-200 text-charcoal-700 font-medium hover:bg-charcoal-50 transition-colors"
+          >
+            Cancelar
+          </button>
+          <button 
+            type="submit"
+            class="flex-1 px-4 py-2.5 bg-navy-900 text-white font-medium hover:bg-navy-800 transition-colors"
+          >
+            Guardar
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</AdminLayout>
+
+<script>
+  const modal = document.getElementById('category-modal');
+  const modalTitle = document.getElementById('modal-title');
+  const form = document.getElementById('category-form') as HTMLFormElement;
+  const nameInput = document.getElementById('category-name') as HTMLInputElement;
+  const slugInput = document.getElementById('category-slug') as HTMLInputElement;
+  const idInput = document.getElementById('category-id') as HTMLInputElement;
+
+  // Generar slug automáticamente
+  nameInput?.addEventListener('input', (e) => {
+    const target = e.target as HTMLInputElement;
+    const slug = target.value
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '');
+    if (slugInput) slugInput.value = slug;
+  });
+
+  // Abrir modal para nueva categoría
+  function openNewModal() {
+    if (modal && modalTitle && form) {
+      modalTitle.textContent = 'Nueva Categoría';
+      form.reset();
+      if (idInput) idInput.value = '';
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+  }
+
+  // Abrir modal para editar
+  function openEditModal(id: string, name: string, slug: string) {
+    if (modal && modalTitle && nameInput && slugInput && idInput) {
+      modalTitle.textContent = 'Editar Categoría';
+      idInput.value = id;
+      nameInput.value = name;
+      slugInput.value = slug;
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+  }
+
+  // Cerrar modal
+  function closeModal() {
+    if (modal) {
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+  }
+
+  // Event listeners
+  document.getElementById('new-category-btn')?.addEventListener('click', openNewModal);
+  document.getElementById('new-category-btn-empty')?.addEventListener('click', openNewModal);
+  document.getElementById('close-modal')?.addEventListener('click', closeModal);
+  document.getElementById('cancel-modal')?.addEventListener('click', closeModal);
+
+  // Cerrar con click fuera
+  modal?.addEventListener('click', (e) => {
+    if (e.target === modal) closeModal();
+  });
+
+  // Botones de editar
+  document.querySelectorAll('[data-edit-category]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.getAttribute('data-edit-category') || '';
+      const name = btn.getAttribute('data-category-name') || '';
+      const slug = btn.getAttribute('data-category-slug') || '';
+      openEditModal(id, name, slug);
+    });
+  });
+
+  // Botones de eliminar
+  document.querySelectorAll('[data-delete-category]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.getAttribute('data-delete-category');
+      if (confirm('¿Estás seguro de eliminar esta categoría? Los productos asociados perderán su categoría.')) {
+        try {
+          const response = await fetch(`/api/admin/categories/${id}`, {
+            method: 'DELETE',
+          });
+          if (response.ok) {
+            window.location.reload();
+          } else {
+            alert('Error al eliminar la categoría');
+          }
+        } catch (error) {
+          alert('Error al eliminar la categoría');
+        }
+      }
+    });
+  });
+
+  // Enviar formulario
+  form?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const formData = new FormData(form);
+    const data = {
+      id: formData.get('id'),
+      name: formData.get('name'),
+      slug: formData.get('slug'),
+    };
+
+    try {
+      const url = data.id ? `/api/admin/categories/${data.id}` : '/api/admin/categories';
+      const method = data.id ? 'PUT' : 'POST';
+      
+      const response = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+
+      if (response.ok) {
+        window.location.reload();
+      } else {
+        const error = await response.json();
+        alert(error.message || 'Error al guardar la categoría');
+      }
+    } catch (error) {
+      alert('Error al guardar la categoría');
+    }
+  });
+</script>

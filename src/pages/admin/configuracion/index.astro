@@ -1,0 +1,324 @@
+---
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * FASHIONMARKET - Admin Settings
+ * Configuración del sistema
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
+
+export const prerender = false;
+
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+
+// Verificar autenticación
+const accessToken = Astro.cookies.get('sb-access-token')?.value;
+const userRole = Astro.cookies.get('user-role')?.value;
+
+if (!accessToken || userRole !== 'admin') {
+  return Astro.redirect('/admin/acceso-seguro');
+}
+---
+
+<AdminLayout title="Configuración">
+  <div class="space-y-8">
+    <!-- Header -->
+    <div>
+      <p class="text-charcoal-500">
+        Configura los ajustes de tu tienda
+      </p>
+    </div>
+
+    <!-- Settings Sections -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <!-- Main Settings -->
+      <div class="lg:col-span-2 space-y-6">
+        <!-- General -->
+        <div class="bg-white border border-charcoal-100 overflow-hidden">
+          <div class="px-6 py-4 border-b border-charcoal-100 bg-charcoal-50">
+            <h3 class="font-semibold text-navy-900">Información de la Tienda</h3>
+          </div>
+          <div class="p-6 space-y-4">
+            <div>
+              <label for="store-name" class="block text-sm font-medium text-charcoal-700 mb-1">
+                Nombre de la tienda
+              </label>
+              <input 
+                type="text" 
+                id="store-name" 
+                value="FashionMarket"
+                class="w-full px-4 py-2.5 border border-charcoal-200 focus:border-navy-500 focus:ring-2 focus:ring-navy-500/20 transition-all outline-none"
+              />
+            </div>
+            
+            <div>
+              <label for="store-email" class="block text-sm font-medium text-charcoal-700 mb-1">
+                Email de contacto
+              </label>
+              <input 
+                type="email" 
+                id="store-email" 
+                value="eloylopezruiz2005@gmail.com"
+                class="w-full px-4 py-2.5 border border-charcoal-200 focus:border-navy-500 focus:ring-2 focus:ring-navy-500/20 transition-all outline-none"
+              />
+            </div>
+            
+            <div>
+              <label for="store-phone" class="block text-sm font-medium text-charcoal-700 mb-1">
+                Teléfono
+              </label>
+              <input 
+                type="tel" 
+                id="store-phone" 
+                placeholder="+34 XXX XXX XXX"
+                class="w-full px-4 py-2.5 border border-charcoal-200 focus:border-navy-500 focus:ring-2 focus:ring-navy-500/20 transition-all outline-none"
+              />
+            </div>
+            
+            <div>
+              <label for="store-address" class="block text-sm font-medium text-charcoal-700 mb-1">
+                Dirección
+              </label>
+              <textarea 
+                id="store-address" 
+                rows="2"
+                placeholder="Dirección física de la tienda"
+                class="w-full px-4 py-2.5 border border-charcoal-200 focus:border-navy-500 focus:ring-2 focus:ring-navy-500/20 transition-all outline-none resize-none"
+              ></textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- Envíos -->
+        <div class="bg-white border border-charcoal-100 overflow-hidden">
+          <div class="px-6 py-4 border-b border-charcoal-100 bg-charcoal-50">
+            <h3 class="font-semibold text-navy-900">Configuración de Envíos</h3>
+          </div>
+          <div class="p-6 space-y-4">
+            <div>
+              <label for="free-shipping" class="block text-sm font-medium text-charcoal-700 mb-1">
+                Envío gratis a partir de (€)
+              </label>
+              <input 
+                type="number" 
+                id="free-shipping" 
+                value="100"
+                min="0"
+                step="0.01"
+                class="w-full px-4 py-2.5 border border-charcoal-200 focus:border-navy-500 focus:ring-2 focus:ring-navy-500/20 transition-all outline-none"
+              />
+            </div>
+            
+            <div>
+              <label for="shipping-cost" class="block text-sm font-medium text-charcoal-700 mb-1">
+                Coste de envío estándar (€)
+              </label>
+              <input 
+                type="number" 
+                id="shipping-cost" 
+                value="4.99"
+                min="0"
+                step="0.01"
+                class="w-full px-4 py-2.5 border border-charcoal-200 focus:border-navy-500 focus:ring-2 focus:ring-navy-500/20 transition-all outline-none"
+              />
+            </div>
+            
+            <div>
+              <label for="return-days" class="block text-sm font-medium text-charcoal-700 mb-1">
+                Días para devoluciones
+              </label>
+              <input 
+                type="number" 
+                id="return-days" 
+                value="30"
+                min="0"
+                class="w-full px-4 py-2.5 border border-charcoal-200 focus:border-navy-500 focus:ring-2 focus:ring-navy-500/20 transition-all outline-none"
+              />
+            </div>
+          </div>
+        </div>
+
+        <!-- Impuestos -->
+        <div class="bg-white border border-charcoal-100 overflow-hidden">
+          <div class="px-6 py-4 border-b border-charcoal-100 bg-charcoal-50">
+            <h3 class="font-semibold text-navy-900">Impuestos</h3>
+          </div>
+          <div class="p-6 space-y-4">
+            <div>
+              <label for="tax-rate" class="block text-sm font-medium text-charcoal-700 mb-1">
+                IVA (%)
+              </label>
+              <input 
+                type="number" 
+                id="tax-rate" 
+                value="21"
+                min="0"
+                max="100"
+                class="w-full px-4 py-2.5 border border-charcoal-200 focus:border-navy-500 focus:ring-2 focus:ring-navy-500/20 transition-all outline-none"
+              />
+            </div>
+            
+            <div class="flex items-center gap-3">
+              <input 
+                type="checkbox" 
+                id="prices-include-tax" 
+                checked
+                class="w-5 h-5 border-charcoal-300 text-navy-600 focus:ring-navy-500"
+              />
+              <label for="prices-include-tax" class="text-sm text-charcoal-700">
+                Los precios incluyen IVA
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Guardar -->
+        <div class="flex justify-end">
+          <button 
+            type="button"
+            id="save-settings"
+            class="inline-flex items-center gap-2 px-6 py-3 bg-navy-900 text-white font-medium hover:bg-navy-800 transition-colors"
+          >
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+            </svg>
+            Guardar Cambios
+          </button>
+        </div>
+      </div>
+
+      <!-- Sidebar Info -->
+      <div class="space-y-6">
+        <!-- Estado del Sistema -->
+        <div class="bg-white border border-charcoal-100 overflow-hidden">
+          <div class="px-5 py-4 border-b border-charcoal-100 bg-charcoal-50">
+            <h3 class="font-semibold text-navy-900">Estado del Sistema</h3>
+          </div>
+          <div class="p-5 space-y-4">
+            <div class="flex items-center justify-between">
+              <span class="text-sm text-charcoal-600">Base de datos</span>
+              <span class="inline-flex items-center gap-1.5 text-sm font-medium text-green-600">
+                <span class="w-2 h-2 bg-green-500 rounded-full"></span>
+                Conectada
+              </span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-sm text-charcoal-600">Cloudinary</span>
+              <span class="inline-flex items-center gap-1.5 text-sm font-medium text-green-600">
+                <span class="w-2 h-2 bg-green-500 rounded-full"></span>
+                Activo
+              </span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-sm text-charcoal-600">Stripe</span>
+              <span class="inline-flex items-center gap-1.5 text-sm font-medium text-amber-600">
+                <span class="w-2 h-2 bg-amber-500 rounded-full"></span>
+                Modo Test
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Versión -->
+        <div class="bg-gradient-to-br from-navy-900 to-navy-800 p-5 text-white">
+          <div class="flex items-start gap-3">
+            <div class="w-10 h-10 bg-white/10 flex items-center justify-center flex-shrink-0">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div>
+              <h4 class="font-semibold">FashionMarket</h4>
+              <p class="text-sm text-white/70 mt-1">v1.0.0</p>
+              <p class="text-xs text-white/50 mt-2">
+                Desarrollado con Astro, React y Supabase
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Accesos Rápidos -->
+        <div class="bg-white border border-charcoal-100 overflow-hidden">
+          <div class="px-5 py-4 border-b border-charcoal-100 bg-charcoal-50">
+            <h3 class="font-semibold text-navy-900">Accesos Rápidos</h3>
+          </div>
+          <div class="p-4 space-y-2">
+            <a 
+              href="https://supabase.com/dashboard" 
+              target="_blank"
+              class="flex items-center gap-3 px-4 py-3 bg-charcoal-50 hover:bg-charcoal-100 text-navy-900 transition-colors"
+            >
+              <svg class="w-5 h-5 text-charcoal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 7v10c0 2 1 3 3 3h10c2 0 3-1 3-3V7c0-2-1-3-3-3H7c-2 0-3 1-3 3z" />
+              </svg>
+              <span class="text-sm font-medium">Panel Supabase</span>
+              <svg class="w-4 h-4 ml-auto text-charcoal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+              </svg>
+            </a>
+            <a 
+              href="https://cloudinary.com/console" 
+              target="_blank"
+              class="flex items-center gap-3 px-4 py-3 bg-charcoal-50 hover:bg-charcoal-100 text-navy-900 transition-colors"
+            >
+              <svg class="w-5 h-5 text-charcoal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              <span class="text-sm font-medium">Panel Cloudinary</span>
+              <svg class="w-4 h-4 ml-auto text-charcoal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+              </svg>
+            </a>
+            <a 
+              href="https://dashboard.stripe.com" 
+              target="_blank"
+              class="flex items-center gap-3 px-4 py-3 bg-charcoal-50 hover:bg-charcoal-100 text-navy-900 transition-colors"
+            >
+              <svg class="w-5 h-5 text-charcoal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+              </svg>
+              <span class="text-sm font-medium">Panel Stripe</span>
+              <svg class="w-4 h-4 ml-auto text-charcoal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+              </svg>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</AdminLayout>
+
+<script>
+  // Guardar configuración
+  document.getElementById('save-settings')?.addEventListener('click', () => {
+    // Por ahora solo mostramos confirmación visual
+    const btn = document.getElementById('save-settings');
+    if (btn) {
+      const originalText = btn.innerHTML;
+      btn.innerHTML = `
+        <svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        Guardando...
+      `;
+      
+      setTimeout(() => {
+        btn.innerHTML = `
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+          </svg>
+          ¡Guardado!
+        `;
+        btn.classList.remove('bg-navy-900', 'hover:bg-navy-800');
+        btn.classList.add('bg-green-600');
+        
+        setTimeout(() => {
+          btn.innerHTML = originalText;
+          btn.classList.add('bg-navy-900', 'hover:bg-navy-800');
+          btn.classList.remove('bg-green-600');
+        }, 2000);
+      }, 1000);
+    }
+  });
+</script>

@@ -124,11 +124,8 @@ if (Astro.request.method === 'POST') {
               {profile?.full_name ? profile.full_name.charAt(0).toUpperCase() : user.email?.charAt(0).toUpperCase()}
             </div>
             <div>
-              <h3 class="font-medium text-navy-900">Foto de perfil</h3>
-              <p class="text-sm text-charcoal-500 mb-2">JPG, PNG. Máximo 2MB</p>
-              <button type="button" class="text-sm text-gold-matte hover:text-gold-dark transition-colors">
-                Cambiar foto
-              </button>
+              <h3 class="font-medium text-navy-900">{profile?.full_name || 'Usuario'}</h3>
+              <p class="text-sm text-charcoal-500">{user.email}</p>
             </div>
           </div>
 
@@ -197,24 +194,167 @@ if (Astro.request.method === 'POST') {
         </form>
       </div>
 
-      <!-- Sección de seguridad -->
-      <div class="bg-white rounded-lg shadow-sm mt-6">
+      <!-- Sección de Cambio de Contraseña (Flujo profesional por email) -->
+      <div class="bg-white rounded-lg shadow-sm mt-6" id="change-password-section">
         <div class="p-6 border-b border-charcoal-100">
-          <h2 class="text-lg font-serif text-navy-900">Seguridad</h2>
-          <p class="text-charcoal-500 text-sm mt-1">Gestiona tu contraseña y seguridad</p>
-        </div>
-        <div class="p-6">
-          <a 
-            href="/cuenta/configuracion"
-            class="inline-flex items-center gap-2 px-4 py-2 border border-charcoal-200 rounded-lg hover:bg-charcoal-50 transition-colors"
-          >
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <h2 class="text-lg font-serif text-navy-900 flex items-center gap-2">
+            <svg class="w-5 h-5 text-navy-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
             </svg>
-            Cambiar contraseña
-          </a>
+            Cambiar Contraseña
+          </h2>
+          <p class="text-charcoal-500 text-sm mt-1">Solicita un enlace seguro para cambiar tu contraseña</p>
+        </div>
+        
+        <div class="p-6">
+          <!-- Estado inicial: Botón para solicitar -->
+          <div id="request-state">
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-5">
+              <div class="flex items-start gap-3">
+                <svg class="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div>
+                  <p class="text-sm text-blue-800 font-medium">¿Cómo funciona?</p>
+                  <p class="text-sm text-blue-700 mt-1">
+                    Te enviaremos un email a <strong>{user.email}</strong> con un enlace seguro. 
+                    Al hacer clic en él, podrás establecer tu nueva contraseña.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Mensaje de estado -->
+            <div id="password-message" class="hidden p-4 rounded-lg text-sm mb-5"></div>
+
+            <button
+              type="button"
+              id="request-reset-btn"
+              class="w-full sm:w-auto px-6 py-3 bg-navy-900 text-white rounded-lg hover:bg-navy-800 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+              </svg>
+              <span id="btn-text">Enviar enlace de cambio de contraseña</span>
+              <svg id="btn-spinner" class="hidden w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+            </button>
+          </div>
+
+          <!-- Estado de éxito: Email enviado -->
+          <div id="success-state" class="hidden">
+            <div class="bg-green-50 border border-green-200 rounded-lg p-6 text-center">
+              <div class="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg class="w-7 h-7 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 19v-8.93a2 2 0 01.89-1.664l7-4.666a2 2 0 012.22 0l7 4.666A2 2 0 0121 10.07V19M3 19a2 2 0 002 2h14a2 2 0 002-2M3 19l6.75-4.5M21 19l-6.75-4.5M3 10l6.75 4.5M21 10l-6.75 4.5m0 0l-1.14.76a2 2 0 01-2.22 0l-1.14-.76" />
+                </svg>
+              </div>
+              <h3 class="text-lg font-medium text-green-800 mb-2">¡Email enviado!</h3>
+              <p class="text-green-700 text-sm mb-4">
+                Hemos enviado un enlace a <strong id="sent-email">{user.email}</strong>.<br/>
+                Revisa tu bandeja de entrada y haz clic en el enlace para cambiar tu contraseña.
+              </p>
+              <p class="text-green-600 text-xs">
+                Si no lo ves, revisa tu carpeta de spam. El enlace expira en 24 horas.
+              </p>
+              <button
+                type="button"
+                id="resend-btn"
+                class="mt-4 text-sm text-green-700 hover:text-green-900 underline"
+              >
+                ¿No recibiste el email? Reenviar
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
   </main>
+
+  <script>
+    // Elements
+    const requestState = document.getElementById('request-state');
+    const successState = document.getElementById('success-state');
+    const requestResetBtn = document.getElementById('request-reset-btn');
+    const resendBtn = document.getElementById('resend-btn');
+    const passwordMessage = document.getElementById('password-message');
+    const btnText = document.getElementById('btn-text');
+    const btnSpinner = document.getElementById('btn-spinner');
+
+    // Show message
+    function showMessage(message: string, type: 'success' | 'error') {
+      if (!passwordMessage) return;
+      
+      passwordMessage.textContent = message;
+      passwordMessage.classList.remove('hidden', 'bg-green-50', 'border-green-200', 'text-green-700', 'bg-red-50', 'border-red-200', 'text-red-700');
+      
+      if (type === 'success') {
+        passwordMessage.classList.add('bg-green-50', 'border', 'border-green-200', 'text-green-700');
+      } else {
+        passwordMessage.classList.add('bg-red-50', 'border', 'border-red-200', 'text-red-700');
+      }
+    }
+
+    // Request password reset
+    async function requestPasswordReset() {
+      // Set loading state
+      if (requestResetBtn) {
+        (requestResetBtn as HTMLButtonElement).disabled = true;
+      }
+      if (btnText) {
+        btnText.textContent = 'Enviando...';
+      }
+      btnSpinner?.classList.remove('hidden');
+
+      try {
+        const response = await fetch('/api/auth/request-password-reset', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || 'Error al enviar el email');
+        }
+
+        // Show success state
+        requestState?.classList.add('hidden');
+        successState?.classList.remove('hidden');
+      } catch (error: any) {
+        showMessage(error.message || 'Error inesperado. Inténtalo de nuevo.', 'error');
+        
+        // Reset button
+        if (requestResetBtn) {
+          (requestResetBtn as HTMLButtonElement).disabled = false;
+        }
+        if (btnText) {
+          btnText.textContent = 'Enviar enlace de cambio de contraseña';
+        }
+        btnSpinner?.classList.add('hidden');
+      }
+    }
+
+    // Event listeners
+    requestResetBtn?.addEventListener('click', requestPasswordReset);
+    resendBtn?.addEventListener('click', () => {
+      // Show request state again
+      successState?.classList.add('hidden');
+      requestState?.classList.remove('hidden');
+      
+      // Reset button state
+      if (requestResetBtn) {
+        (requestResetBtn as HTMLButtonElement).disabled = false;
+      }
+      if (btnText) {
+        btnText.textContent = 'Enviar enlace de cambio de contraseña';
+      }
+      btnSpinner?.classList.add('hidden');
+      
+      // Trigger new request
+      requestPasswordReset();
+    });
+  </script>
 </BaseLayout>

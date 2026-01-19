@@ -18,8 +18,11 @@
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
     "astro": "^5.16.7",
+    "chart.js": "^4.5.1",
+    "cloudinary": "^2.8.0",
     "nanostores": "^1.1.0",
     "react": "^19.2.3",
+    "react-chartjs-2": "^5.3.1",
     "react-dom": "^19.2.3",
     "stripe": "^20.1.2",
     "tailwindcss": "^4.1.18"

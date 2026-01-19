@@ -99,7 +99,7 @@ if (isSupabaseConfigured() && supabase) {
           </thead>
           <tbody class="divide-y divide-charcoal-100">
             {products && products.length > 0 ? (
-              products.map((product) => (
+              products.map((product, index) => (
                 <tr class="hover:bg-charcoal-50 transition-colors">
                   <td class="px-6 py-4">
                     <div class="flex items-center gap-4">
@@ -115,7 +115,7 @@ if (isSupabaseConfigured() && supabase) {
                           {product.name}
                         </p>
                         <p class="text-xs text-charcoal-500 truncate max-w-xs">
-                          {product.slug}
+                          ID: #{index + 1}
                         </p>
                       </div>
                     </div>
