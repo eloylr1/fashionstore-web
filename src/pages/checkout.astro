@@ -30,10 +30,6 @@ if (sessionError || !sessionData.user) {
 }
 
 const user = sessionData.user;
-
-// Obtener items del carrito (simulado - en tu caso viene del localStorage)
-// En producción, obtendrías esto del carrito del usuario
-const cartTotal = 14999; // 149.99€ (en céntimos)
 ---
 
 <BaseLayout title="Checkout | FashionMarket">
@@ -56,9 +52,8 @@ const cartTotal = 14999; // 149.99€ (en céntimos)
           <div class="bg-white rounded-lg shadow-sm p-6">
             <h1 class="text-2xl font-serif text-navy-900 mb-6">Finalizar pedido</h1>
 
-            <!-- Componente de Stripe -->
+            <!-- Componente de Stripe - lee el carrito del localStorage -->
             <CheckoutForm 
-              amount={cartTotal}
               client:load
             />
           </div>
@@ -69,15 +64,10 @@ const cartTotal = 14999; // 149.99€ (en céntimos)
           <div class="bg-white rounded-lg shadow-sm p-6 sticky top-24">
             <h2 class="text-lg font-semibold text-navy-900 mb-4">Resumen del pedido</h2>
 
-            <!-- Items del carrito -->
+            <!-- Items del carrito (se llena con JS) -->
             <div class="space-y-4 mb-6 pb-6 border-b border-charcoal-100" id="cart-items">
-              <div class="flex gap-4">
-                <div class="w-16 h-16 bg-charcoal-100 rounded flex-shrink-0"></div>
-                <div class="flex-1">
-                  <h3 class="font-medium text-navy-900 text-sm">Traje Ejecutivo Navy</h3>
-                  <p class="text-xs text-charcoal-500">Talla: 50 | Color: Azul Marino</p>
-                  <p class="text-sm text-navy-900 mt-1">349,99€</p>
-                </div>
+              <div class="flex items-center justify-center py-4">
+                <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-navy-900"></div>
               </div>
             </div>
 
@@ -136,7 +126,7 @@ const cartTotal = 14999; // 149.99€ (en céntimos)
               </div>
               <div class="flex justify-between text-base font-semibold pt-3 border-t border-charcoal-100">
                 <span class="text-navy-900">Total</span>
-                <span id="total-display" class="text-navy-900">{(cartTotal / 100).toFixed(2)}€</span>
+                <span id="total-display" class="text-navy-900">0,00€</span>
               </div>
             </div>
 
@@ -208,7 +198,75 @@ const cartTotal = 14999; // 149.99€ (en céntimos)
       discount_amount: number;
     } | null = null;
     
-    const subtotal = 14999; // En céntimos - esto debería venir del carrito real
+    // Obtener carrito del localStorage
+    const getCart = () => {
+      try {
+        const saved = localStorage.getItem('fashionmarket-cart');
+        return saved ? JSON.parse(saved) : [];
+      } catch {
+        return [];
+      }
+    };
+
+    const cartItems = getCart();
+    const subtotal = cartItems.reduce((sum: number, item: any) => sum + item.price * item.quantity, 0);
+
+    // Formatear precio
+    const formatPrice = (cents: number) => {
+      return new Intl.NumberFormat('es-ES', {
+        style: 'currency',
+        currency: 'EUR',
+      }).format(cents / 100);
+    };
+
+    // Renderizar items del carrito
+    const renderCartItems = () => {
+      const container = document.getElementById('cart-items');
+      if (!container) return;
+
+      if (cartItems.length === 0) {
+        container.innerHTML = `
+          <div class="text-center py-4">
+            <p class="text-charcoal-500 text-sm">Tu carrito está vacío</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = cartItems.map((item: any) => `
+        <div class="flex gap-4">
+          <div class="w-16 h-16 bg-charcoal-100 rounded flex-shrink-0 overflow-hidden">
+            ${item.image ? `<img src="${item.image}" alt="${item.name}" class="w-full h-full object-cover" />` : ''}
+          </div>
+          <div class="flex-1">
+            <h3 class="font-medium text-navy-900 text-sm">${item.name}</h3>
+            <p class="text-xs text-charcoal-500">Talla: ${item.size} | Cantidad: ${item.quantity}</p>
+            <p class="text-sm text-navy-900 mt-1">${formatPrice(item.price * item.quantity)}</p>
+          </div>
+        </div>
+      `).join('');
+    };
+
+    // Actualizar totales
+    const updateTotals = () => {
+      const discount = appliedDiscount?.discount_amount || 0;
+      const total = subtotal - discount;
+      
+      const subtotalDisplay = document.getElementById('subtotal-display');
+      const totalDisplay = document.getElementById('total-display');
+      const discountRow = document.getElementById('discount-row');
+      const discountTotal = document.getElementById('discount-total');
+      
+      if (subtotalDisplay) subtotalDisplay.textContent = formatPrice(subtotal);
+      if (totalDisplay) totalDisplay.textContent = formatPrice(total);
+      
+      if (discount > 0 && discountRow && discountTotal) {
+        discountRow.classList.remove('hidden');
+        discountTotal.textContent = `-${formatPrice(discount)}`;
+      } else if (discountRow) {
+        discountRow.classList.add('hidden');
+      }
+    };
 
     // Elementos del DOM
     const discountCodeInput = document.getElementById('discount-code') as HTMLInputElement;
@@ -218,30 +276,6 @@ const cartTotal = 14999; // 149.99€ (en céntimos)
     const discountApplied = document.getElementById('discount-applied') as HTMLDivElement;
     const discountCodeDisplay = document.getElementById('discount-code-display') as HTMLSpanElement;
     const discountAmountDisplay = document.getElementById('discount-amount-display') as HTMLSpanElement;
-    const discountRow = document.getElementById('discount-row') as HTMLDivElement;
-    const discountTotal = document.getElementById('discount-total') as HTMLSpanElement;
-    const totalDisplay = document.getElementById('total-display') as HTMLSpanElement;
-
-    const formatPrice = (cents: number) => {
-      return new Intl.NumberFormat('es-ES', {
-        style: 'currency',
-        currency: 'EUR',
-      }).format(cents / 100);
-    };
-
-    const updateTotals = () => {
-      const discount = appliedDiscount?.discount_amount || 0;
-      const total = subtotal - discount;
-      
-      if (discount > 0) {
-        discountRow?.classList.remove('hidden');
-        discountTotal!.textContent = `-${formatPrice(discount)}`;
-      } else {
-        discountRow?.classList.add('hidden');
-      }
-      
-      totalDisplay!.textContent = formatPrice(total);
-    };
 
     const showMessage = (message: string, isError: boolean) => {
       if (!discountMessage) return;
@@ -324,5 +358,9 @@ const cartTotal = 14999; // 149.99€ (en céntimos)
         window.location.href = `/cuenta/pedidos/${event.data.paymentIntentId}`;
       }
     });
+
+    // Inicializar al cargar
+    renderCartItems();
+    updateTotals();
   </script>
 </BaseLayout>

@@ -5,6 +5,8 @@
  * ═══════════════════════════════════════════════════════════════════════════
  */
 
+export const prerender = false;
+
 import type { APIRoute } from 'astro';
 import { createClient } from '@supabase/supabase-js';
 
@@ -165,8 +167,17 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       }),
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     );
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error validating discount code:', error);
+    
+    // Si es un error de Supabase por tabla inexistente
+    if (error?.message?.includes('relation') || error?.code === '42P01') {
+      return new Response(
+        JSON.stringify({ valid: false, reason: 'Sistema de descuentos no configurado' }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+    
     return new Response(
       JSON.stringify({ valid: false, reason: 'Error al validar el código' }),
       { status: 500, headers: { 'Content-Type': 'application/json' } }

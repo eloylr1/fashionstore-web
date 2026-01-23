@@ -10,16 +10,40 @@
 export const prerender = false; // SSR
 
 import '../styles/global.css';
+import { createClient } from '@supabase/supabase-js';
 
-// Si ya está autenticado, redirigir según el rol
+// Si ya está autenticado con token VÁLIDO, redirigir según el rol
 const accessToken = Astro.cookies.get('sb-access-token');
 const userRole = Astro.cookies.get('user-role');
 
-if (accessToken) {
-  if (userRole?.value === 'admin') {
-    return Astro.redirect('/admin');
+if (accessToken?.value) {
+  try {
+    const supabase = createClient(
+      import.meta.env.PUBLIC_SUPABASE_URL,
+      import.meta.env.PUBLIC_SUPABASE_ANON_KEY
+    );
+    
+    // VALIDAR el token con Supabase
+    const { data: { user }, error } = await supabase.auth.getUser(accessToken.value);
+    
+    if (!error && user) {
+      // Token válido - redirigir según rol
+      if (userRole?.value === 'admin') {
+        return Astro.redirect('/admin');
+      }
+      return Astro.redirect('/tienda');
+    } else {
+      // Token inválido - LIMPIAR COOKIES
+      Astro.cookies.delete('sb-access-token', { path: '/' });
+      Astro.cookies.delete('sb-refresh-token', { path: '/' });
+      Astro.cookies.delete('user-role', { path: '/' });
+    }
+  } catch (error) {
+    // Error - limpiar cookies
+    Astro.cookies.delete('sb-access-token', { path: '/' });
+    Astro.cookies.delete('sb-refresh-token', { path: '/' });
+    Astro.cookies.delete('user-role', { path: '/' });
   }
-  return Astro.redirect('/tienda');
 }
 ---
 

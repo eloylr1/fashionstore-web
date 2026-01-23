@@ -165,11 +165,13 @@ if (accessToken && userRole === 'admin') {
     </div>
     
     <script>
-      import { createClient } from '@supabase/supabase-js';
+      import { supabase, isSupabaseConfigured } from '../../lib/supabase/client';
       
-      const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
-      const supabaseAnonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
-      const supabase = createClient(supabaseUrl, supabaseAnonKey);
+      // Lista de emails de administradores autorizados
+      const ADMIN_EMAILS = [
+        'eloylopezruizfn@gmail.com',
+        'admin@fashionmarket.com'
+      ];
       
       const form = document.getElementById('admin-login-form') as HTMLFormElement;
       const errorMessage = document.getElementById('error-message');
@@ -187,7 +189,7 @@ if (accessToken && userRole === 'admin') {
       form?.addEventListener('submit', async (e) => {
         e.preventDefault();
         
-        const email = (document.getElementById('email') as HTMLInputElement).value;
+        const email = (document.getElementById('email') as HTMLInputElement).value.trim().toLowerCase();
         const password = (document.getElementById('password') as HTMLInputElement).value;
         
         // Hide messages
@@ -202,90 +204,95 @@ if (accessToken && userRole === 'admin') {
               <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
               <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
             </svg>
-            <span>Verificando credenciales...</span>
+            <span>Verificando...</span>
           `;
         }
         
+        // Verificar primero si el email está en la lista de admins
+        if (!ADMIN_EMAILS.includes(email)) {
+          showError('Acceso denegado. Solo administradores autorizados.');
+          resetButton();
+          return;
+        }
+        
+        // Verificar configuración de Supabase
+        if (!isSupabaseConfigured() || !supabase) {
+          showError('Error de configuración. Contacta al administrador.');
+          resetButton();
+          return;
+        }
+        
         try {
-          // Try to sign in
-          const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+          // Intentar login - usando el mismo cliente que funciona en /login
+          const { data, error } = await supabase.auth.signInWithPassword({
             email,
             password,
           });
           
-          if (authError) throw authError;
-          
-          if (!authData.user) {
-            throw new Error('No se pudo obtener información del usuario');
+          if (error) {
+            if (error.message.includes('Invalid login credentials')) {
+              showError('Credenciales incorrectas. Verifica tu email y contraseña.');
+            } else if (error.message.includes('Email not confirmed')) {
+              showError('Email no confirmado. Revisa tu bandeja de entrada.');
+            } else {
+              showError('Error de autenticación: ' + error.message);
+            }
+            resetButton();
+            return;
           }
           
-          // Check if user is admin
-          const { data: profile, error: profileError } = await supabase
-            .from('profiles')
-            .select('role, full_name')
-            .eq('id', authData.user.id)
-            .single();
-          
-          if (profileError) throw profileError;
-          
-          if (profile?.role !== 'admin') {
-            // Sign out if not admin
-            await supabase.auth.signOut();
-            throw new Error('Acceso denegado. Solo administradores pueden acceder a esta página.');
+          if (!data.session) {
+            showError('No se pudo crear la sesión.');
+            resetButton();
+            return;
           }
           
-          // Set cookies
-          const maxAge = 60 * 60 * 24 * 7; // 7 days
-          document.cookie = `sb-access-token=${authData.session?.access_token}; path=/; max-age=${maxAge}; SameSite=Lax`;
-          document.cookie = `sb-refresh-token=${authData.session?.refresh_token}; path=/; max-age=${maxAge}; SameSite=Lax`;
-          document.cookie = `user-role=${profile.role}; path=/; max-age=${maxAge}; SameSite=Lax`;
+          // Login exitoso - configurar cookies
+          const maxAge = 60 * 60 * 24 * 7; // 7 días
+          document.cookie = `sb-access-token=${data.session.access_token}; path=/; max-age=${maxAge}; SameSite=Lax`;
+          document.cookie = `sb-refresh-token=${data.session.refresh_token}; path=/; max-age=${maxAge}; SameSite=Lax`;
+          document.cookie = `user-role=admin; path=/; max-age=${maxAge}; SameSite=Lax`;
           
-          // Save name to localStorage
-          if (profile.full_name) {
-            localStorage.setItem('user-name', profile.full_name);
-          }
+          // Guardar nombre
+          const userName = data.user?.user_metadata?.full_name || data.user?.user_metadata?.name || email.split('@')[0];
+          localStorage.setItem('user-name', userName);
           
-          // Show success
+          // Mostrar éxito
           if (successMessage) {
-            successMessage.textContent = '✓ Acceso autorizado. Redirigiendo al panel...';
+            successMessage.textContent = '✓ Acceso autorizado. Redirigiendo...';
             successMessage.classList.remove('hidden');
           }
           
-          // Redirect to admin panel
+          // Redirigir
           setTimeout(() => {
             window.location.href = '/admin';
-          }, 1000);
+          }, 800);
           
-        } catch (error: any) {
-          console.error('Admin login error:', error);
-          
-          if (errorMessage) {
-            if (error.message.includes('Invalid login credentials')) {
-              errorMessage.textContent = 'Credenciales incorrectas. Verifica tu email y contraseña.';
-            } else if (error.message.includes('Acceso denegado')) {
-              errorMessage.textContent = error.message;
-            } else if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
-              errorMessage.textContent = 'Error de conexión con el servidor. Verifica tu conexión a internet.';
-            } else if (error.message.includes('Email not confirmed')) {
-              errorMessage.textContent = 'Email no confirmado. Revisa tu bandeja de entrada.';
-            } else {
-              errorMessage.textContent = `Error: ${error.message}`;
-            }
-            errorMessage.classList.remove('hidden');
-          }
-          
-          // Re-enable button
-          if (submitBtn) {
-            submitBtn.removeAttribute('disabled');
-            submitBtn.innerHTML = `
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
-              </svg>
-              <span>Acceder al Panel</span>
-            `;
-          }
+        } catch (err: any) {
+          console.error('Login error:', err);
+          showError('Error de conexión. Verifica tu internet.');
+          resetButton();
         }
       });
+      
+      function showError(msg: string) {
+        if (errorMessage) {
+          errorMessage.textContent = msg;
+          errorMessage.classList.remove('hidden');
+        }
+      }
+      
+      function resetButton() {
+        if (submitBtn) {
+          submitBtn.removeAttribute('disabled');
+          submitBtn.innerHTML = `
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+            </svg>
+            <span>Acceder al Panel</span>
+          `;
+        }
+      }
     </script>
   </body>
 </html>

@@ -200,24 +200,26 @@ if (accessToken?.value) {
               </div>
               <!-- Botones -->
               <div class="p-5 space-y-3">
-                <a 
-                  href="/login"
+                <button 
+                  type="button"
+                  id="btn-go-login"
                   class="flex items-center justify-center gap-2 w-full py-3 px-4 bg-navy-900 text-white text-center rounded-lg hover:bg-navy-800 transition-all duration-200 text-sm font-semibold shadow-sm hover:shadow-md cursor-pointer"
                 >
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
                   </svg>
                   Iniciar sesión
-                </a>
-                <a
-                  href="/registro"
+                </button>
+                <button
+                  type="button"
+                  id="btn-go-registro"
                   class="flex items-center justify-center gap-2 w-full py-3 px-4 border-2 border-navy-900 text-navy-900 text-center rounded-lg hover:bg-navy-50 transition-all duration-200 text-sm font-semibold cursor-pointer"
                 >
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
                   </svg>
                   Crear cuenta
-                </a>
+                </button>
               </div>
               <!-- Beneficios -->
               <div class="bg-cream/50 px-5 py-4 border-t border-charcoal-100">
@@ -456,7 +458,9 @@ if (accessToken?.value) {
     // Close dropdown when clicking outside
     document.addEventListener('click', (e) => {
       const container = document.getElementById('user-menu-container');
-      if (container && !container.contains(e.target as Node)) {
+      const target = e.target as HTMLElement;
+      
+      if (container && !container.contains(target)) {
         userDropdown?.classList.add('hidden');
       }
     });
@@ -467,6 +471,28 @@ if (accessToken?.value) {
         userDropdown?.classList.add('hidden');
       }
     });
+
+    // FORZAR navegación en los botones del dropdown
+    const btnLogin = document.getElementById('btn-go-login');
+    const btnRegistro = document.getElementById('btn-go-registro');
+    
+    if (btnLogin) {
+      btnLogin.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        setTimeout(() => { window.location.assign('/login'); }, 0);
+      }, true);
+    }
+    
+    if (btnRegistro) {
+      btnRegistro.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        setTimeout(() => { window.location.assign('/registro'); }, 0);
+      }, true);
+    }
 
     // Handle logout - clear localStorage
     const logoutForm = document.getElementById('logout-form');

@@ -49,10 +49,14 @@ if (isSupabaseConfigured() && supabase) {
 }
 
 import NewsletterPopup from '../components/newsletter/NewsletterPopup';
+import OffersPopup from '../components/offers/OffersPopup';
 ---
 
 <BaseLayout title="Moda Masculina Premium">
-  <!-- Newsletter Popup -->
+  <!-- Offers Popup (aparece primero) -->
+  <OffersPopup client:load />
+  
+  <!-- Newsletter Popup (aparece después si no se ha suscrito) -->
   <NewsletterPopup client:load />
   
   <!-- Hero Section - Pantalla completa -->

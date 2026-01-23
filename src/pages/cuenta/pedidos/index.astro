@@ -2,7 +2,7 @@
 /**
  * ═══════════════════════════════════════════════════════════════════════════
  * FASHIONMARKET - Mis Pedidos
- * Historial de pedidos del usuario
+ * Historial de pedidos con búsqueda, filtros y timeline de seguimiento
  * ═══════════════════════════════════════════════════════════════════════════
  */
 
@@ -82,11 +82,24 @@ const formatDate = (date: string) => {
     year: 'numeric',
   });
 };
+
+// Estados para el timeline de seguimiento
+const orderSteps = [
+  { key: 'paid', label: 'Pagado', icon: '💳' },
+  { key: 'processing', label: 'En preparación', icon: '📦' },
+  { key: 'shipped', label: 'Enviado', icon: '🚚' },
+  { key: 'delivered', label: 'Entregado', icon: '✅' },
+];
+
+const getStepIndex = (status: string) => {
+  if (status === 'cancelled' || status === 'refunded' || status === 'pending') return -1;
+  return orderSteps.findIndex(s => s.key === status);
+};
 ---
 
 <BaseLayout title="Mis Pedidos | FashionMarket">
   <main class="min-h-screen bg-cream py-8 lg:py-12">
-    <div class="container-custom max-w-4xl">
+    <div class="container-custom max-w-5xl">
       <!-- Breadcrumb -->
       <nav class="mb-6">
         <ol class="flex items-center gap-2 text-sm text-charcoal-500">
@@ -101,12 +114,92 @@ const formatDate = (date: string) => {
       <div class="bg-white rounded-lg shadow-sm">
         <!-- Header -->
         <div class="p-6 border-b border-charcoal-100">
-          <h1 class="text-2xl font-serif text-navy-900">Mis Pedidos</h1>
-          <p class="text-charcoal-500 mt-1">Historial y seguimiento de tus pedidos</p>
+          <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <h1 class="text-2xl font-serif text-navy-900">Mis Pedidos</h1>
+              <p class="text-charcoal-500 mt-1">
+                {orders?.length || 0} pedido{orders?.length !== 1 ? 's' : ''} en total
+              </p>
+            </div>
+            
+            <!-- Estadísticas rápidas -->
+            <div class="flex gap-4 text-sm">
+              <div class="px-4 py-2 bg-green-50 rounded-lg">
+                <span class="text-green-700 font-medium">
+                  {orders?.filter((o: any) => o.status === 'delivered').length || 0}
+                </span>
+                <span class="text-green-600 ml-1">entregados</span>
+              </div>
+              <div class="px-4 py-2 bg-indigo-50 rounded-lg">
+                <span class="text-indigo-700 font-medium">
+                  {orders?.filter((o: any) => ['paid', 'processing', 'shipped'].includes(o.status)).length || 0}
+                </span>
+                <span class="text-indigo-600 ml-1">en curso</span>
+              </div>
+            </div>
+          </div>
         </div>
 
+        <!-- Barra de búsqueda y filtros -->
+        {orders && orders.length > 0 && (
+          <div class="p-4 border-b border-charcoal-100 bg-cream/50">
+            <div class="flex flex-col md:flex-row gap-4">
+              <!-- Búsqueda -->
+              <div class="flex-1 relative">
+                <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-charcoal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                <input 
+                  type="text" 
+                  id="search-orders"
+                  placeholder="Buscar por nº de pedido (ej: FM-ABC123)" 
+                  class="w-full pl-10 pr-4 py-2.5 border border-charcoal-200 rounded-lg focus:ring-2 focus:ring-gold-matte/30 focus:border-gold-matte transition-colors"
+                />
+              </div>
+              
+              <!-- Filtro por estado -->
+              <div class="min-w-[180px]">
+                <select 
+                  id="filter-status"
+                  class="w-full px-4 py-2.5 border border-charcoal-200 rounded-lg focus:ring-2 focus:ring-gold-matte/30 focus:border-gold-matte transition-colors appearance-none bg-white cursor-pointer"
+                >
+                  <option value="">Todos los estados</option>
+                  <option value="paid">Pagados</option>
+                  <option value="processing">En preparación</option>
+                  <option value="shipped">Enviados</option>
+                  <option value="delivered">Entregados</option>
+                  <option value="cancelled">Cancelados</option>
+                </select>
+              </div>
+              
+              <!-- Filtro por fechas -->
+              <div class="min-w-[180px]">
+                <select 
+                  id="filter-date"
+                  class="w-full px-4 py-2.5 border border-charcoal-200 rounded-lg focus:ring-2 focus:ring-gold-matte/30 focus:border-gold-matte transition-colors appearance-none bg-white cursor-pointer"
+                >
+                  <option value="">Todas las fechas</option>
+                  <option value="7">Últimos 7 días</option>
+                  <option value="30">Últimos 30 días</option>
+                  <option value="90">Últimos 3 meses</option>
+                  <option value="365">Último año</option>
+                </select>
+              </div>
+            </div>
+            
+            <!-- Indicador de filtros activos -->
+            <div id="active-filters" class="hidden mt-3 flex items-center gap-2 flex-wrap">
+              <span class="text-sm text-charcoal-500">Filtros activos:</span>
+              <div id="filter-tags" class="flex gap-2 flex-wrap"></div>
+              <button id="clear-filters" class="text-sm text-red-600 hover:text-red-700 ml-2">
+                Limpiar todo
+              </button>
+            </div>
+          </div>
+        )}
+
         <!-- Lista de pedidos -->
-        <div class="divide-y divide-charcoal-100">
+        <div id="orders-list" class="divide-y divide-charcoal-100">
           {(!orders || orders.length === 0) ? (
             <div class="p-12 text-center">
               <svg class="w-20 h-20 mx-auto text-charcoal-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -125,117 +218,197 @@ const formatDate = (date: string) => {
               </a>
             </div>
           ) : (
-            orders.map((order: any) => (
-              <div class="p-6">
-                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
-                  <div>
-                    <div class="flex items-center gap-3 mb-1">
-                      <span class="font-medium text-navy-900 text-lg">{order.order_number}</span>
-                      <span class={`px-3 py-1 text-xs font-medium rounded-full border ${getStatusColor(order.status)}`}>
-                        {getStatusLabel(order.status)}
-                      </span>
+            orders.map((order: any) => {
+              const stepIndex = getStepIndex(order.status);
+              const isCancelled = order.status === 'cancelled' || order.status === 'refunded';
+              
+              return (
+                <div 
+                  class="order-item p-6 transition-colors hover:bg-cream/30" 
+                  data-order-number={order.order_number}
+                  data-status={order.status}
+                  data-date={order.created_at}
+                >
+                  {/* Cabecera del pedido */}
+                  <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-5">
+                    <div>
+                      <div class="flex items-center gap-3 mb-1">
+                        <a 
+                          href={`/cuenta/pedidos/${order.id}`}
+                          class="font-semibold text-navy-900 text-lg hover:text-gold-matte transition-colors"
+                        >
+                          {order.order_number}
+                        </a>
+                        <span class={`px-3 py-1 text-xs font-medium rounded-full border ${getStatusColor(order.status)}`}>
+                          {getStatusLabel(order.status)}
+                        </span>
+                      </div>
+                      <p class="text-sm text-charcoal-500">
+                        📅 {formatDate(order.created_at)}
+                      </p>
                     </div>
-                    <p class="text-sm text-charcoal-500">
-                      Realizado el {formatDate(order.created_at)}
-                    </p>
+                    <div class="text-right">
+                      <p class="text-xl font-bold text-navy-900">{formatPrice(order.total)}</p>
+                      <p class="text-sm text-charcoal-500">{order.order_items?.length || 0} artículo(s)</p>
+                    </div>
                   </div>
-                  <div class="text-right">
-                    <p class="text-lg font-semibold text-navy-900">{formatPrice(order.total)}</p>
-                    <p class="text-sm text-charcoal-500">{order.order_items?.length || 0} artículo(s)</p>
-                  </div>
-                </div>
 
-                {/* Items del pedido */}
-                {order.order_items && order.order_items.length > 0 && (
-                  <div class="bg-cream/50 rounded-lg p-4 mb-4">
-                    <div class="flex flex-wrap gap-3">
-                      {order.order_items.slice(0, 3).map((item: any) => (
-                        <div class="flex items-center gap-3 bg-white rounded-lg p-2 pr-4">
-                          <div class="w-12 h-12 bg-charcoal-100 rounded flex items-center justify-center">
-                            {item.product_image ? (
-                              <img src={item.product_image} alt={item.product_name} class="w-full h-full object-cover rounded" />
-                            ) : (
-                              <svg class="w-6 h-6 text-charcoal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                              </svg>
-                            )}
+                  {/* Timeline de seguimiento */}
+                  {!isCancelled && stepIndex >= 0 && (
+                    <div class="mb-5 p-4 bg-gradient-to-br from-cream/80 to-cream/40 rounded-xl">
+                      <p class="text-xs font-medium text-charcoal-500 uppercase tracking-wide mb-3">Seguimiento del pedido</p>
+                      <div class="flex items-center justify-between relative">
+                        {/* Línea de fondo */}
+                        <div class="absolute left-0 right-0 top-5 h-1 bg-charcoal-200 -z-10"></div>
+                        <div 
+                          class="absolute left-0 top-5 h-1 bg-green-500 -z-10 transition-all duration-500"
+                          style={`width: ${stepIndex === 0 ? '0%' : stepIndex === 1 ? '33%' : stepIndex === 2 ? '66%' : '100%'}`}
+                        ></div>
+                        
+                        {orderSteps.map((step, i) => (
+                          <div class="flex flex-col items-center relative z-10">
+                            {/* Icono */}
+                            <div 
+                              class={`w-10 h-10 rounded-full flex items-center justify-center text-lg transition-all ${
+                                i < stepIndex || i === stepIndex
+                                  ? 'bg-green-500 text-white shadow-md shadow-green-200' 
+                                  : 'bg-white border-2 border-charcoal-200 text-charcoal-400'
+                              } ${i === stepIndex ? 'ring-4 ring-green-200 scale-110' : ''}`}
+                            >
+                              {i < stepIndex ? '✓' : step.icon}
+                            </div>
+                            
+                            {/* Label */}
+                            <p class={`mt-2 text-xs text-center whitespace-nowrap ${
+                              i < stepIndex || i === stepIndex ? 'text-green-700 font-medium' : 'text-charcoal-400'
+                            }`}>
+                              {step.label}
+                            </p>
                           </div>
-                          <div class="text-sm">
-                            <p class="font-medium text-navy-900 line-clamp-1">{item.product_name}</p>
-                            <p class="text-charcoal-500">x{item.quantity}</p>
+                        ))}
+                      </div>
+                      
+                      {/* Mensaje de estado actual */}
+                      {order.status === 'shipped' && order.tracking_number && (
+                        <div class="mt-4 p-3 bg-indigo-50 rounded-lg flex items-center gap-3">
+                          <svg class="w-5 h-5 text-indigo-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                          </svg>
+                          <div class="flex-1">
+                            <p class="text-sm font-medium text-indigo-900">Número de seguimiento</p>
+                            <p class="text-indigo-700 font-mono text-sm">{order.tracking_number}</p>
                           </div>
-                        </div>
-                      ))}
-                      {order.order_items.length > 3 && (
-                        <div class="flex items-center justify-center px-4 text-sm text-charcoal-500">
-                          +{order.order_items.length - 3} más
+                          <button class="text-sm text-indigo-600 hover:text-indigo-800 font-medium">
+                            Rastrear →
+                          </button>
                         </div>
                       )}
                     </div>
-                  </div>
-                )}
+                  )}
 
-                {/* Seguimiento */}
-                {order.status === 'shipped' && order.tracking_number && (
-                  <div class="bg-indigo-50 rounded-lg p-4 mb-4 flex items-center gap-3">
-                    <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                    </svg>
-                    <div>
-                      <p class="text-sm font-medium text-indigo-900">Número de seguimiento</p>
-                      <p class="text-indigo-700 font-mono">{order.tracking_number}</p>
+                  {/* Items del pedido */}
+                  {order.order_items && order.order_items.length > 0 && (
+                    <div class="bg-white border border-charcoal-100 rounded-lg p-3 mb-4">
+                      <div class="flex flex-wrap gap-3">
+                        {order.order_items.slice(0, 4).map((item: any) => (
+                          <div class="flex items-center gap-3 bg-cream/50 rounded-lg p-2 pr-4">
+                            <div class="w-12 h-12 bg-charcoal-100 rounded flex items-center justify-center overflow-hidden">
+                              {item.product_image ? (
+                                <img src={item.product_image} alt={item.product_name} class="w-full h-full object-cover" />
+                              ) : (
+                                <svg class="w-6 h-6 text-charcoal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                </svg>
+                              )}
+                            </div>
+                            <div class="text-sm">
+                              <p class="font-medium text-navy-900 line-clamp-1">{item.product_name}</p>
+                              <p class="text-charcoal-500">
+                                x{item.quantity}
+                                {item.size && <span class="ml-2 text-xs bg-charcoal-100 px-1.5 py-0.5 rounded">T:{item.size}</span>}
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                        {order.order_items.length > 4 && (
+                          <div class="flex items-center justify-center px-4 text-sm text-charcoal-500 bg-cream/50 rounded-lg">
+                            +{order.order_items.length - 4} más
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
-                {/* Acciones */}
-                <div class="flex flex-wrap gap-3">
-                  <a 
-                    href={`/cuenta/pedidos/${order.id}`}
-                    class="inline-flex items-center gap-2 px-4 py-2 bg-navy-900 text-white text-sm rounded-lg hover:bg-navy-800 transition-colors"
-                  >
-                    Ver detalles
-                  </a>
-                  {/* Botón cancelar - Solo para pedidos "paid" (antes de envío) */}
-                  {order.status === 'paid' && (
-                    <button 
-                      type="button"
-                      data-order-id={order.id}
-                      data-order-number={order.order_number}
-                      class="cancel-order-btn inline-flex items-center gap-2 px-4 py-2 border border-red-200 text-red-600 text-sm rounded-lg hover:bg-red-50 transition-colors"
+                  {/* Acciones */}
+                  <div class="flex flex-wrap gap-3">
+                    <a 
+                      href={`/cuenta/pedidos/${order.id}`}
+                      class="inline-flex items-center gap-2 px-4 py-2 bg-navy-900 text-white text-sm rounded-lg hover:bg-navy-800 transition-colors"
                     >
                       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                       </svg>
-                      Cancelar pedido
-                    </button>
-                  )}
-                  {/* Botón devolución - Solo para pedidos "delivered" */}
-                  {order.status === 'delivered' && (
-                    <button 
-                      type="button"
-                      data-order-id={order.id}
-                      data-order-number={order.order_number}
-                      class="return-order-btn inline-flex items-center gap-2 px-4 py-2 border border-charcoal-200 text-charcoal-700 text-sm rounded-lg hover:bg-charcoal-50 transition-colors"
-                    >
-                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
-                      </svg>
-                      Solicitar devolución
-                    </button>
-                  )}
-                  {order.status === 'shipped' && (
-                    <button 
-                      type="button"
-                      class="inline-flex items-center gap-2 px-4 py-2 border border-charcoal-200 text-charcoal-700 text-sm rounded-lg hover:bg-charcoal-50 transition-colors"
-                    >
-                      Seguir envío
-                    </button>
-                  )}
+                      Ver detalles
+                    </a>
+                    
+                    {/* Cancelar - Solo para pedidos pagados */}
+                    {order.status === 'paid' && (
+                      <button 
+                        type="button"
+                        data-order-id={order.id}
+                        data-order-number={order.order_number}
+                        class="cancel-order-btn inline-flex items-center gap-2 px-4 py-2 border border-red-200 text-red-600 text-sm rounded-lg hover:bg-red-50 transition-colors"
+                      >
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                        Cancelar
+                      </button>
+                    )}
+                    
+                    {/* Devolución - Solo para entregados */}
+                    {order.status === 'delivered' && (
+                      <button 
+                        type="button"
+                        data-order-id={order.id}
+                        data-order-number={order.order_number}
+                        class="return-order-btn inline-flex items-center gap-2 px-4 py-2 border border-charcoal-200 text-charcoal-700 text-sm rounded-lg hover:bg-charcoal-50 transition-colors"
+                      >
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                        </svg>
+                        Solicitar devolución
+                      </button>
+                    )}
+                    
+                    {/* Seguir envío */}
+                    {order.status === 'shipped' && (
+                      <button 
+                        type="button"
+                        class="inline-flex items-center gap-2 px-4 py-2 border border-indigo-200 text-indigo-600 text-sm rounded-lg hover:bg-indigo-50 transition-colors"
+                      >
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        Rastrear envío
+                      </button>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))
+              );
+            })
           )}
+        </div>
+
+        <!-- Mensaje sin resultados (oculto por defecto) -->
+        <div id="no-results" class="hidden p-12 text-center">
+          <svg class="w-16 h-16 mx-auto text-charcoal-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+          <h2 class="text-lg font-medium text-navy-900 mb-2">No se encontraron pedidos</h2>
+          <p class="text-charcoal-500">Intenta con otros criterios de búsqueda</p>
         </div>
 
         <!-- Volver -->
@@ -249,7 +422,7 @@ const formatDate = (date: string) => {
   </main>
 
   <!-- Modal de Cancelación -->
-  <div id="cancel-modal" class="fixed inset-0 z-50 hidden" role="dialog" aria-modal="true" aria-labelledby="cancel-modal-title">
+  <div id="cancel-modal" class="fixed inset-0 z-50 hidden" role="dialog" aria-modal="true">
     <div class="absolute inset-0 bg-black/60 backdrop-blur-sm modal-backdrop"></div>
     <div class="absolute inset-0 flex items-center justify-center p-4">
       <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden">
@@ -259,16 +432,10 @@ const formatDate = (date: string) => {
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
             </svg>
           </div>
-          <h3 id="cancel-modal-title" class="text-xl font-serif text-navy-900 text-center mb-2">
-            ¿Cancelar pedido?
-          </h3>
-          <p class="text-charcoal-600 text-center mb-2">
-            Estás a punto de cancelar el pedido:
-          </p>
+          <h3 class="text-xl font-serif text-navy-900 text-center mb-2">¿Cancelar pedido?</h3>
+          <p class="text-charcoal-600 text-center mb-2">Estás a punto de cancelar el pedido:</p>
           <p id="cancel-order-number" class="text-center font-mono font-bold text-navy-900 mb-4"></p>
-          <p class="text-sm text-charcoal-500 text-center mb-6">
-            El stock de los productos se restaurará automáticamente. Esta acción no se puede deshacer.
-          </p>
+          <p class="text-sm text-charcoal-500 text-center mb-6">Esta acción no se puede deshacer.</p>
           <div id="cancel-error" class="hidden mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm"></div>
           <div class="flex gap-3">
             <button type="button" id="cancel-modal-close" class="flex-1 px-4 py-3 border border-charcoal-200 rounded-lg text-charcoal-700 hover:bg-charcoal-50 transition-colors">
@@ -288,15 +455,13 @@ const formatDate = (date: string) => {
   </div>
 
   <!-- Modal de Devolución -->
-  <div id="return-modal" class="fixed inset-0 z-50 hidden" role="dialog" aria-modal="true" aria-labelledby="return-modal-title">
+  <div id="return-modal" class="fixed inset-0 z-50 hidden" role="dialog" aria-modal="true">
     <div class="absolute inset-0 bg-black/60 backdrop-blur-sm modal-backdrop"></div>
     <div class="absolute inset-0 flex items-center justify-center p-4">
       <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden">
         <div class="bg-gradient-to-br from-navy-900 to-navy-800 px-6 py-5">
           <div class="flex items-center justify-between">
-            <h3 id="return-modal-title" class="text-xl font-serif text-white">
-              Solicitar devolución
-            </h3>
+            <h3 class="text-xl font-serif text-white">Solicitar devolución</h3>
             <button type="button" id="return-modal-close" class="p-2 text-white/70 hover:text-white transition-colors">
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -307,70 +472,39 @@ const formatDate = (date: string) => {
         </div>
         
         <div class="p-6 space-y-5">
-          <!-- Paso 1: Envío -->
           <div class="flex gap-4">
             <div class="flex-shrink-0 w-10 h-10 bg-gold-matte/10 rounded-full flex items-center justify-center">
               <span class="text-gold-matte font-bold">1</span>
             </div>
             <div>
               <h4 class="font-medium text-navy-900 mb-1">Envía los artículos</h4>
-              <p class="text-sm text-charcoal-600">
-                Debes enviar los artículos en su embalaje original a:
-              </p>
+              <p class="text-sm text-charcoal-600">Debes enviar los artículos en su embalaje original a:</p>
               <div class="mt-2 p-3 bg-cream rounded-lg">
                 <p class="font-medium text-navy-900">FashionMarket - Devoluciones</p>
-                <p class="text-sm text-charcoal-600">Calle de la Moda 123</p>
-                <p class="text-sm text-charcoal-600">Polígono Industrial</p>
-                <p class="text-sm text-charcoal-600">28001 Madrid, España</p>
+                <p class="text-sm text-charcoal-600">Calle de la Moda 123, 28001 Madrid</p>
               </div>
             </div>
           </div>
 
-          <!-- Paso 2: Email -->
           <div class="flex gap-4">
             <div class="flex-shrink-0 w-10 h-10 bg-gold-matte/10 rounded-full flex items-center justify-center">
               <span class="text-gold-matte font-bold">2</span>
             </div>
             <div>
-              <h4 class="font-medium text-navy-900 mb-1">Etiqueta de devolución</h4>
-              <p class="text-sm text-charcoal-600">
-                Hemos enviado un correo con la etiqueta de devolución a tu email asociado. 
-                Imprímela y pégala en el paquete.
-              </p>
-              <div class="mt-2 flex items-center gap-2 text-sm text-green-600">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                </svg>
-                Correo enviado a tu dirección
-              </div>
-            </div>
-          </div>
-
-          <!-- Paso 3: Reembolso -->
-          <div class="flex gap-4">
-            <div class="flex-shrink-0 w-10 h-10 bg-gold-matte/10 rounded-full flex items-center justify-center">
-              <span class="text-gold-matte font-bold">3</span>
-            </div>
-            <div>
               <h4 class="font-medium text-navy-900 mb-1">Reembolso</h4>
               <p class="text-sm text-charcoal-600">
-                Una vez recibido y validado el paquete, el reembolso se procesará en tu método de pago original 
-                en un plazo de <strong>5 a 7 días hábiles</strong>.
+                Una vez recibido y validado, el reembolso se procesará en <strong>5-7 días hábiles</strong>.
               </p>
             </div>
           </div>
 
-          <!-- Info adicional -->
-          <div class="bg-amber-50 border border-amber-200 rounded-lg p-4">
-            <div class="flex gap-3">
-              <svg class="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <p class="text-sm text-amber-800">
-                Tienes <strong>30 días</strong> desde la entrega para realizar la devolución. 
-                Los artículos deben estar sin usar y con las etiquetas originales.
-              </p>
-            </div>
+          <div class="bg-amber-50 border border-amber-200 rounded-lg p-4 flex gap-3">
+            <svg class="w-5 h-5 text-amber-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <p class="text-sm text-amber-800">
+              Tienes <strong>30 días</strong> desde la entrega para devolver. Artículos sin usar y con etiquetas.
+            </p>
           </div>
 
           <button type="button" id="return-understood-btn" class="w-full px-4 py-3 bg-navy-900 text-white rounded-lg hover:bg-navy-800 transition-colors font-medium">
@@ -382,10 +516,149 @@ const formatDate = (date: string) => {
   </div>
 
   <script>
-    // Variables para los modales
-    let currentOrderId: string | null = null;
+    // ═══════════════════════════════════════════════════════════════════════
+    // BÚSQUEDA Y FILTROS
+    // ═══════════════════════════════════════════════════════════════════════
+    
+    const searchInput = document.getElementById('search-orders') as HTMLInputElement;
+    const statusFilter = document.getElementById('filter-status') as HTMLSelectElement;
+    const dateFilter = document.getElementById('filter-date') as HTMLSelectElement;
+    const ordersList = document.getElementById('orders-list');
+    const noResults = document.getElementById('no-results');
+    const activeFilters = document.getElementById('active-filters');
+    const filterTags = document.getElementById('filter-tags');
+    const clearFiltersBtn = document.getElementById('clear-filters');
 
-    // Elementos DOM
+    const statusLabels: Record<string, string> = {
+      paid: 'Pagados',
+      processing: 'En preparación',
+      shipped: 'Enviados',
+      delivered: 'Entregados',
+      cancelled: 'Cancelados',
+    };
+
+    const dateLabels: Record<string, string> = {
+      '7': 'Últimos 7 días',
+      '30': 'Últimos 30 días',
+      '90': 'Últimos 3 meses',
+      '365': 'Último año',
+    };
+
+    function filterOrders() {
+      const searchTerm = searchInput?.value.toLowerCase().trim() || '';
+      const statusValue = statusFilter?.value || '';
+      const dateValue = dateFilter?.value || '';
+      
+      const items = document.querySelectorAll('.order-item');
+      let visibleCount = 0;
+
+      const now = new Date();
+      const daysAgo = dateValue ? parseInt(dateValue) : 0;
+      const dateThreshold = daysAgo ? new Date(now.getTime() - daysAgo * 24 * 60 * 60 * 1000) : null;
+
+      items.forEach(item => {
+        const el = item as HTMLElement;
+        const orderNumber = el.dataset.orderNumber?.toLowerCase() || '';
+        const status = el.dataset.status || '';
+        const orderDate = new Date(el.dataset.date || '');
+
+        let visible = true;
+
+        // Filtro de búsqueda
+        if (searchTerm && !orderNumber.includes(searchTerm)) {
+          visible = false;
+        }
+
+        // Filtro de estado
+        if (statusValue && status !== statusValue) {
+          visible = false;
+        }
+
+        // Filtro de fecha
+        if (dateThreshold && orderDate < dateThreshold) {
+          visible = false;
+        }
+
+        el.style.display = visible ? '' : 'none';
+        if (visible) visibleCount++;
+      });
+
+      // Mostrar mensaje si no hay resultados
+      if (noResults) {
+        noResults.classList.toggle('hidden', visibleCount > 0);
+      }
+      
+      // Actualizar indicador de filtros activos
+      updateFilterTags(searchTerm, statusValue, dateValue);
+    }
+
+    function updateFilterTags(search: string, status: string, date: string) {
+      if (!filterTags || !activeFilters) return;
+      
+      filterTags.innerHTML = '';
+      let hasFilters = false;
+
+      if (search) {
+        hasFilters = true;
+        filterTags.innerHTML += `
+          <span class="inline-flex items-center gap-1 px-2 py-1 bg-navy-100 text-navy-700 rounded text-sm">
+            Búsqueda: "${search}"
+            <button type="button" data-clear="search" class="hover:text-navy-900">×</button>
+          </span>
+        `;
+      }
+
+      if (status) {
+        hasFilters = true;
+        filterTags.innerHTML += `
+          <span class="inline-flex items-center gap-1 px-2 py-1 bg-navy-100 text-navy-700 rounded text-sm">
+            ${statusLabels[status] || status}
+            <button type="button" data-clear="status" class="hover:text-navy-900">×</button>
+          </span>
+        `;
+      }
+
+      if (date) {
+        hasFilters = true;
+        filterTags.innerHTML += `
+          <span class="inline-flex items-center gap-1 px-2 py-1 bg-navy-100 text-navy-700 rounded text-sm">
+            ${dateLabels[date] || date}
+            <button type="button" data-clear="date" class="hover:text-navy-900">×</button>
+          </span>
+        `;
+      }
+
+      activeFilters.classList.toggle('hidden', !hasFilters);
+
+      // Eventos para limpiar filtros individuales
+      filterTags.querySelectorAll('button[data-clear]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const clear = (btn as HTMLElement).dataset.clear;
+          if (clear === 'search' && searchInput) searchInput.value = '';
+          if (clear === 'status' && statusFilter) statusFilter.value = '';
+          if (clear === 'date' && dateFilter) dateFilter.value = '';
+          filterOrders();
+        });
+      });
+    }
+
+    // Event listeners
+    searchInput?.addEventListener('input', filterOrders);
+    statusFilter?.addEventListener('change', filterOrders);
+    dateFilter?.addEventListener('change', filterOrders);
+    
+    clearFiltersBtn?.addEventListener('click', () => {
+      if (searchInput) searchInput.value = '';
+      if (statusFilter) statusFilter.value = '';
+      if (dateFilter) dateFilter.value = '';
+      filterOrders();
+    });
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // MODALES
+    // ═══════════════════════════════════════════════════════════════════════
+    
+    let currentOrderId: string | null = null;
     const cancelModal = document.getElementById('cancel-modal');
     const returnModal = document.getElementById('return-modal');
     const cancelOrderNumber = document.getElementById('cancel-order-number');
@@ -394,13 +667,11 @@ const formatDate = (date: string) => {
     const cancelSpinner = document.getElementById('cancel-spinner');
     const cancelError = document.getElementById('cancel-error');
 
-    // Función para abrir modal de cancelación
     document.querySelectorAll('.cancel-order-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         const orderId = (btn as HTMLElement).dataset.orderId;
         const orderNumber = (btn as HTMLElement).dataset.orderNumber;
         currentOrderId = orderId || null;
-        
         if (cancelOrderNumber) cancelOrderNumber.textContent = orderNumber || '';
         cancelError?.classList.add('hidden');
         cancelModal?.classList.remove('hidden');
@@ -408,20 +679,15 @@ const formatDate = (date: string) => {
       });
     });
 
-    // Función para abrir modal de devolución
     document.querySelectorAll('.return-order-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         const orderNumber = (btn as HTMLElement).dataset.orderNumber;
         if (returnOrderNumber) returnOrderNumber.textContent = orderNumber || '';
         returnModal?.classList.remove('hidden');
         document.body.style.overflow = 'hidden';
-        
-        // TODO: Aquí se enviaría el email de devolución
-        console.log('📧 Email de devolución enviado para pedido:', orderNumber);
       });
     });
 
-    // Cerrar modales
     const closeModal = (modal: HTMLElement | null) => {
       modal?.classList.add('hidden');
       document.body.style.overflow = '';
@@ -432,7 +698,6 @@ const formatDate = (date: string) => {
     document.getElementById('return-modal-close')?.addEventListener('click', () => closeModal(returnModal));
     document.getElementById('return-understood-btn')?.addEventListener('click', () => closeModal(returnModal));
 
-    // Cerrar con backdrop click
     document.querySelectorAll('.modal-backdrop').forEach(backdrop => {
       backdrop.addEventListener('click', () => {
         closeModal(cancelModal);
@@ -440,7 +705,6 @@ const formatDate = (date: string) => {
       });
     });
 
-    // Cerrar con ESC
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
         closeModal(cancelModal);
@@ -448,7 +712,6 @@ const formatDate = (date: string) => {
       }
     });
 
-    // Confirmar cancelación - Llama a la RPC de Supabase
     cancelConfirmBtn?.addEventListener('click', async () => {
       if (!currentOrderId) return;
 
@@ -466,14 +729,13 @@ const formatDate = (date: string) => {
         const data = await response.json();
 
         if (!response.ok || !data.success) {
-          throw new Error(data.error || data.message || 'Error al cancelar el pedido');
+          throw new Error(data.error || 'Error al cancelar el pedido');
         }
 
-        // Éxito - recargar página
         window.location.reload();
       } catch (error: any) {
         if (cancelError) {
-          cancelError.textContent = error.message || 'Error inesperado. Inténtalo de nuevo.';
+          cancelError.textContent = error.message || 'Error inesperado';
           cancelError.classList.remove('hidden');
         }
       } finally {

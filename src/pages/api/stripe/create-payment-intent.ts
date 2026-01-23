@@ -5,16 +5,48 @@
  * ═══════════════════════════════════════════════════════════════════════════
  */
 
+export const prerender = false;
+
 import type { APIRoute } from 'astro';
 import Stripe from 'stripe';
 
-const stripe = new Stripe(import.meta.env.STRIPE_SECRET_KEY || '', {
-  apiVersion: '2024-12-18.acacia',
-});
+const stripeSecretKey = import.meta.env.STRIPE_SECRET_KEY;
 
 export const POST: APIRoute = async ({ request }) => {
+  // Verificar que Stripe esté configurado
+  if (!stripeSecretKey) {
+    console.error('STRIPE_SECRET_KEY no configurada');
+    return new Response(
+      JSON.stringify({ error: 'Stripe no está configurado correctamente' }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+
+  const stripe = new Stripe(stripeSecretKey, {
+    apiVersion: '2025-12-15.clover',
+  });
+
   try {
-    const { amount, currency = 'eur', metadata = {} } = await request.json();
+    // Leer y parsear el body
+    let body;
+    try {
+      const text = await request.text();
+      if (!text) {
+        return new Response(
+          JSON.stringify({ error: 'Body vacío' }),
+          { status: 400, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+      body = JSON.parse(text);
+    } catch (parseError) {
+      console.error('Error parsing request body:', parseError);
+      return new Response(
+        JSON.stringify({ error: 'JSON inválido en el body' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const { amount, currency = 'eur', metadata = {} } = body;
 
     // Validar que tenemos un monto válido
     if (!amount || amount <= 0) {

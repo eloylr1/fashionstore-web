@@ -1,7 +1,9 @@
 /**
  * ═══════════════════════════════════════════════════════════════════════════
- * FASHIONMARKET - Cart Store (Nano Stores)
- * Manejo de estado persistente del carrito de compras
+ * FASHIONMARKET - Cart Store (Nano Stores) v2
+ * Manejo de estado persistente del carrito con sincronización por usuario
+ * - Invitados: localStorage solamente
+ * - Usuarios logueados: sincronizado con base de datos
  * ═══════════════════════════════════════════════════════════════════════════
  */
 
@@ -28,6 +30,12 @@ export interface CartState {
   isOpen: boolean;
 }
 
+export interface CartNotification {
+  type: 'welcome' | 'restored' | 'added';
+  message: string;
+  itemCount?: number;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // STORE PRINCIPAL
 // ─────────────────────────────────────────────────────────────────────────────
@@ -49,6 +57,12 @@ export const cartItems = atom<CartItem[]>(getInitialState());
 
 // Atom para controlar visibilidad del slide-over
 export const isCartOpen = atom<boolean>(false);
+
+// Atom para el ID del usuario logueado (para saber si sincronizar con DB)
+export const currentUserId = atom<string | null>(null);
+
+// Atom para notificaciones del carrito
+export const cartNotification = atom<CartNotification | null>(null);
 
 // ─────────────────────────────────────────────────────────────────────────────
 // COMPUTED VALUES (valores derivados)
@@ -112,6 +126,7 @@ export function addToCart(product: Product, size: string, quantity: number = 1):
   
   cartItems.set(newItems);
   persistCart(newItems);
+  syncCartToServer(newItems);
   
   // Abrir el carrito automáticamente
   isCartOpen.set(true);
@@ -127,6 +142,7 @@ export function removeFromCart(productId: string, size: string): void {
   
   cartItems.set(newItems);
   persistCart(newItems);
+  syncCartToServer(newItems);
 }
 
 /**
@@ -147,6 +163,7 @@ export function updateQuantity(productId: string, size: string, quantity: number
   
   cartItems.set(newItems);
   persistCart(newItems);
+  syncCartToServer(newItems);
 }
 
 /**
@@ -155,6 +172,7 @@ export function updateQuantity(productId: string, size: string, quantity: number
 export function clearCart(): void {
   cartItems.set([]);
   persistCart([]);
+  syncCartToServer([]);
 }
 
 /**
@@ -170,6 +188,147 @@ export function openCart(): void {
 
 export function closeCart(): void {
   isCartOpen.set(false);
+}
+
+/**
+ * Mostrar notificación del carrito
+ */
+export function showCartNotification(notification: CartNotification): void {
+  cartNotification.set(notification);
+  // Auto-ocultar después de 5 segundos
+  setTimeout(() => {
+    cartNotification.set(null);
+  }, 5000);
+}
+
+/**
+ * Ocultar notificación
+ */
+export function hideCartNotification(): void {
+  cartNotification.set(null);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SINCRONIZACIÓN CON SERVIDOR (para usuarios logueados)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Sincronizar carrito al servidor
+ */
+async function syncCartToServer(items: CartItem[]): Promise<void> {
+  const userId = currentUserId.get();
+  if (!userId) return; // Solo sincronizar si hay usuario logueado
+  
+  try {
+    await fetch('/api/cart/sync', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ items }),
+    });
+  } catch (error) {
+    console.error('Error syncing cart to server:', error);
+  }
+}
+
+/**
+ * Cargar carrito del servidor (al hacer login)
+ */
+export async function loadCartFromServer(): Promise<void> {
+  try {
+    const response = await fetch('/api/cart/get');
+    if (!response.ok) return;
+    
+    const data = await response.json();
+    
+    if (data.items && Array.isArray(data.items)) {
+      const localItems = cartItems.get();
+      
+      // Convertir items del servidor al formato del carrito
+      const serverItems: CartItem[] = data.items.map((item: any) => ({
+        productId: item.product_id,
+        name: item.name,
+        slug: item.slug,
+        price: item.price,
+        quantity: item.quantity,
+        size: item.size,
+        image: item.image || '/placeholder.jpg',
+        maxStock: item.stock || 99,
+      }));
+      
+      // Merge: combinar items locales con los del servidor
+      const mergedItems = mergeCartItems(localItems, serverItems);
+      
+      cartItems.set(mergedItems);
+      persistCart(mergedItems);
+      
+      // Sincronizar el resultado de vuelta al servidor
+      if (mergedItems.length > 0) {
+        await syncCartToServer(mergedItems);
+        
+        // Mostrar notificación si había items en el carrito
+        showCartNotification({
+          type: 'restored',
+          message: `¡Bienvenido de vuelta! Tienes ${mergedItems.length} artículo${mergedItems.length > 1 ? 's' : ''} en tu carrito.`,
+          itemCount: mergedItems.length,
+        });
+      }
+      
+      // Guardar userId
+      if (data.userId) {
+        currentUserId.set(data.userId);
+      }
+    }
+  } catch (error) {
+    console.error('Error loading cart from server:', error);
+  }
+}
+
+/**
+ * Combinar items locales con los del servidor
+ */
+function mergeCartItems(localItems: CartItem[], serverItems: CartItem[]): CartItem[] {
+  const merged = new Map<string, CartItem>();
+  
+  // Primero añadir items del servidor
+  for (const item of serverItems) {
+    const key = `${item.productId}-${item.size}`;
+    merged.set(key, item);
+  }
+  
+  // Luego añadir/actualizar con items locales (toma la cantidad mayor)
+  for (const item of localItems) {
+    const key = `${item.productId}-${item.size}`;
+    const existing = merged.get(key);
+    
+    if (existing) {
+      // Tomar la cantidad mayor
+      merged.set(key, {
+        ...item,
+        quantity: Math.max(item.quantity, existing.quantity),
+      });
+    } else {
+      merged.set(key, item);
+    }
+  }
+  
+  return Array.from(merged.values());
+}
+
+/**
+ * Limpiar carrito para invitado (al cerrar sesión)
+ */
+export function clearCartForGuest(): void {
+  currentUserId.set(null);
+  // No borramos los items, se quedan en localStorage para el invitado
+}
+
+/**
+ * Inicializar carrito para usuario invitado (borrar todo)
+ */
+export function initializeGuestCart(): void {
+  cartItems.set([]);
+  persistCart([]);
+  currentUserId.set(null);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -208,5 +367,28 @@ export function initializeCart(): void {
   const saved = getInitialState();
   if (saved.length > 0) {
     cartItems.set(saved);
+  }
+  
+  // Verificar si hay usuario logueado y cargar su carrito
+  checkAndLoadUserCart();
+}
+
+/**
+ * Verificar sesión y cargar carrito del usuario
+ */
+async function checkAndLoadUserCart(): Promise<void> {
+  try {
+    const response = await fetch('/api/auth/session');
+    if (!response.ok) return;
+    
+    const data = await response.json();
+    
+    if (data.user?.id) {
+      currentUserId.set(data.user.id);
+      await loadCartFromServer();
+    }
+  } catch (error) {
+    // Usuario no logueado, usar localStorage
+    console.log('Using guest cart (localStorage)');
   }
 }

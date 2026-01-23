@@ -8,11 +8,10 @@ import node from '@astrojs/node';
 // https://astro.build/config
 export default defineConfig({
   // URL del sitio para SEO y generación de URLs canónicas
-  site: 'http://localhost:4321',
+  site: process.env.PUBLIC_SITE_URL || 'https://eloyfashionstore.victoriafp.online',
   
-  // Astro 5.0: output: 'static' es el default
-  // Las páginas con `export const prerender = false` serán SSR automáticamente
-  output: 'static',
+  // SSR con Node.js adapter para Coolify
+  output: 'server',
 
   vite: {
     plugins: [tailwindcss()]
@@ -27,5 +26,11 @@ export default defineConfig({
 
   adapter: node({
     mode: 'standalone'
-  })
+  }),
+
+  // Configuración del servidor para producción
+  server: {
+    host: '0.0.0.0',
+    port: 4321
+  }
 });

@@ -1,0 +1,756 @@
+---
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * PÁGINA: Detalle del Pedido
+ * Muestra información completa de un pedido específico con gestión post-venta
+ * Incluye: cancelación (antes de envío) y devolución (después de entrega)
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
+
+export const prerender = false;
+
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import { supabase } from '../../../lib/supabase/client';
+
+// Obtener ID del pedido
+const { id } = Astro.params;
+
+if (!id) {
+  return Astro.redirect('/cuenta/pedidos');
+}
+
+// Verificar autenticación
+const accessToken = Astro.cookies.get('sb-access-token')?.value;
+const refreshToken = Astro.cookies.get('sb-refresh-token')?.value;
+
+if (!accessToken || !refreshToken || !supabase) {
+  return Astro.redirect('/login?redirect=/cuenta/pedidos/' + id);
+}
+
+const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
+  access_token: accessToken,
+  refresh_token: refreshToken,
+});
+
+if (sessionError || !sessionData.user) {
+  Astro.cookies.delete('sb-access-token', { path: '/' });
+  Astro.cookies.delete('sb-refresh-token', { path: '/' });
+  return Astro.redirect('/login?redirect=/cuenta/pedidos/' + id);
+}
+
+const user = sessionData.user;
+
+// Definir tipo de pedido
+interface Order {
+  id: string;
+  user_id: string;
+  order_number: string;
+  status: string;
+  total: number;
+  subtotal?: number;
+  discount_amount?: number;
+  shipping_address: any;
+  tracking_number?: string;
+  stripe_payment_intent_id?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+interface Invoice {
+  id: string;
+  invoice_number: string;
+  issue_date: string;
+}
+
+// Obtener pedido
+const { data: orderData, error: orderError } = await supabase
+  .from('orders')
+  .select('*')
+  .eq('id', id)
+  .eq('user_id', user.id)
+  .single();
+
+if (orderError || !orderData) {
+  return Astro.redirect('/cuenta/pedidos');
+}
+
+const order = orderData as Order;
+
+// Obtener items del pedido
+const { data: orderItems } = await supabase
+  .from('order_items')
+  .select(`
+    *,
+    product:products(name, slug, images)
+  `)
+  .eq('order_id', id);
+
+// Obtener factura si existe
+const { data: invoiceData } = await supabase
+  .from('invoices')
+  .select('*')
+  .eq('order_id', id)
+  .single();
+
+const invoice = invoiceData as Invoice | null;
+
+// Helpers
+const formatPrice = (cents: number) => {
+  return new Intl.NumberFormat('es-ES', {
+    style: 'currency',
+    currency: 'EUR',
+  }).format(cents / 100);
+};
+
+const formatDate = (date: string) => {
+  return new Date(date).toLocaleDateString('es-ES', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+};
+
+const getStatusInfo = (status: string) => {
+  const statusMap: Record<string, { label: string; color: string; bgColor: string; icon: string; description: string }> = {
+    pending: { 
+      label: 'Pendiente de pago', 
+      color: 'text-yellow-800', 
+      bgColor: 'bg-yellow-100 border-yellow-200', 
+      icon: '⏳',
+      description: 'El pago aún no ha sido procesado'
+    },
+    paid: { 
+      label: 'Pagado', 
+      color: 'text-blue-800', 
+      bgColor: 'bg-blue-100 border-blue-200', 
+      icon: '💳',
+      description: 'Pago confirmado, preparando tu pedido'
+    },
+    processing: { 
+      label: 'En preparación', 
+      color: 'text-purple-800', 
+      bgColor: 'bg-purple-100 border-purple-200', 
+      icon: '📦',
+      description: 'Tu pedido está siendo preparado'
+    },
+    shipped: { 
+      label: 'Enviado', 
+      color: 'text-indigo-800', 
+      bgColor: 'bg-indigo-100 border-indigo-200', 
+      icon: '🚚',
+      description: 'Tu pedido está en camino'
+    },
+    delivered: { 
+      label: 'Entregado', 
+      color: 'text-green-800', 
+      bgColor: 'bg-green-100 border-green-200', 
+      icon: '✅',
+      description: 'Pedido entregado correctamente'
+    },
+    cancelled: { 
+      label: 'Cancelado', 
+      color: 'text-red-800', 
+      bgColor: 'bg-red-100 border-red-200', 
+      icon: '❌',
+      description: 'Este pedido ha sido cancelado'
+    },
+    refunded: { 
+      label: 'Reembolsado', 
+      color: 'text-gray-800', 
+      bgColor: 'bg-gray-100 border-gray-200', 
+      icon: '↩️',
+      description: 'El importe ha sido reembolsado'
+    },
+  };
+  return statusMap[status] || { 
+    label: status, 
+    color: 'text-gray-800', 
+    bgColor: 'bg-gray-100 border-gray-200', 
+    icon: '📋',
+    description: 'Estado del pedido'
+  };
+};
+
+const statusInfo = getStatusInfo(order.status);
+
+// Dirección de envío
+const shippingAddress = order.shipping_address as any;
+
+// Determinar acciones disponibles según estado
+const canCancel = order.status === 'paid'; // Solo se puede cancelar si está pagado pero no enviado
+const canRequestReturn = order.status === 'delivered'; // Solo se puede devolver si está entregado
+
+// Timeline de seguimiento
+const orderSteps = [
+  { key: 'paid', label: 'Pagado', icon: '💳' },
+  { key: 'processing', label: 'Preparando', icon: '📦' },
+  { key: 'shipped', label: 'Enviado', icon: '🚚' },
+  { key: 'delivered', label: 'Entregado', icon: '✅' },
+];
+
+const getStepIndex = (status: string) => {
+  if (status === 'cancelled' || status === 'refunded' || status === 'pending') return -1;
+  const idx = orderSteps.findIndex(s => s.key === status);
+  return idx >= 0 ? idx : -1;
+};
+
+const stepIndex = getStepIndex(order.status);
+const isCancelled = order.status === 'cancelled' || order.status === 'refunded';
+---
+
+<BaseLayout title={`Pedido #${order.order_number || id.slice(0, 8)} | FashionMarket`}>
+  <main class="min-h-screen bg-cream py-8 lg:py-12">
+    <div class="container-custom max-w-4xl">
+      <!-- Breadcrumb -->
+      <nav class="mb-6">
+        <ol class="flex items-center gap-2 text-sm text-charcoal-500">
+          <li><a href="/" class="hover:text-navy-900 transition-colors">Inicio</a></li>
+          <li>/</li>
+          <li><a href="/cuenta" class="hover:text-navy-900 transition-colors">Mi Cuenta</a></li>
+          <li>/</li>
+          <li><a href="/cuenta/pedidos" class="hover:text-navy-900 transition-colors">Pedidos</a></li>
+          <li>/</li>
+          <li class="text-navy-900 font-medium">#{order.order_number || id.slice(0, 8)}</li>
+        </ol>
+      </nav>
+
+      <!-- Header del pedido -->
+      <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 class="text-2xl font-serif text-navy-900">
+              Pedido #{order.order_number || id.slice(0, 8).toUpperCase()}
+            </h1>
+            <p class="text-charcoal-500 mt-1">
+              Realizado el {formatDate(order.created_at)}
+            </p>
+          </div>
+          <div class="flex items-center gap-3">
+            <span class={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium border ${statusInfo.bgColor} ${statusInfo.color}`}>
+              <span>{statusInfo.icon}</span>
+              {statusInfo.label}
+            </span>
+          </div>
+        </div>
+        <p class="text-sm text-charcoal-500 mt-2">{statusInfo.description}</p>
+      </div>
+
+      <!-- Timeline de Seguimiento -->
+      {!isCancelled && stepIndex >= 0 && (
+        <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
+          <h2 class="font-semibold text-navy-900 mb-4">Estado del envío</h2>
+          <div class="flex items-center justify-between relative px-4">
+            {/* Línea de fondo */}
+            <div class="absolute left-8 right-8 top-5 h-1 bg-charcoal-200"></div>
+            <div 
+              class="absolute left-8 top-5 h-1 bg-green-500 transition-all duration-500"
+              style={`width: calc(${stepIndex === 0 ? '0%' : stepIndex === 1 ? '33%' : stepIndex === 2 ? '66%' : '100%'} - 2rem)`}
+            ></div>
+            
+            {orderSteps.map((step, i) => (
+              <div class="flex flex-col items-center relative z-10">
+                <div 
+                  class={`w-10 h-10 rounded-full flex items-center justify-center text-lg transition-all ${
+                    i < stepIndex || i === stepIndex
+                      ? 'bg-green-500 text-white shadow-md shadow-green-200' 
+                      : 'bg-white border-2 border-charcoal-200 text-charcoal-400'
+                  } ${i === stepIndex ? 'ring-4 ring-green-200 scale-110' : ''}`}
+                >
+                  {i < stepIndex ? '✓' : step.icon}
+                </div>
+                <p class={`mt-2 text-xs text-center whitespace-nowrap ${
+                  i < stepIndex || i === stepIndex ? 'text-green-700 font-medium' : 'text-charcoal-400'
+                }`}>
+                  {step.label}
+                </p>
+              </div>
+            ))}
+          </div>
+          
+          {/* Número de seguimiento si está enviado */}
+          {order.status === 'shipped' && order.tracking_number && (
+            <div class="mt-6 p-4 bg-indigo-50 rounded-lg flex items-center gap-3">
+              <svg class="w-5 h-5 text-indigo-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+              </svg>
+              <div class="flex-1">
+                <p class="text-sm font-medium text-indigo-900">Número de seguimiento</p>
+                <p class="text-indigo-700 font-mono text-sm">{order.tracking_number}</p>
+              </div>
+              <button class="text-sm text-indigo-600 hover:text-indigo-800 font-medium">
+                Rastrear →
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      <!-- Mensaje de cancelación si aplica -->
+      {isCancelled && (
+        <div class={`rounded-lg p-4 mb-6 flex items-start gap-3 ${order.status === 'cancelled' ? 'bg-red-50 border border-red-200' : 'bg-gray-50 border border-gray-200'}`}>
+          <svg class={`w-5 h-5 flex-shrink-0 mt-0.5 ${order.status === 'cancelled' ? 'text-red-500' : 'text-gray-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <div>
+            <p class={`font-medium ${order.status === 'cancelled' ? 'text-red-800' : 'text-gray-800'}`}>
+              {order.status === 'cancelled' ? 'Pedido cancelado' : 'Pedido reembolsado'}
+            </p>
+            <p class={`text-sm mt-1 ${order.status === 'cancelled' ? 'text-red-600' : 'text-gray-600'}`}>
+              {order.status === 'cancelled' 
+                ? 'Este pedido fue cancelado. El stock ha sido restaurado al inventario.' 
+                : 'El importe de este pedido ha sido reembolsado a tu método de pago original.'}
+            </p>
+          </div>
+        </div>
+      )}
+
+      <div class="grid lg:grid-cols-3 gap-6">
+        <!-- Productos -->
+        <div class="lg:col-span-2 space-y-6">
+          <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+            <div class="p-4 border-b border-charcoal-100">
+              <h2 class="font-semibold text-navy-900">Productos ({orderItems?.length || 0})</h2>
+            </div>
+            <div class="divide-y divide-charcoal-100">
+              {orderItems && orderItems.length > 0 ? (
+                orderItems.map((item: any) => (
+                  <div class="p-4 flex gap-4">
+                    <div class="w-20 h-20 bg-charcoal-100 rounded-lg flex-shrink-0 overflow-hidden">
+                      {item.product?.images?.[0] ? (
+                        <img 
+                          src={item.product.images[0]} 
+                          alt={item.product_name || item.product?.name} 
+                          class="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div class="w-full h-full flex items-center justify-center text-charcoal-400">
+                          <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                        </div>
+                      )}
+                    </div>
+                    <div class="flex-1">
+                      <h3 class="font-medium text-navy-900">
+                        {item.product_name || item.product?.name || 'Producto'}
+                      </h3>
+                      <p class="text-sm text-charcoal-500 mt-1">
+                        {item.size && `Talla: ${item.size}`}
+                        {item.size && item.color && ' | '}
+                        {item.color && `Color: ${item.color}`}
+                      </p>
+                      <div class="flex items-center justify-between mt-2">
+                        <span class="text-sm text-charcoal-600">
+                          {formatPrice(item.unit_price)} × {item.quantity}
+                        </span>
+                        <span class="font-semibold text-navy-900">
+                          {formatPrice(item.unit_price * item.quantity)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div class="p-8 text-center text-charcoal-500">
+                  <p>No se encontraron productos en este pedido</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <!-- Dirección de envío -->
+          {shippingAddress && (
+            <div class="bg-white rounded-lg shadow-sm p-6">
+              <h2 class="font-semibold text-navy-900 mb-4">Dirección de envío</h2>
+              <div class="text-charcoal-600">
+                <p class="font-medium text-navy-900">{shippingAddress.name || shippingAddress.full_name}</p>
+                <p>{shippingAddress.address_line1 || shippingAddress.street}</p>
+                {shippingAddress.address_line2 && <p>{shippingAddress.address_line2}</p>}
+                <p>{shippingAddress.postal_code} {shippingAddress.city}</p>
+                <p>{shippingAddress.country || 'España'}</p>
+                {shippingAddress.phone && <p class="mt-2">Tel: {shippingAddress.phone}</p>}
+              </div>
+            </div>
+          )}
+        </div>
+
+        <!-- Resumen -->
+        <div class="space-y-6">
+          <!-- Totales -->
+          <div class="bg-white rounded-lg shadow-sm p-6">
+            <h2 class="font-semibold text-navy-900 mb-4">Resumen</h2>
+            <div class="space-y-3">
+              <div class="flex justify-between text-sm">
+                <span class="text-charcoal-600">Subtotal</span>
+                <span class="text-navy-900">{formatPrice(order.subtotal || order.total)}</span>
+              </div>
+              {(order.discount_amount ?? 0) > 0 && (
+                <div class="flex justify-between text-sm">
+                  <span class="text-green-600">Descuento</span>
+                  <span class="text-green-600">-{formatPrice(order.discount_amount ?? 0)}</span>
+                </div>
+              )}
+              <div class="flex justify-between text-sm">
+                <span class="text-charcoal-600">Envío</span>
+                <span class="text-green-600 font-medium">GRATIS</span>
+              </div>
+              <div class="flex justify-between text-lg font-semibold pt-3 border-t border-charcoal-100">
+                <span class="text-navy-900">Total</span>
+                <span class="text-navy-900">{formatPrice(order.total)}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Factura -->
+          {invoice && (
+            <div class="bg-white rounded-lg shadow-sm p-6">
+              <h2 class="font-semibold text-navy-900 mb-4">Factura</h2>
+              <div class="space-y-3">
+                <div class="flex justify-between text-sm">
+                  <span class="text-charcoal-600">Número</span>
+                  <span class="font-mono text-navy-900">{invoice.invoice_number}</span>
+                </div>
+                <div class="flex justify-between text-sm">
+                  <span class="text-charcoal-600">Fecha</span>
+                  <span class="text-navy-900">{new Date(invoice.issue_date).toLocaleDateString('es-ES')}</span>
+                </div>
+                <a
+                  href={`/api/invoices/${invoice.id}`}
+                  target="_blank"
+                  class="mt-4 w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-navy-900 text-white rounded-lg hover:bg-navy-800 transition-colors text-sm font-medium"
+                >
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  Ver factura
+                </a>
+              </div>
+            </div>
+          )}
+
+          <!-- Información de pago -->
+          <div class="bg-white rounded-lg shadow-sm p-6">
+            <h2 class="font-semibold text-navy-900 mb-4">Pago</h2>
+            <div class="space-y-2 text-sm">
+              <div class="flex items-center gap-2 text-charcoal-600">
+                <svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>Pago completado con Stripe</span>
+              </div>
+              {order.stripe_payment_intent_id && (
+                <p class="text-xs text-charcoal-400 font-mono pl-7">
+                  ID: {order.stripe_payment_intent_id.slice(0, 20)}...
+                </p>
+              )}
+            </div>
+          </div>
+
+          <!-- Acciones -->
+          <div class="space-y-3">
+            <a
+              href="/cuenta/pedidos"
+              class="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 border border-charcoal-200 text-charcoal-700 rounded-lg hover:bg-charcoal-50 transition-colors text-sm font-medium"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+              Volver a mis pedidos
+            </a>
+            
+            {/* Botón Cancelar - Solo para pedidos PAGADOS (antes de envío) */}
+            {canCancel && (
+              <button
+                type="button"
+                id="cancel-order-btn"
+                data-order-id={order.id}
+                data-order-number={order.order_number}
+                class="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+                Cancelar pedido
+              </button>
+            )}
+            
+            {/* Botón Devolución - Solo para pedidos ENTREGADOS */}
+            {canRequestReturn && (
+              <button
+                type="button"
+                id="return-order-btn"
+                data-order-id={order.id}
+                data-order-number={order.order_number}
+                class="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 border border-charcoal-200 text-charcoal-700 rounded-lg hover:bg-charcoal-50 transition-colors text-sm font-medium"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                </svg>
+                Solicitar devolución
+              </button>
+            )}
+            
+            {/* Mensaje informativo si ya se envió (no cancelable) */}
+            {(order.status === 'shipped' || order.status === 'processing') && (
+              <div class="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                <p class="text-xs text-amber-700 text-center">
+                  <strong>Nota:</strong> Tu pedido ya está en proceso de envío y no puede ser cancelado.
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+  
+  <!-- Modal de Cancelación -->
+  <div id="cancel-modal" class="fixed inset-0 z-50 hidden" role="dialog" aria-modal="true">
+    <div class="absolute inset-0 bg-black/60 backdrop-blur-sm modal-backdrop"></div>
+    <div class="absolute inset-0 flex items-center justify-center p-4">
+      <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden">
+        <div class="p-6">
+          <div class="flex items-center justify-center w-16 h-16 mx-auto mb-4 rounded-full bg-red-100">
+            <svg class="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <h3 class="text-xl font-serif text-navy-900 text-center mb-2">¿Cancelar pedido?</h3>
+          <p class="text-charcoal-600 text-center mb-2">Estás a punto de cancelar el pedido:</p>
+          <p id="cancel-order-number" class="text-center font-mono font-bold text-lg text-navy-900 mb-4">{order.order_number}</p>
+          
+          <div class="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4">
+            <p class="text-sm text-amber-800 text-center">
+              <strong>Importante:</strong> El stock de los productos será restaurado automáticamente.
+            </p>
+          </div>
+          
+          <p class="text-sm text-charcoal-500 text-center mb-6">Esta acción no se puede deshacer.</p>
+          
+          <div id="cancel-error" class="hidden mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm text-center"></div>
+          
+          <div class="flex gap-3">
+            <button type="button" id="cancel-modal-close" class="flex-1 px-4 py-3 border border-charcoal-200 rounded-lg text-charcoal-700 hover:bg-charcoal-50 transition-colors font-medium">
+              No, mantener
+            </button>
+            <button type="button" id="cancel-confirm-btn" class="flex-1 px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium flex items-center justify-center gap-2">
+              <span>Sí, cancelar</span>
+              <svg id="cancel-spinner" class="hidden w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de Devolución (Informativo) -->
+  <div id="return-modal" class="fixed inset-0 z-50 hidden" role="dialog" aria-modal="true">
+    <div class="absolute inset-0 bg-black/60 backdrop-blur-sm modal-backdrop"></div>
+    <div class="absolute inset-0 flex items-center justify-center p-4">
+      <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden max-h-[90vh] overflow-y-auto">
+        <!-- Header -->
+        <div class="bg-gradient-to-br from-navy-900 to-navy-800 px-6 py-5 sticky top-0">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center">
+                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                </svg>
+              </div>
+              <div>
+                <h3 class="text-xl font-serif text-white">Solicitar devolución</h3>
+                <p class="text-white/70 text-sm">Pedido: <span class="font-mono">{order.order_number}</span></p>
+              </div>
+            </div>
+            <button type="button" id="return-modal-close" class="p-2 text-white/70 hover:text-white transition-colors rounded-full hover:bg-white/10">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+        
+        <!-- Contenido -->
+        <div class="p-6 space-y-6">
+          <!-- Paso 1: Instrucciones de envío -->
+          <div class="flex gap-4">
+            <div class="flex-shrink-0 w-10 h-10 bg-gold-matte/10 rounded-full flex items-center justify-center">
+              <span class="text-gold-matte font-bold">1</span>
+            </div>
+            <div class="flex-1">
+              <h4 class="font-semibold text-navy-900 mb-2">📦 Prepara el paquete</h4>
+              <p class="text-sm text-charcoal-600 mb-3">
+                Empaqueta los artículos en su <strong>embalaje original</strong> con todas las etiquetas intactas.
+              </p>
+              <div class="bg-cream rounded-lg p-4 border border-charcoal-100">
+                <p class="text-xs text-charcoal-500 uppercase tracking-wide mb-2">Dirección de devolución</p>
+                <p class="font-semibold text-navy-900">FashionMarket - Devoluciones</p>
+                <p class="text-charcoal-700">Calle de la Moda 123</p>
+                <p class="text-charcoal-700">Polígono Industrial Norte</p>
+                <p class="text-charcoal-700">28001 Madrid, España</p>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Paso 2: Confirmación por email -->
+          <div class="flex gap-4">
+            <div class="flex-shrink-0 w-10 h-10 bg-gold-matte/10 rounded-full flex items-center justify-center">
+              <span class="text-gold-matte font-bold">2</span>
+            </div>
+            <div class="flex-1">
+              <h4 class="font-semibold text-navy-900 mb-2">✉️ Etiqueta de devolución</h4>
+              <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div class="flex items-start gap-3">
+                  <svg class="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                  </svg>
+                  <p class="text-sm text-blue-800">
+                    Hemos enviado un correo con la <strong>etiqueta de devolución prepagada</strong> a tu email asociado. 
+                    Imprímela y pégala en el paquete.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Paso 3: Reembolso -->
+          <div class="flex gap-4">
+            <div class="flex-shrink-0 w-10 h-10 bg-gold-matte/10 rounded-full flex items-center justify-center">
+              <span class="text-gold-matte font-bold">3</span>
+            </div>
+            <div class="flex-1">
+              <h4 class="font-semibold text-navy-900 mb-2">💳 Proceso de reembolso</h4>
+              <p class="text-sm text-charcoal-600">
+                Una vez recibamos y validemos el paquete, procesaremos el reembolso a tu método de pago original.
+              </p>
+            </div>
+          </div>
+          
+          <!-- Disclaimer financiero -->
+          <div class="bg-amber-50 border border-amber-200 rounded-lg p-4">
+            <div class="flex items-start gap-3">
+              <svg class="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <div class="text-sm text-amber-800">
+                <p class="font-semibold mb-1">Información importante sobre el reembolso</p>
+                <p>
+                  El reembolso se procesará en tu <strong>método de pago original</strong> en un plazo de 
+                  <strong>5 a 7 días hábiles</strong> desde la validación del paquete.
+                </p>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Política de devolución -->
+          <div class="bg-charcoal-50 rounded-lg p-4 text-sm text-charcoal-600">
+            <p class="font-medium text-charcoal-800 mb-2">📋 Condiciones de devolución:</p>
+            <ul class="space-y-1 list-disc list-inside">
+              <li>Plazo máximo: <strong>30 días</strong> desde la entrega</li>
+              <li>Artículos sin usar y con etiquetas originales</li>
+              <li>Embalaje original o equivalente</li>
+              <li>No aplica a productos personalizados o de higiene</li>
+            </ul>
+          </div>
+
+          <!-- Botón entendido -->
+          <button type="button" id="return-understood-btn" class="w-full px-4 py-3.5 bg-navy-900 text-white rounded-lg hover:bg-navy-800 transition-colors font-medium flex items-center justify-center gap-2">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+            </svg>
+            Entendido
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script define:vars={{ orderId: order.id }}>
+    // ═══════════════════════════════════════════════════════════════════════
+    // GESTIÓN DE MODALES Y CANCELACIÓN
+    // ═══════════════════════════════════════════════════════════════════════
+    
+    const cancelModal = document.getElementById('cancel-modal');
+    const returnModal = document.getElementById('return-modal');
+    const cancelConfirmBtn = document.getElementById('cancel-confirm-btn');
+    const cancelSpinner = document.getElementById('cancel-spinner');
+    const cancelError = document.getElementById('cancel-error');
+
+    // Abrir modal de cancelación
+    document.getElementById('cancel-order-btn')?.addEventListener('click', () => {
+      cancelError?.classList.add('hidden');
+      cancelModal?.classList.remove('hidden');
+      document.body.style.overflow = 'hidden';
+    });
+
+    // Abrir modal de devolución
+    document.getElementById('return-order-btn')?.addEventListener('click', () => {
+      returnModal?.classList.remove('hidden');
+      document.body.style.overflow = 'hidden';
+    });
+
+    // Cerrar modales
+    const closeModal = (modal) => {
+      modal?.classList.add('hidden');
+      document.body.style.overflow = '';
+    };
+
+    document.getElementById('cancel-modal-close')?.addEventListener('click', () => closeModal(cancelModal));
+    document.getElementById('return-modal-close')?.addEventListener('click', () => closeModal(returnModal));
+    document.getElementById('return-understood-btn')?.addEventListener('click', () => closeModal(returnModal));
+
+    // Cerrar con click en backdrop
+    document.querySelectorAll('.modal-backdrop').forEach(backdrop => {
+      backdrop.addEventListener('click', () => {
+        closeModal(cancelModal);
+        closeModal(returnModal);
+      });
+    });
+
+    // Cerrar con Escape
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        closeModal(cancelModal);
+        closeModal(returnModal);
+      }
+    });
+
+    // Confirmar cancelación - Operación atómica via RPC
+    cancelConfirmBtn?.addEventListener('click', async () => {
+      const btn = cancelConfirmBtn;
+      btn.disabled = true;
+      cancelSpinner?.classList.remove('hidden');
+      cancelError?.classList.add('hidden');
+
+      try {
+        const response = await fetch('/api/orders/cancel', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ order_id: orderId }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+          throw new Error(data.error || 'Error al cancelar el pedido');
+        }
+
+        // Éxito - recargar página para mostrar nuevo estado
+        window.location.reload();
+      } catch (error) {
+        if (cancelError) {
+          cancelError.textContent = error.message || 'Error inesperado al cancelar';
+          cancelError.classList.remove('hidden');
+        }
+      } finally {
+        btn.disabled = false;
+        cancelSpinner?.classList.add('hidden');
+      }
+    });
+  </script>
+</BaseLayout>
