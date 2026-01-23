@@ -1,14 +1,15 @@
 ---
 /**
  * ═══════════════════════════════════════════════════════════════════════════
- * FASHIONMARKET - Admin Settings
- * Configuración del sistema
+ * FASHIONMARKET - Admin Settings (Profesional con Tabs)
+ * Configuración completa del sistema con pestañas interactivas
  * ═══════════════════════════════════════════════════════════════════════════
  */
 
 export const prerender = false;
 
 import AdminLayout from '../../../layouts/AdminLayout.astro';
+import SettingsTabs from '../../../components/admin/SettingsTabs.tsx';
 
 // Verificar autenticación
 const accessToken = Astro.cookies.get('sb-access-token')?.value;
@@ -20,305 +21,104 @@ if (!accessToken || userRole !== 'admin') {
 ---
 
 <AdminLayout title="Configuración">
-  <div class="space-y-8">
+  <div class="space-y-6">
     <!-- Header -->
-    <div>
-      <p class="text-charcoal-500">
-        Configura los ajustes de tu tienda
-      </p>
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div>
+        <p class="text-charcoal-500">
+          Configura todos los aspectos de tu tienda
+        </p>
+      </div>
+      
+      <!-- System Status Pills -->
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="inline-flex items-center gap-1.5 px-3 py-1 bg-green-50 text-green-700 text-xs font-medium border border-green-200">
+          <span class="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
+          Base de datos
+        </span>
+        <span class="inline-flex items-center gap-1.5 px-3 py-1 bg-green-50 text-green-700 text-xs font-medium border border-green-200">
+          <span class="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
+          Cloudinary
+        </span>
+        <span class="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-50 text-amber-700 text-xs font-medium border border-amber-200">
+          <span class="w-1.5 h-1.5 bg-amber-500 rounded-full"></span>
+          Stripe Test
+        </span>
+      </div>
     </div>
 
-    <!-- Settings Sections -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-      <!-- Main Settings -->
-      <div class="lg:col-span-2 space-y-6">
-        <!-- General -->
-        <div class="bg-white border border-charcoal-100 overflow-hidden">
-          <div class="px-6 py-4 border-b border-charcoal-100 bg-charcoal-50">
-            <h3 class="font-semibold text-navy-900">Información de la Tienda</h3>
-          </div>
-          <div class="p-6 space-y-4">
-            <div>
-              <label for="store-name" class="block text-sm font-medium text-charcoal-700 mb-1">
-                Nombre de la tienda
-              </label>
-              <input 
-                type="text" 
-                id="store-name" 
-                value="FashionMarket"
-                class="w-full px-4 py-2.5 border border-charcoal-200 focus:border-navy-500 focus:ring-2 focus:ring-navy-500/20 transition-all outline-none"
-              />
-            </div>
-            
-            <div>
-              <label for="store-email" class="block text-sm font-medium text-charcoal-700 mb-1">
-                Email de contacto
-              </label>
-              <input 
-                type="email" 
-                id="store-email" 
-                value="eloylopezruiz2005@gmail.com"
-                class="w-full px-4 py-2.5 border border-charcoal-200 focus:border-navy-500 focus:ring-2 focus:ring-navy-500/20 transition-all outline-none"
-              />
-            </div>
-            
-            <div>
-              <label for="store-phone" class="block text-sm font-medium text-charcoal-700 mb-1">
-                Teléfono
-              </label>
-              <input 
-                type="tel" 
-                id="store-phone" 
-                placeholder="+34 XXX XXX XXX"
-                class="w-full px-4 py-2.5 border border-charcoal-200 focus:border-navy-500 focus:ring-2 focus:ring-navy-500/20 transition-all outline-none"
-              />
-            </div>
-            
-            <div>
-              <label for="store-address" class="block text-sm font-medium text-charcoal-700 mb-1">
-                Dirección
-              </label>
-              <textarea 
-                id="store-address" 
-                rows="2"
-                placeholder="Dirección física de la tienda"
-                class="w-full px-4 py-2.5 border border-charcoal-200 focus:border-navy-500 focus:ring-2 focus:ring-navy-500/20 transition-all outline-none resize-none"
-              ></textarea>
-            </div>
-          </div>
-        </div>
+    <!-- Settings Tabs Component (React with client:load) -->
+    <SettingsTabs client:load />
 
-        <!-- Envíos -->
-        <div class="bg-white border border-charcoal-100 overflow-hidden">
-          <div class="px-6 py-4 border-b border-charcoal-100 bg-charcoal-50">
-            <h3 class="font-semibold text-navy-900">Configuración de Envíos</h3>
-          </div>
-          <div class="p-6 space-y-4">
-            <div>
-              <label for="free-shipping" class="block text-sm font-medium text-charcoal-700 mb-1">
-                Envío gratis a partir de (€)
-              </label>
-              <input 
-                type="number" 
-                id="free-shipping" 
-                value="100"
-                min="0"
-                step="0.01"
-                class="w-full px-4 py-2.5 border border-charcoal-200 focus:border-navy-500 focus:ring-2 focus:ring-navy-500/20 transition-all outline-none"
-              />
-            </div>
-            
-            <div>
-              <label for="shipping-cost" class="block text-sm font-medium text-charcoal-700 mb-1">
-                Coste de envío estándar (€)
-              </label>
-              <input 
-                type="number" 
-                id="shipping-cost" 
-                value="4.99"
-                min="0"
-                step="0.01"
-                class="w-full px-4 py-2.5 border border-charcoal-200 focus:border-navy-500 focus:ring-2 focus:ring-navy-500/20 transition-all outline-none"
-              />
-            </div>
-            
-            <div>
-              <label for="return-days" class="block text-sm font-medium text-charcoal-700 mb-1">
-                Días para devoluciones
-              </label>
-              <input 
-                type="number" 
-                id="return-days" 
-                value="30"
-                min="0"
-                class="w-full px-4 py-2.5 border border-charcoal-200 focus:border-navy-500 focus:ring-2 focus:ring-navy-500/20 transition-all outline-none"
-              />
-            </div>
-          </div>
-        </div>
-
-        <!-- Impuestos -->
-        <div class="bg-white border border-charcoal-100 overflow-hidden">
-          <div class="px-6 py-4 border-b border-charcoal-100 bg-charcoal-50">
-            <h3 class="font-semibold text-navy-900">Impuestos</h3>
-          </div>
-          <div class="p-6 space-y-4">
-            <div>
-              <label for="tax-rate" class="block text-sm font-medium text-charcoal-700 mb-1">
-                IVA (%)
-              </label>
-              <input 
-                type="number" 
-                id="tax-rate" 
-                value="21"
-                min="0"
-                max="100"
-                class="w-full px-4 py-2.5 border border-charcoal-200 focus:border-navy-500 focus:ring-2 focus:ring-navy-500/20 transition-all outline-none"
-              />
-            </div>
-            
-            <div class="flex items-center gap-3">
-              <input 
-                type="checkbox" 
-                id="prices-include-tax" 
-                checked
-                class="w-5 h-5 border-charcoal-300 text-navy-600 focus:ring-navy-500"
-              />
-              <label for="prices-include-tax" class="text-sm text-charcoal-700">
-                Los precios incluyen IVA
-              </label>
-            </div>
-          </div>
-        </div>
-
-        <!-- Guardar -->
-        <div class="flex justify-end">
-          <button 
-            type="button"
-            id="save-settings"
-            class="inline-flex items-center gap-2 px-6 py-3 bg-navy-900 text-white font-medium hover:bg-navy-800 transition-colors"
-          >
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+    <!-- Quick Links Section -->
+    <div class="mt-8 pt-8 border-t border-charcoal-200">
+      <h3 class="text-sm font-semibold text-charcoal-700 mb-4">Enlaces rápidos a paneles externos</h3>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <a 
+          href="https://supabase.com/dashboard" 
+          target="_blank"
+          rel="noopener noreferrer"
+          class="flex items-center gap-3 p-4 bg-white border border-charcoal-200 hover:border-navy-300 hover:shadow-md transition-all group"
+        >
+          <div class="w-10 h-10 bg-emerald-100 text-emerald-600 flex items-center justify-center group-hover:bg-emerald-200 transition-colors">
+            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M21.362 9.354H12V.396a.396.396 0 0 0-.716-.233L2.203 12.424l-.401.562a1.04 1.04 0 0 0 .836 1.659H12v8.959a.396.396 0 0 0 .716.233l9.081-12.261.401-.562a1.04 1.04 0 0 0-.836-1.66z"/>
             </svg>
-            Guardar Cambios
-          </button>
-        </div>
+          </div>
+          <div class="flex-1">
+            <span class="font-medium text-navy-900 group-hover:text-navy-700">Supabase</span>
+            <p class="text-xs text-charcoal-500">Base de datos</p>
+          </div>
+          <svg class="w-4 h-4 text-charcoal-400 group-hover:text-navy-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+          </svg>
+        </a>
+
+        <a 
+          href="https://cloudinary.com/console" 
+          target="_blank"
+          rel="noopener noreferrer"
+          class="flex items-center gap-3 p-4 bg-white border border-charcoal-200 hover:border-navy-300 hover:shadow-md transition-all group"
+        >
+          <div class="w-10 h-10 bg-blue-100 text-blue-600 flex items-center justify-center group-hover:bg-blue-200 transition-colors">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+          </div>
+          <div class="flex-1">
+            <span class="font-medium text-navy-900 group-hover:text-navy-700">Cloudinary</span>
+            <p class="text-xs text-charcoal-500">Imágenes</p>
+          </div>
+          <svg class="w-4 h-4 text-charcoal-400 group-hover:text-navy-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+          </svg>
+        </a>
+
+        <a 
+          href="https://dashboard.stripe.com" 
+          target="_blank"
+          rel="noopener noreferrer"
+          class="flex items-center gap-3 p-4 bg-white border border-charcoal-200 hover:border-navy-300 hover:shadow-md transition-all group"
+        >
+          <div class="w-10 h-10 bg-indigo-100 text-indigo-600 flex items-center justify-center group-hover:bg-indigo-200 transition-colors">
+            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M13.976 9.15c-2.172-.806-3.356-1.426-3.356-2.409 0-.831.683-1.305 1.901-1.305 2.227 0 4.515.858 6.09 1.631l.89-5.494C18.252.975 15.697 0 12.165 0 9.667 0 7.589.654 6.104 1.872 4.56 3.147 3.757 4.992 3.757 7.218c0 4.039 2.467 5.76 6.476 7.219 2.585.92 3.445 1.574 3.445 2.583 0 .98-.84 1.545-2.354 1.545-1.875 0-4.965-.921-6.99-2.109l-.9 5.555C5.175 22.99 8.385 24 11.714 24c2.641 0 4.843-.624 6.328-1.813 1.664-1.305 2.525-3.236 2.525-5.732 0-4.128-2.524-5.851-6.591-7.305z"/>
+            </svg>
+          </div>
+          <div class="flex-1">
+            <span class="font-medium text-navy-900 group-hover:text-navy-700">Stripe</span>
+            <p class="text-xs text-charcoal-500">Pagos</p>
+          </div>
+          <svg class="w-4 h-4 text-charcoal-400 group-hover:text-navy-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+          </svg>
+        </a>
       </div>
+    </div>
 
-      <!-- Sidebar Info -->
-      <div class="space-y-6">
-        <!-- Estado del Sistema -->
-        <div class="bg-white border border-charcoal-100 overflow-hidden">
-          <div class="px-5 py-4 border-b border-charcoal-100 bg-charcoal-50">
-            <h3 class="font-semibold text-navy-900">Estado del Sistema</h3>
-          </div>
-          <div class="p-5 space-y-4">
-            <div class="flex items-center justify-between">
-              <span class="text-sm text-charcoal-600">Base de datos</span>
-              <span class="inline-flex items-center gap-1.5 text-sm font-medium text-green-600">
-                <span class="w-2 h-2 bg-green-500 rounded-full"></span>
-                Conectada
-              </span>
-            </div>
-            <div class="flex items-center justify-between">
-              <span class="text-sm text-charcoal-600">Cloudinary</span>
-              <span class="inline-flex items-center gap-1.5 text-sm font-medium text-green-600">
-                <span class="w-2 h-2 bg-green-500 rounded-full"></span>
-                Activo
-              </span>
-            </div>
-            <div class="flex items-center justify-between">
-              <span class="text-sm text-charcoal-600">Stripe</span>
-              <span class="inline-flex items-center gap-1.5 text-sm font-medium text-amber-600">
-                <span class="w-2 h-2 bg-amber-500 rounded-full"></span>
-                Modo Test
-              </span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Versión -->
-        <div class="bg-gradient-to-br from-navy-900 to-navy-800 p-5 text-white">
-          <div class="flex items-start gap-3">
-            <div class="w-10 h-10 bg-white/10 flex items-center justify-center flex-shrink-0">
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
-            <div>
-              <h4 class="font-semibold">FashionMarket</h4>
-              <p class="text-sm text-white/70 mt-1">v1.0.0</p>
-              <p class="text-xs text-white/50 mt-2">
-                Desarrollado con Astro, React y Supabase
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <!-- Accesos Rápidos -->
-        <div class="bg-white border border-charcoal-100 overflow-hidden">
-          <div class="px-5 py-4 border-b border-charcoal-100 bg-charcoal-50">
-            <h3 class="font-semibold text-navy-900">Accesos Rápidos</h3>
-          </div>
-          <div class="p-4 space-y-2">
-            <a 
-              href="https://supabase.com/dashboard" 
-              target="_blank"
-              class="flex items-center gap-3 px-4 py-3 bg-charcoal-50 hover:bg-charcoal-100 text-navy-900 transition-colors"
-            >
-              <svg class="w-5 h-5 text-charcoal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 7v10c0 2 1 3 3 3h10c2 0 3-1 3-3V7c0-2-1-3-3-3H7c-2 0-3 1-3 3z" />
-              </svg>
-              <span class="text-sm font-medium">Panel Supabase</span>
-              <svg class="w-4 h-4 ml-auto text-charcoal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-              </svg>
-            </a>
-            <a 
-              href="https://cloudinary.com/console" 
-              target="_blank"
-              class="flex items-center gap-3 px-4 py-3 bg-charcoal-50 hover:bg-charcoal-100 text-navy-900 transition-colors"
-            >
-              <svg class="w-5 h-5 text-charcoal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-              <span class="text-sm font-medium">Panel Cloudinary</span>
-              <svg class="w-4 h-4 ml-auto text-charcoal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-              </svg>
-            </a>
-            <a 
-              href="https://dashboard.stripe.com" 
-              target="_blank"
-              class="flex items-center gap-3 px-4 py-3 bg-charcoal-50 hover:bg-charcoal-100 text-navy-900 transition-colors"
-            >
-              <svg class="w-5 h-5 text-charcoal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-              </svg>
-              <span class="text-sm font-medium">Panel Stripe</span>
-              <svg class="w-4 h-4 ml-auto text-charcoal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-              </svg>
-            </a>
-          </div>
-        </div>
-      </div>
+    <!-- Version Info -->
+    <div class="text-center py-4 text-xs text-charcoal-400">
+      FashionMarket v1.0.0 • Desarrollado con Astro, React y Supabase
     </div>
   </div>
 </AdminLayout>
-
-<script>
-  // Guardar configuración
-  document.getElementById('save-settings')?.addEventListener('click', () => {
-    // Por ahora solo mostramos confirmación visual
-    const btn = document.getElementById('save-settings');
-    if (btn) {
-      const originalText = btn.innerHTML;
-      btn.innerHTML = `
-        <svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
-          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-        </svg>
-        Guardando...
-      `;
-      
-      setTimeout(() => {
-        btn.innerHTML = `
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-          </svg>
-          ¡Guardado!
-        `;
-        btn.classList.remove('bg-navy-900', 'hover:bg-navy-800');
-        btn.classList.add('bg-green-600');
-        
-        setTimeout(() => {
-          btn.innerHTML = originalText;
-          btn.classList.add('bg-navy-900', 'hover:bg-navy-800');
-          btn.classList.remove('bg-green-600');
-        }, 2000);
-      }, 1000);
-    }
-  });
-</script>

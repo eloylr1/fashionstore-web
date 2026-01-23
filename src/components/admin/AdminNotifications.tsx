@@ -249,7 +249,7 @@ export default function AdminNotifications() {
             <div className="border-t border-gray-100 p-3 bg-gray-50">
               <a
                 href="/admin/notificaciones"
-                className="block text-center text-sm text-blue-600 hover:text-blue-800 font-medium"
+                className="block text-center text-sm text-blue-600 hover:text-blue-800 font-medium transition-colors"
               >
                 Ver todas las notificaciones
               </a>

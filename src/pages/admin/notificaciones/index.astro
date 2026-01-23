@@ -1,0 +1,396 @@
+---
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * FASHIONMARKET - Admin Notifications Page
+ * Lista completa de notificaciones con filtros
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
+
+export const prerender = false;
+
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+
+// Verificar autenticación
+const accessToken = Astro.cookies.get('sb-access-token')?.value;
+const userRole = Astro.cookies.get('user-role')?.value;
+
+if (!accessToken || userRole !== 'admin') {
+  return Astro.redirect('/admin/acceso-seguro');
+}
+---
+
+<AdminLayout title="Notificaciones">
+  <div class="space-y-6">
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div>
+        <p class="text-charcoal-500">
+          Gestiona todas las notificaciones del sistema
+        </p>
+      </div>
+      
+      <button 
+        type="button"
+        id="mark-all-read"
+        class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-charcoal-200 text-charcoal-700 text-sm font-medium hover:bg-charcoal-50 transition-colors"
+      >
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+        </svg>
+        Marcar todas como leídas
+      </button>
+    </div>
+
+    <!-- Filters -->
+    <div class="bg-white border border-charcoal-100 p-4">
+      <div class="flex flex-wrap items-center gap-4">
+        <span class="text-sm font-medium text-charcoal-700">Filtrar por:</span>
+        <div class="flex flex-wrap gap-2">
+          <button 
+            type="button" 
+            data-filter="all"
+            class="filter-btn px-3 py-1.5 text-sm font-medium bg-navy-900 text-white transition-colors"
+          >
+            Todas
+          </button>
+          <button 
+            type="button" 
+            data-filter="order"
+            class="filter-btn px-3 py-1.5 text-sm font-medium bg-charcoal-100 text-charcoal-700 hover:bg-charcoal-200 transition-colors"
+          >
+            <span class="flex items-center gap-1.5">
+              <svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+              </svg>
+              Pedidos
+            </span>
+          </button>
+          <button 
+            type="button" 
+            data-filter="stock"
+            class="filter-btn px-3 py-1.5 text-sm font-medium bg-charcoal-100 text-charcoal-700 hover:bg-charcoal-200 transition-colors"
+          >
+            <span class="flex items-center gap-1.5">
+              <svg class="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              Stock
+            </span>
+          </button>
+          <button 
+            type="button" 
+            data-filter="customer"
+            class="filter-btn px-3 py-1.5 text-sm font-medium bg-charcoal-100 text-charcoal-700 hover:bg-charcoal-200 transition-colors"
+          >
+            <span class="flex items-center gap-1.5">
+              <svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+              </svg>
+              Clientes
+            </span>
+          </button>
+        </div>
+        
+        <div class="ml-auto flex items-center gap-2">
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" id="show-unread-only" class="w-4 h-4 text-navy-600 border-charcoal-300 rounded focus:ring-navy-500" />
+            <span class="text-sm text-charcoal-600">Solo no leídas</span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Notifications List -->
+    <div class="bg-white border border-charcoal-100 divide-y divide-charcoal-100" id="notifications-list">
+      <!-- Notification Item - Order -->
+      <div class="notification-item p-4 hover:bg-charcoal-50 transition-colors" data-type="order" data-read="false">
+        <div class="flex items-start gap-4">
+          <div class="flex-shrink-0 w-10 h-10 bg-blue-100 text-blue-600 flex items-center justify-center">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+            </svg>
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="flex items-start justify-between gap-4">
+              <div>
+                <p class="font-semibold text-navy-900">Nuevo pedido recibido</p>
+                <p class="text-sm text-charcoal-600 mt-0.5">Pedido #1234 por €299.00 - Cliente: Juan García</p>
+              </div>
+              <div class="flex items-center gap-2 flex-shrink-0">
+                <span class="w-2 h-2 bg-blue-500 rounded-full"></span>
+                <span class="text-xs text-charcoal-400">Hace 5 min</span>
+              </div>
+            </div>
+            <div class="flex items-center gap-3 mt-3">
+              <a href="/admin/pedidos" class="text-sm font-medium text-navy-700 hover:text-leather transition-colors">
+                Ver pedido →
+              </a>
+              <button type="button" class="mark-read-btn text-sm text-charcoal-500 hover:text-charcoal-700 transition-colors">
+                Marcar como leída
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Notification Item - Stock -->
+      <div class="notification-item p-4 hover:bg-charcoal-50 transition-colors" data-type="stock" data-read="false">
+        <div class="flex items-start gap-4">
+          <div class="flex-shrink-0 w-10 h-10 bg-amber-100 text-amber-600 flex items-center justify-center">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="flex items-start justify-between gap-4">
+              <div>
+                <p class="font-semibold text-navy-900">Stock bajo</p>
+                <p class="text-sm text-charcoal-600 mt-0.5">Traje Italiano Slim Fit - Solo quedan 3 unidades</p>
+              </div>
+              <div class="flex items-center gap-2 flex-shrink-0">
+                <span class="w-2 h-2 bg-blue-500 rounded-full"></span>
+                <span class="text-xs text-charcoal-400">Hace 30 min</span>
+              </div>
+            </div>
+            <div class="flex items-center gap-3 mt-3">
+              <a href="/admin/productos" class="text-sm font-medium text-navy-700 hover:text-leather transition-colors">
+                Ver producto →
+              </a>
+              <button type="button" class="mark-read-btn text-sm text-charcoal-500 hover:text-charcoal-700 transition-colors">
+                Marcar como leída
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Notification Item - Customer -->
+      <div class="notification-item p-4 hover:bg-charcoal-50 transition-colors opacity-60" data-type="customer" data-read="true">
+        <div class="flex items-start gap-4">
+          <div class="flex-shrink-0 w-10 h-10 bg-green-100 text-green-600 flex items-center justify-center">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+            </svg>
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="flex items-start justify-between gap-4">
+              <div>
+                <p class="font-medium text-navy-900">Nuevo cliente registrado</p>
+                <p class="text-sm text-charcoal-600 mt-0.5">Carlos García se ha registrado en la tienda</p>
+              </div>
+              <div class="flex items-center gap-2 flex-shrink-0">
+                <span class="text-xs text-charcoal-400">Hace 1 hora</span>
+              </div>
+            </div>
+            <div class="flex items-center gap-3 mt-3">
+              <a href="/admin/clientes" class="text-sm font-medium text-navy-700 hover:text-leather transition-colors">
+                Ver cliente →
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Notification Item - Order (read) -->
+      <div class="notification-item p-4 hover:bg-charcoal-50 transition-colors opacity-60" data-type="order" data-read="true">
+        <div class="flex items-start gap-4">
+          <div class="flex-shrink-0 w-10 h-10 bg-blue-100 text-blue-600 flex items-center justify-center">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+            </svg>
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="flex items-start justify-between gap-4">
+              <div>
+                <p class="font-medium text-navy-900">Pedido enviado</p>
+                <p class="text-sm text-charcoal-600 mt-0.5">Pedido #1230 marcado como enviado</p>
+              </div>
+              <div class="flex items-center gap-2 flex-shrink-0">
+                <span class="text-xs text-charcoal-400">Hace 2 horas</span>
+              </div>
+            </div>
+            <div class="flex items-center gap-3 mt-3">
+              <a href="/admin/pedidos" class="text-sm font-medium text-navy-700 hover:text-leather transition-colors">
+                Ver pedido →
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- More notifications... -->
+      <div class="notification-item p-4 hover:bg-charcoal-50 transition-colors opacity-60" data-type="stock" data-read="true">
+        <div class="flex items-start gap-4">
+          <div class="flex-shrink-0 w-10 h-10 bg-amber-100 text-amber-600 flex items-center justify-center">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="flex items-start justify-between gap-4">
+              <div>
+                <p class="font-medium text-navy-900">Stock repuesto</p>
+                <p class="text-sm text-charcoal-600 mt-0.5">Camisa Oxford Premium - Stock actualizado a 25 unidades</p>
+              </div>
+              <div class="flex items-center gap-2 flex-shrink-0">
+                <span class="text-xs text-charcoal-400">Hace 3 horas</span>
+              </div>
+            </div>
+            <div class="flex items-center gap-3 mt-3">
+              <a href="/admin/productos" class="text-sm font-medium text-navy-700 hover:text-leather transition-colors">
+                Ver producto →
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="notification-item p-4 hover:bg-charcoal-50 transition-colors opacity-60" data-type="customer" data-read="true">
+        <div class="flex items-start gap-4">
+          <div class="flex-shrink-0 w-10 h-10 bg-green-100 text-green-600 flex items-center justify-center">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+            </svg>
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="flex items-start justify-between gap-4">
+              <div>
+                <p class="font-medium text-navy-900">Cliente actualizado</p>
+                <p class="text-sm text-charcoal-600 mt-0.5">María López ha actualizado su perfil</p>
+              </div>
+              <div class="flex items-center gap-2 flex-shrink-0">
+                <span class="text-xs text-charcoal-400">Ayer</span>
+              </div>
+            </div>
+            <div class="flex items-center gap-3 mt-3">
+              <a href="/admin/clientes" class="text-sm font-medium text-navy-700 hover:text-leather transition-colors">
+                Ver cliente →
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Empty State (hidden by default) -->
+    <div id="empty-state" class="hidden bg-white border border-charcoal-100 p-12 text-center">
+      <div class="w-16 h-16 mx-auto bg-charcoal-100 flex items-center justify-center mb-4">
+        <svg class="w-8 h-8 text-charcoal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+        </svg>
+      </div>
+      <h4 class="text-lg font-medium text-navy-900 mb-2">No hay notificaciones</h4>
+      <p class="text-charcoal-500">Las notificaciones aparecerán aquí cuando haya actividad</p>
+    </div>
+
+    <!-- Pagination -->
+    <div class="flex items-center justify-between">
+      <p class="text-sm text-charcoal-500">
+        Mostrando <span class="font-medium">6</span> de <span class="font-medium">24</span> notificaciones
+      </p>
+      <div class="flex gap-2">
+        <button type="button" class="px-3 py-1.5 border border-charcoal-200 text-sm font-medium text-charcoal-500 hover:bg-charcoal-50 transition-colors disabled:opacity-50" disabled>
+          Anterior
+        </button>
+        <button type="button" class="px-3 py-1.5 border border-charcoal-200 text-sm font-medium text-charcoal-700 hover:bg-charcoal-50 transition-colors">
+          Siguiente
+        </button>
+      </div>
+    </div>
+  </div>
+</AdminLayout>
+
+<script>
+  // Filter functionality
+  const filterButtons = document.querySelectorAll('.filter-btn');
+  const notificationItems = document.querySelectorAll('.notification-item');
+  const showUnreadOnly = document.getElementById('show-unread-only') as HTMLInputElement;
+  const emptyState = document.getElementById('empty-state');
+  const notificationsList = document.getElementById('notifications-list');
+
+  let currentFilter = 'all';
+  let unreadOnly = false;
+
+  function applyFilters() {
+    let visibleCount = 0;
+    
+    notificationItems.forEach(item => {
+      const type = item.getAttribute('data-type');
+      const isRead = item.getAttribute('data-read') === 'true';
+      
+      let show = true;
+      
+      if (currentFilter !== 'all' && type !== currentFilter) {
+        show = false;
+      }
+      
+      if (unreadOnly && isRead) {
+        show = false;
+      }
+      
+      if (show) {
+        item.classList.remove('hidden');
+        visibleCount++;
+      } else {
+        item.classList.add('hidden');
+      }
+    });
+
+    // Toggle empty state
+    if (visibleCount === 0) {
+      emptyState?.classList.remove('hidden');
+      notificationsList?.classList.add('hidden');
+    } else {
+      emptyState?.classList.add('hidden');
+      notificationsList?.classList.remove('hidden');
+    }
+  }
+
+  filterButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      // Update active state
+      filterButtons.forEach(b => {
+        b.classList.remove('bg-navy-900', 'text-white');
+        b.classList.add('bg-charcoal-100', 'text-charcoal-700');
+      });
+      btn.classList.remove('bg-charcoal-100', 'text-charcoal-700');
+      btn.classList.add('bg-navy-900', 'text-white');
+      
+      currentFilter = btn.getAttribute('data-filter') || 'all';
+      applyFilters();
+    });
+  });
+
+  showUnreadOnly?.addEventListener('change', (e) => {
+    unreadOnly = (e.target as HTMLInputElement).checked;
+    applyFilters();
+  });
+
+  // Mark as read functionality
+  document.querySelectorAll('.mark-read-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const item = btn.closest('.notification-item');
+      if (item) {
+        item.setAttribute('data-read', 'true');
+        item.classList.add('opacity-60');
+        const dot = item.querySelector('.bg-blue-500');
+        dot?.remove();
+        btn.remove();
+        applyFilters();
+      }
+    });
+  });
+
+  // Mark all as read
+  document.getElementById('mark-all-read')?.addEventListener('click', () => {
+    notificationItems.forEach(item => {
+      item.setAttribute('data-read', 'true');
+      item.classList.add('opacity-60');
+      const dot = item.querySelector('.bg-blue-500');
+      dot?.remove();
+      const markBtn = item.querySelector('.mark-read-btn');
+      markBtn?.remove();
+    });
+    applyFilters();
+  });
+</script>
