@@ -1,8 +1,8 @@
 ---
 /**
  * ═══════════════════════════════════════════════════════════════════════════
- * FASHIONMARKET - Admin Products List
- * Listado y gestión de productos (SSR Protegido)
+ * FASHIONMARKET - Admin Products List (Mejorado)
+ * Listado y gestión de productos con filtros y búsqueda
  * ═══════════════════════════════════════════════════════════════════════════
  */
 
@@ -12,6 +12,8 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
 import { supabase, isSupabaseConfigured } from '../../../lib/supabase/client';
 import { supabaseAdmin, isSupabaseAdminConfigured } from '../../../lib/supabase/server';
 import { formatPrice } from '../../../lib/stores/cart';
+import ProductFilters from '../../../components/admin/ProductFilters.tsx';
+import DeleteProductModal from '../../../components/admin/DeleteProductModal.tsx';
 
 // Verificar autenticación (solo si Supabase está configurado)
 if (isSupabaseAdminConfigured() && supabaseAdmin) {
@@ -31,26 +33,49 @@ if (isSupabaseAdminConfigured() && supabaseAdmin) {
 
 // Datos de demostración
 let products: any[] = [
-  { id: '1', name: 'Traje Italiano Slim Fit', slug: 'traje-italiano-slim-fit', price: 599.00, images: ['/placeholder-product.svg'], category_id: '1', featured: true, stock: 10, sizes: ['S','M','L','XL'], colors: ['Navy', 'Charcoal'], description: 'Traje de corte italiano', material: 'Lana 100%', created_at: new Date().toISOString(), updated_at: new Date().toISOString(), categories: { name: 'Trajes' } },
-  { id: '2', name: 'Camisa Oxford Premium', slug: 'camisa-oxford-premium', price: 89.00, images: ['/placeholder-product.svg'], category_id: '2', featured: true, stock: 25, sizes: ['S','M','L','XL'], colors: ['White', 'Light Blue'], description: 'Camisa oxford clásica', material: 'Algodón 100%', created_at: new Date().toISOString(), updated_at: new Date().toISOString(), categories: { name: 'Camisas' } },
-  { id: '3', name: 'Cinturón de Cuero', slug: 'cinturon-cuero', price: 75.00, images: ['/placeholder-product.svg'], category_id: '3', featured: true, stock: 50, sizes: ['85cm','90cm','95cm','100cm'], colors: ['Brown', 'Black'], description: 'Cinturón artesanal', material: 'Cuero genuino', created_at: new Date().toISOString(), updated_at: new Date().toISOString(), categories: { name: 'Accesorios' } },
-  { id: '4', name: 'Blazer Casual Lino', slug: 'blazer-casual-lino', price: 299.00, images: ['/placeholder-product.svg'], category_id: '1', featured: true, stock: 15, sizes: ['S','M','L','XL'], colors: ['Beige', 'Navy'], description: 'Blazer de verano', material: 'Lino 100%', created_at: new Date().toISOString(), updated_at: new Date().toISOString(), categories: { name: 'Trajes' } },
+  { id: '1', name: 'Traje Italiano Slim Fit', slug: 'traje-italiano-slim-fit', price: 599.00, images: ['/placeholder-product.svg'], category_id: '1', featured: true, stock: 10, sizes: ['S','M','L','XL'], colors: ['Navy', 'Charcoal'], description: 'Traje de corte italiano', material: 'Lana 100%', created_at: new Date().toISOString(), updated_at: new Date().toISOString(), categories: { id: '1', name: 'Trajes' } },
+  { id: '2', name: 'Camisa Oxford Premium', slug: 'camisa-oxford-premium', price: 89.00, images: ['/placeholder-product.svg'], category_id: '2', featured: true, stock: 25, sizes: ['S','M','L','XL'], colors: ['White', 'Light Blue'], description: 'Camisa oxford clásica', material: 'Algodón 100%', created_at: new Date().toISOString(), updated_at: new Date().toISOString(), categories: { id: '2', name: 'Camisas' } },
+  { id: '3', name: 'Cinturón de Cuero', slug: 'cinturon-cuero', price: 75.00, images: ['/placeholder-product.svg'], category_id: '3', featured: true, stock: 50, sizes: ['85cm','90cm','95cm','100cm'], colors: ['Brown', 'Black'], description: 'Cinturón artesanal', material: 'Cuero genuino', created_at: new Date().toISOString(), updated_at: new Date().toISOString(), categories: { id: '3', name: 'Cinturones' } },
+  { id: '4', name: 'Blazer Casual Lino', slug: 'blazer-casual-lino', price: 299.00, images: ['/placeholder-product.svg'], category_id: '4', featured: true, stock: 15, sizes: ['S','M','L','XL'], colors: ['Beige', 'Navy'], description: 'Blazer de verano', material: 'Lino 100%', created_at: new Date().toISOString(), updated_at: new Date().toISOString(), categories: { id: '4', name: 'Blazers' } },
+  { id: '5', name: 'Corbata de Seda', slug: 'corbata-seda', price: 65.00, images: ['/placeholder-product.svg'], category_id: '5', featured: false, stock: 8, sizes: ['Única'], colors: ['Burgundy', 'Navy'], description: 'Corbata elegante', material: 'Seda 100%', created_at: new Date().toISOString(), updated_at: new Date().toISOString(), categories: { id: '5', name: 'Corbatas' } },
+  { id: '6', name: 'Gemelos Plata', slug: 'gemelos-plata', price: 120.00, images: ['/placeholder-product.svg'], category_id: '6', featured: false, stock: 3, sizes: ['Única'], colors: ['Silver'], description: 'Gemelos artesanales', material: 'Plata 925', created_at: new Date().toISOString(), updated_at: new Date().toISOString(), categories: { id: '6', name: 'Gemelos' } },
 ];
 
-// Obtener productos reales con categorías
+let categories: any[] = [
+  { id: '1', name: 'Trajes' },
+  { id: '2', name: 'Camisas' },
+  { id: '3', name: 'Cinturones' },
+  { id: '4', name: 'Blazers' },
+  { id: '5', name: 'Corbatas' },
+  { id: '6', name: 'Gemelos' },
+];
+
+// Obtener productos y categorías reales
 if (isSupabaseConfigured() && supabase) {
   const { data: realProducts } = await supabase
     .from('products')
     .select(`
       *,
       categories (
+        id,
         name
       )
     `)
     .order('created_at', { ascending: false });
   
   if (realProducts?.length) products = realProducts;
+
+  const { data: realCategories } = await supabase
+    .from('categories')
+    .select('id, name')
+    .order('name', { ascending: true });
+
+  if (realCategories?.length) categories = realCategories;
 }
+
+// Convertir a JSON para pasar al cliente
+const productsJson = JSON.stringify(products);
+const categoriesJson = JSON.stringify(categories);
 ---
 
 <AdminLayout title="Productos">
@@ -58,23 +83,31 @@ if (isSupabaseConfigured() && supabase) {
     <!-- Header -->
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
       <div>
-        <p class="text-charcoal-500">
+        <p class="text-charcoal-500" id="products-count">
           {products?.length || 0} productos en total
         </p>
       </div>
       
-      <a href="/admin/productos/nuevo" class="btn-primary">
-        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <a href="/admin/productos/nuevo" class="btn-primary inline-flex items-center gap-2 px-5 py-2.5 bg-navy-900 text-white text-sm font-medium hover:bg-navy-800 transition-all duration-200 shadow-lg shadow-navy-900/20">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
         </svg>
         Nuevo producto
       </a>
     </div>
     
+    <!-- Filters (React Component) -->
+    <div id="filters-container">
+      <ProductFilters 
+        client:load 
+        categories={categories}
+      />
+    </div>
+    
     <!-- Products Table -->
     <div class="bg-white border border-charcoal-100 overflow-hidden">
       <div class="overflow-x-auto">
-        <table class="w-full">
+        <table class="w-full" id="products-table">
           <thead>
             <tr class="bg-charcoal-50 border-b border-charcoal-100">
               <th class="text-left px-6 py-4 text-xs font-semibold uppercase tracking-wider text-charcoal-600">
@@ -97,10 +130,16 @@ if (isSupabaseConfigured() && supabase) {
               </th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-charcoal-100">
+          <tbody class="divide-y divide-charcoal-100" id="products-tbody">
             {products && products.length > 0 ? (
               products.map((product, index) => (
-                <tr class="hover:bg-charcoal-50 transition-colors">
+                <tr class="hover:bg-charcoal-50 transition-colors product-row" 
+                    data-id={product.id}
+                    data-name={product.name}
+                    data-category={product.category_id}
+                    data-featured={product.featured ? 'true' : 'false'}
+                    data-stock={product.stock}
+                >
                   <td class="px-6 py-4">
                     <div class="flex items-center gap-4">
                       <div class="w-12 h-12 bg-cream flex-shrink-0">
@@ -111,16 +150,16 @@ if (isSupabaseConfigured() && supabase) {
                         />
                       </div>
                       <div>
-                        <p class="text-sm font-medium text-navy-900">
+                        <p class="text-sm font-medium text-navy-900 product-name">
                           {product.name}
                         </p>
                         <p class="text-xs text-charcoal-500 truncate max-w-xs">
-                          ID: #{index + 1}
+                          ID: {product.id.substring(0, 8)}...
                         </p>
                       </div>
                     </div>
                   </td>
-                  <td class="px-6 py-4">
+                  <td class="px-6 py-4 product-category">
                     <span class="text-sm text-charcoal-600">
                       {product.categories?.name || '-'}
                     </span>
@@ -131,15 +170,23 @@ if (isSupabaseConfigured() && supabase) {
                     </span>
                   </td>
                   <td class="px-6 py-4">
-                    <span class={`text-sm font-medium ${
-                      product.stock < 10 ? 'text-error' : 'text-charcoal-800'
+                    <span class={`inline-flex items-center gap-1.5 text-sm font-medium ${
+                      product.stock < 10 ? 'text-red-600' : product.stock > 50 ? 'text-green-600' : 'text-charcoal-800'
                     }`}>
+                      {product.stock < 10 && (
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                      )}
                       {product.stock}
                     </span>
                   </td>
                   <td class="px-6 py-4">
                     {product.featured ? (
                       <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-leather/10 text-leather">
+                        <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                        </svg>
                         Destacado
                       </span>
                     ) : (
@@ -171,7 +218,7 @@ if (isSupabaseConfigured() && supabase) {
                       </a>
                       <button 
                         type="button"
-                        class="text-charcoal-400 hover:text-error transition-colors delete-product"
+                        class="text-charcoal-400 hover:text-red-600 transition-colors delete-product-btn"
                         data-id={product.id}
                         data-name={product.name}
                         title="Eliminar"
@@ -185,13 +232,13 @@ if (isSupabaseConfigured() && supabase) {
                 </tr>
               ))
             ) : (
-              <tr>
+              <tr id="no-products-row">
                 <td colspan="6" class="px-6 py-12 text-center">
                   <svg class="w-12 h-12 mx-auto text-charcoal-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                   </svg>
                   <p class="text-charcoal-600 mb-4">No hay productos todavía</p>
-                  <a href="/admin/productos/nuevo" class="btn-primary">
+                  <a href="/admin/productos/nuevo" class="btn-primary inline-flex items-center gap-2 px-5 py-2.5 bg-navy-900 text-white text-sm font-medium">
                     Crear primer producto
                   </a>
                 </td>
@@ -201,37 +248,241 @@ if (isSupabaseConfigured() && supabase) {
         </table>
       </div>
     </div>
-  </div>
-  
-  <script>
-    import { supabase, isSupabaseConfigured } from '../../../lib/supabase/client';
     
-    document.querySelectorAll('.delete-product').forEach((btn) => {
-      btn.addEventListener('click', async (e) => {
-        const target = e.currentTarget as HTMLButtonElement;
-        const id = target.dataset.id;
-        const name = target.dataset.name;
-        
-        if (!id) return;
-        
-        if (!isSupabaseConfigured() || !supabase) {
-          alert('Supabase no está configurado');
-          return;
-        }
-        
-        if (confirm(`¿Estás seguro de eliminar "${name}"? Esta acción no se puede deshacer.`)) {
-          const { error } = await supabase
-            .from('products')
-            .delete()
-            .eq('id', id);
-          
-          if (error) {
-            alert('Error al eliminar el producto');
-          } else {
-            window.location.reload();
-          }
-        }
-      });
-    });
-  </script>
+    <!-- Empty state for filters -->
+    <div id="no-results" class="hidden bg-white border border-charcoal-100 p-12 text-center">
+      <svg class="w-16 h-16 mx-auto text-charcoal-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+      </svg>
+      <h3 class="text-lg font-semibold text-charcoal-800 mb-2">No se encontraron productos</h3>
+      <p class="text-charcoal-500 mb-4">Prueba a cambiar los filtros de búsqueda</p>
+      <button type="button" id="clear-filters-btn" class="text-navy-700 hover:text-navy-900 font-medium">
+        Limpiar filtros
+      </button>
+    </div>
+  </div>
+
+  <!-- Delete Modal Container -->
+  <div id="delete-modal-container"></div>
 </AdminLayout>
+
+<script define:vars={{ productsJson, categoriesJson }}>
+  // Datos iniciales
+  const allProducts = JSON.parse(productsJson);
+  const allCategories = JSON.parse(categoriesJson);
+  
+  // Estado del modal de eliminar
+  let deleteModalOpen = false;
+  let deleteProductId = null;
+  let deleteProductName = '';
+
+  // Elementos DOM
+  const tbody = document.getElementById('products-tbody');
+  const productsCount = document.getElementById('products-count');
+  const noResults = document.getElementById('no-results');
+  const productsTable = document.getElementById('products-table');
+  const deleteModalContainer = document.getElementById('delete-modal-container');
+
+  // Escuchar eventos de filtrado desde el componente React
+  window.addEventListener('filterChange', (e) => {
+    const filters = e.detail;
+    applyFilters(filters);
+  });
+
+  // Aplicar filtros
+  function applyFilters(filters) {
+    const rows = document.querySelectorAll('.product-row');
+    let visibleCount = 0;
+
+    rows.forEach(row => {
+      const name = row.querySelector('.product-name')?.textContent?.toLowerCase() || '';
+      const categoryId = row.dataset.category || '';
+      const featured = row.dataset.featured === 'true';
+      const stock = parseInt(row.dataset.stock || '0', 10);
+      
+      let visible = true;
+
+      // Filtro de búsqueda
+      if (filters.search && !name.includes(filters.search.toLowerCase())) {
+        visible = false;
+      }
+
+      // Filtro de categoría
+      if (filters.category && categoryId !== filters.category) {
+        visible = false;
+      }
+
+      // Filtro de estado
+      if (filters.status === 'featured' && !featured) {
+        visible = false;
+      } else if (filters.status === 'normal' && featured) {
+        visible = false;
+      }
+
+      // Filtro de stock
+      if (filters.stock === 'low' && stock >= 10) {
+        visible = false;
+      } else if (filters.stock === 'normal' && (stock < 10 || stock > 50)) {
+        visible = false;
+      } else if (filters.stock === 'high' && stock <= 50) {
+        visible = false;
+      }
+
+      row.style.display = visible ? '' : 'none';
+      if (visible) visibleCount++;
+    });
+
+    // Actualizar contador
+    productsCount.textContent = `${visibleCount} de ${allProducts.length} productos`;
+
+    // Mostrar/ocultar mensaje de sin resultados
+    if (visibleCount === 0 && allProducts.length > 0) {
+      noResults.classList.remove('hidden');
+      productsTable.classList.add('hidden');
+    } else {
+      noResults.classList.add('hidden');
+      productsTable.classList.remove('hidden');
+    }
+  }
+
+  // Limpiar filtros
+  document.getElementById('clear-filters-btn')?.addEventListener('click', () => {
+    // Disparar evento para limpiar filtros en React
+    window.dispatchEvent(new CustomEvent('clearFilters'));
+    applyFilters({ search: '', category: '', status: 'all', stock: 'all' });
+  });
+
+  // Modal de eliminar producto
+  function showDeleteModal(id, name) {
+    deleteProductId = id;
+    deleteProductName = name;
+    
+    deleteModalContainer.innerHTML = `
+      <div class="fixed inset-0 z-50 overflow-y-auto" id="delete-modal">
+        <div class="fixed inset-0 bg-black/50 backdrop-blur-sm" id="delete-backdrop"></div>
+        <div class="relative min-h-screen flex items-center justify-center p-4">
+          <div class="relative bg-white w-full max-w-md shadow-2xl overflow-hidden">
+            <div class="pt-8 pb-4 px-6 text-center">
+              <div class="mx-auto w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4">
+                <svg class="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </div>
+              <h3 class="text-xl font-semibold text-gray-900 mb-2">Eliminar producto</h3>
+              <p class="text-gray-500">
+                ¿Estás seguro de que deseas eliminar 
+                <span class="font-semibold text-gray-900">"${name}"</span>?
+              </p>
+              <p class="text-sm text-gray-400 mt-2">Esta acción no se puede deshacer.</p>
+            </div>
+            <div id="delete-error" class="hidden mx-6 mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+              <p class="text-sm text-red-600"></p>
+            </div>
+            <div class="px-6 pb-6 flex gap-3">
+              <button type="button" id="cancel-delete" class="flex-1 px-4 py-3 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors">
+                Cancelar
+              </button>
+              <button type="button" id="confirm-delete" class="flex-1 px-4 py-3 text-sm font-medium text-white bg-red-600 hover:bg-red-700 transition-colors flex items-center justify-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+                Eliminar
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    // Event listeners del modal
+    document.getElementById('delete-backdrop')?.addEventListener('click', hideDeleteModal);
+    document.getElementById('cancel-delete')?.addEventListener('click', hideDeleteModal);
+    document.getElementById('confirm-delete')?.addEventListener('click', confirmDelete);
+
+    // Prevenir scroll del body
+    document.body.style.overflow = 'hidden';
+  }
+
+  function hideDeleteModal() {
+    deleteModalContainer.innerHTML = '';
+    deleteProductId = null;
+    deleteProductName = '';
+    document.body.style.overflow = '';
+  }
+
+  async function confirmDelete() {
+    if (!deleteProductId) return;
+
+    const confirmBtn = document.getElementById('confirm-delete');
+    const errorDiv = document.getElementById('delete-error');
+    
+    // Estado de carga
+    confirmBtn.innerHTML = `
+      <svg class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+      </svg>
+      Eliminando...
+    `;
+    confirmBtn.disabled = true;
+
+    try {
+      const response = await fetch(`/api/admin/products/${deleteProductId}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' }
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Error al eliminar');
+      }
+
+      // Eliminar fila de la tabla
+      document.querySelector(`.product-row[data-id="${deleteProductId}"]`)?.remove();
+      
+      // Actualizar contador
+      const remainingRows = document.querySelectorAll('.product-row').length;
+      productsCount.textContent = `${remainingRows} productos en total`;
+
+      hideDeleteModal();
+    } catch (error) {
+      errorDiv.classList.remove('hidden');
+      errorDiv.querySelector('p').textContent = error.message;
+      confirmBtn.innerHTML = `
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+        </svg>
+        Eliminar
+      `;
+      confirmBtn.disabled = false;
+    }
+  }
+
+  // Event listeners para botones de eliminar
+  document.querySelectorAll('.delete-product-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const id = btn.dataset.id;
+      const name = btn.dataset.name;
+      showDeleteModal(id, name);
+    });
+  });
+
+  // Cerrar modal con Escape
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && document.getElementById('delete-modal')) {
+      hideDeleteModal();
+    }
+  });
+</script>
+
+<script>
+  // Conectar el componente React de filtros con el sistema de filtrado
+  import { useState, useEffect } from 'react';
+  
+  // Escuchar cambios de filtros desde React y propagar al script principal
+  window.addEventListener('message', (e) => {
+    if (e.data.type === 'filterChange') {
+      window.dispatchEvent(new CustomEvent('filterChange', { detail: e.data.filters }));
+    }
+  });
+</script>
