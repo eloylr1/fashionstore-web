@@ -111,9 +111,6 @@ export const PUT: APIRoute = async ({ params, request, cookies }) => {
         error: 'Nombre y slug son requeridos', 
         code: 'VALIDATION_ERROR' 
       }, 400);
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
     }
 
     // Verificar si el slug ya existe en otra categoría
