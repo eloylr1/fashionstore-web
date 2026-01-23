@@ -8,7 +8,17 @@
 export const prerender = false;
 
 import type { APIRoute } from 'astro';
-import { supabase, isSupabaseConfigured } from '../../../../lib/supabase/client';
+import { createClient } from '@supabase/supabase-js';
+
+const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL || '';
+// Usar service role key para operaciones de admin (tiene permisos completos)
+const supabaseServiceKey = import.meta.env.SUPABASE_SERVICE_ROLE_KEY || import.meta.env.PUBLIC_SUPABASE_ANON_KEY || '';
+
+// Cliente con service role para operaciones admin
+const getSupabase = () => {
+  if (!supabaseUrl || !supabaseServiceKey) return null;
+  return createClient(supabaseUrl, supabaseServiceKey);
+};
 
 // GET - Obtener todas las categorías
 export const GET: APIRoute = async ({ cookies }) => {
@@ -21,7 +31,8 @@ export const GET: APIRoute = async ({ cookies }) => {
     });
   }
 
-  if (!isSupabaseConfigured() || !supabase) {
+  const supabase = getSupabase();
+  if (!supabase) {
     return new Response(JSON.stringify({ error: 'Supabase no configurado' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
@@ -60,7 +71,8 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     });
   }
 
-  if (!isSupabaseConfigured() || !supabase) {
+  const supabase = getSupabase();
+  if (!supabase) {
     return new Response(JSON.stringify({ error: 'Supabase no configurado' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
