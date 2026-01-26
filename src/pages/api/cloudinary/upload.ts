@@ -12,7 +12,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
   try {
     // Verificar autenticación de admin
     const accessToken = cookies.get('sb-access-token')?.value;
-    const userRole = cookies.get('user-role')?.value;
+    const userRole = cookies.get('user-role')?.value?.toLowerCase();
 
     if (!accessToken || userRole !== 'admin') {
       return new Response(JSON.stringify({ error: 'No autorizado' }), {
