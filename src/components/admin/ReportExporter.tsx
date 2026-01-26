@@ -35,7 +35,10 @@ export default function ReportExporter() {
   // Obtener datos del reporte
   const fetchReportData = async (): Promise<ReportData> => {
     const response = await fetch('/api/admin/report-data');
-    if (!response.ok) throw new Error('Error al obtener datos');
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || `Error ${response.status}: No se pudieron obtener los datos`);
+    }
     return response.json();
   };
 
@@ -113,10 +116,11 @@ export default function ReportExporter() {
 
       setMessage({ type: 'success', text: 'Excel descargado correctamente' });
     } catch (error) {
-      setMessage({ type: 'error', text: 'Error al generar Excel' });
+      console.error('Error Excel:', error);
+      setMessage({ type: 'error', text: error instanceof Error ? error.message : 'Error al generar Excel' });
     } finally {
       setLoading(false);
-      setTimeout(() => setMessage(null), 3000);
+      setTimeout(() => setMessage(null), 5000);
     }
   };
 
@@ -259,11 +263,11 @@ export default function ReportExporter() {
 
       setMessage({ type: 'success', text: 'PDF descargado correctamente' });
     } catch (error) {
-      console.error('Error generating PDF:', error);
-      setMessage({ type: 'error', text: 'Error al generar PDF' });
+      console.error('Error PDF:', error);
+      setMessage({ type: 'error', text: error instanceof Error ? error.message : 'Error al generar PDF' });
     } finally {
       setLoading(false);
-      setTimeout(() => setMessage(null), 3000);
+      setTimeout(() => setMessage(null), 5000);
     }
   };
 
@@ -284,16 +288,21 @@ export default function ReportExporter() {
         body: JSON.stringify({ email }),
       });
 
-      if (!response.ok) throw new Error('Error al enviar');
+      const data = await response.json().catch(() => ({}));
+      
+      if (!response.ok) {
+        throw new Error(data.error || `Error ${response.status}`);
+      }
 
       setMessage({ type: 'success', text: `Reporte enviado a ${email}` });
       setShowModal(false);
       setEmail('');
     } catch (error) {
-      setMessage({ type: 'error', text: 'Error al enviar el email' });
+      console.error('Error email:', error);
+      setMessage({ type: 'error', text: error instanceof Error ? error.message : 'Error al enviar el email' });
     } finally {
       setSendingEmail(false);
-      setTimeout(() => setMessage(null), 3000);
+      setTimeout(() => setMessage(null), 5000);
     }
   };
 

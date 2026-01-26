@@ -156,7 +156,8 @@ export const GET: APIRoute = async ({ cookies }) => {
 
   } catch (error) {
     console.error('Error fetching report data:', error);
-    return new Response(JSON.stringify({ error: 'Error interno' }), { status: 500 });
+    const errorMessage = error instanceof Error ? error.message : 'Error interno del servidor';
+    return new Response(JSON.stringify({ error: errorMessage }), { status: 500 });
   }
 };
 

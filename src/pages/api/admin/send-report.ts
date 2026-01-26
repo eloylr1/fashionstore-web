@@ -19,7 +19,10 @@ function createGmailTransporter() {
   const gmailUser = import.meta.env.GMAIL_USER;
   const gmailPass = import.meta.env.GMAIL_APP_PASSWORD;
 
+  console.log('Gmail config check:', { hasUser: !!gmailUser, hasPass: !!gmailPass });
+
   if (!gmailUser || !gmailPass) {
+    console.error('Gmail credentials missing - GMAIL_USER:', !!gmailUser, 'GMAIL_APP_PASSWORD:', !!gmailPass);
     return null;
   }
 
@@ -238,13 +241,11 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     const transporter = createGmailTransporter();
     
     if (!transporter) {
-      console.warn('Gmail no configurado (GMAIL_USER y GMAIL_APP_PASSWORD)');
-      // En desarrollo sin credenciales, simular éxito
+      console.error('Gmail no configurado - faltan variables GMAIL_USER y/o GMAIL_APP_PASSWORD');
       return new Response(JSON.stringify({ 
-        success: true, 
-        message: 'Email enviado (modo desarrollo - Gmail no configurado)' 
+        error: 'Gmail no configurado en el servidor. Configura GMAIL_USER y GMAIL_APP_PASSWORD en Coolify.' 
       }), {
-        status: 200,
+        status: 500,
         headers: { 'Content-Type': 'application/json' },
       });
     }
@@ -275,6 +276,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 
   } catch (error) {
     console.error('Error in send-report:', error);
-    return new Response(JSON.stringify({ error: 'Error interno' }), { status: 500 });
+    const errorMessage = error instanceof Error ? error.message : 'Error interno del servidor';
+    return new Response(JSON.stringify({ error: errorMessage }), { status: 500 });
   }
 };
