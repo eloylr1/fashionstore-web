@@ -37,54 +37,46 @@ export default function ImageUploader({
     onImagesChange?.(urls);
   };
 
-  // Subir imágenes a Cloudinary via API
+  // Subir imágenes directamente a Cloudinary (sin pasar por nuestro servidor)
   const uploadToCloudinary = async (files: File[]): Promise<string[]> => {
-    const formData = new FormData();
+    const cloudName = 'dfd2imbfs'; // Tu cloud name
+    const uploadPreset = 'fashionmarket_unsigned'; // Preset sin firma
     
-    files.forEach(file => {
-      formData.append('images', file);
-    });
-    formData.append('folder', folder);
-
-    console.log('Enviando petición a /api/cloudinary/upload...');
+    const uploadedUrls: string[] = [];
     
-    let response: Response;
-    try {
-      response = await fetch('/api/cloudinary/upload', {
-        method: 'POST',
-        credentials: 'include',
-        body: formData
-      });
-    } catch (fetchError) {
-      console.error('Fetch failed:', fetchError);
-      throw new Error('Error de conexión. No se pudo contactar el servidor.');
-    }
-
-    console.log('Response status:', response.status);
-    console.log('Response headers:', Object.fromEntries(response.headers.entries()));
-
-    // Intentar leer la respuesta como texto primero
-    const responseText = await response.text();
-    console.log('Response text:', responseText.substring(0, 500));
-    
-    // Intentar parsear como JSON
-    let data;
-    try {
-      data = JSON.parse(responseText);
-    } catch {
-      console.error('Response not JSON:', responseText);
-      // Mostrar más información sobre el error
-      if (responseText.includes('<!DOCTYPE') || responseText.includes('<html')) {
-        throw new Error('El servidor devolvió HTML en lugar de JSON. Posible error 404 o redirección.');
+    for (const file of files) {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('upload_preset', uploadPreset);
+      formData.append('folder', `fashionmarket/${folder}`);
+      
+      console.log('Subiendo a Cloudinary directamente:', file.name);
+      
+      try {
+        const response = await fetch(
+          `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
+          {
+            method: 'POST',
+            body: formData
+          }
+        );
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          console.error('Cloudinary error:', errorData);
+          throw new Error(errorData.error?.message || 'Error al subir imagen');
+        }
+        
+        const data = await response.json();
+        console.log('Imagen subida:', data.secure_url);
+        uploadedUrls.push(data.secure_url);
+      } catch (err) {
+        console.error('Error uploading file:', file.name, err);
+        throw err;
       }
-      throw new Error(`Error del servidor: ${responseText.substring(0, 100)}`);
     }
-
-    if (!response.ok) {
-      throw new Error(data.error || data.details || 'Error al subir imágenes');
-    }
-
-    return data.urls;
+    
+    return uploadedUrls;
   };
 
   const handleFiles = useCallback(async (files: FileList) => {
