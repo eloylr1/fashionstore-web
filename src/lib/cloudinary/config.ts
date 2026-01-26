@@ -7,15 +7,48 @@
 
 import { v2 as cloudinary } from 'cloudinary';
 
+// Obtener variables de entorno (compatible con SSR)
+const getEnvVar = (key: string): string => {
+  // Intentar import.meta.env primero (Astro/Vite)
+  if (typeof import.meta !== 'undefined' && import.meta.env) {
+    const value = (import.meta.env as any)[key];
+    if (value) return value;
+  }
+  // Fallback a process.env (Node.js)
+  if (typeof process !== 'undefined' && process.env) {
+    const value = process.env[key];
+    if (value) return value;
+  }
+  return '';
+};
+
+const cloudName = getEnvVar('PUBLIC_CLOUDINARY_CLOUD_NAME');
+const apiKey = getEnvVar('CLOUDINARY_API_KEY');
+const apiSecret = getEnvVar('CLOUDINARY_API_SECRET');
+
+// Log para debug (solo en desarrollo)
+console.log('Cloudinary config:', { 
+  hasCloudName: !!cloudName, 
+  hasApiKey: !!apiKey, 
+  hasApiSecret: !!apiSecret 
+});
+
 // Configurar Cloudinary con las credenciales
 cloudinary.config({
-  cloud_name: import.meta.env.PUBLIC_CLOUDINARY_CLOUD_NAME,
-  api_key: import.meta.env.CLOUDINARY_API_KEY,
-  api_secret: import.meta.env.CLOUDINARY_API_SECRET,
+  cloud_name: cloudName,
+  api_key: apiKey,
+  api_secret: apiSecret,
   secure: true
 });
 
 export { cloudinary };
+
+/**
+ * Verifica si Cloudinary está configurado
+ */
+export function isCloudinaryConfigured(): boolean {
+  return !!(cloudName && apiKey && apiSecret);
+}
 
 /**
  * Sube una imagen a Cloudinary
@@ -24,6 +57,11 @@ export { cloudinary };
  * @returns URL de la imagen subida
  */
 export async function uploadImage(file: string, folder: string = 'products'): Promise<string> {
+  // Verificar configuración
+  if (!isCloudinaryConfigured()) {
+    throw new Error('Cloudinary no está configurado. Verifica las variables de entorno: PUBLIC_CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET');
+  }
+
   try {
     const result = await cloudinary.uploader.upload(file, {
       folder: `fashionmarket/${folder}`,
