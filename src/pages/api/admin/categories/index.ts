@@ -23,7 +23,7 @@ const getSupabase = () => {
 // GET - Obtener todas las categorías
 export const GET: APIRoute = async ({ cookies }) => {
   // Verificar autenticación
-  const userRole = cookies.get('user-role')?.value;
+  const userRole = cookies.get('user-role')?.value?.toLowerCase();
   if (userRole !== 'admin') {
     return new Response(JSON.stringify({ error: 'No autorizado' }), {
       status: 401,
@@ -63,7 +63,7 @@ export const GET: APIRoute = async ({ cookies }) => {
 // POST - Crear nueva categoría
 export const POST: APIRoute = async ({ request, cookies }) => {
   // Verificar autenticación
-  const userRole = cookies.get('user-role')?.value;
+  const userRole = cookies.get('user-role')?.value?.toLowerCase();
   if (userRole !== 'admin') {
     return new Response(JSON.stringify({ error: 'No autorizado' }), {
       status: 401,

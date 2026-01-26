@@ -41,7 +41,7 @@ const jsonResponse = (data: any, status: number = 200) => {
 
 // GET - Obtener una categoría
 export const GET: APIRoute = async ({ params, cookies }) => {
-  const userRole = cookies.get('user-role')?.value;
+  const userRole = cookies.get('user-role')?.value?.toLowerCase();
   if (userRole !== 'admin') {
     return jsonResponse({ error: 'No autorizado', code: 'UNAUTHORIZED' }, 401);
   }
@@ -84,7 +84,7 @@ export const GET: APIRoute = async ({ params, cookies }) => {
 
 // PUT - Actualizar una categoría
 export const PUT: APIRoute = async ({ params, request, cookies }) => {
-  const userRole = cookies.get('user-role')?.value;
+  const userRole = cookies.get('user-role')?.value?.toLowerCase();
   if (userRole !== 'admin') {
     return jsonResponse({ error: 'No autorizado', code: 'UNAUTHORIZED' }, 401);
   }
@@ -154,7 +154,7 @@ export const PUT: APIRoute = async ({ params, request, cookies }) => {
 
 // DELETE - Eliminar una categoría
 export const DELETE: APIRoute = async ({ params, cookies }) => {
-  const userRole = cookies.get('user-role')?.value;
+  const userRole = cookies.get('user-role')?.value?.toLowerCase();
   if (userRole !== 'admin') {
     return jsonResponse({ error: 'No autorizado', code: 'UNAUTHORIZED' }, 401);
   }
