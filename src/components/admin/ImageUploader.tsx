@@ -48,15 +48,26 @@ export default function ImageUploader({
 
     const response = await fetch('/api/cloudinary/upload', {
       method: 'POST',
+      credentials: 'include',
       body: formData
     });
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || 'Error al subir imágenes');
+    // Intentar leer la respuesta como texto primero
+    const responseText = await response.text();
+    
+    // Intentar parsear como JSON
+    let data;
+    try {
+      data = JSON.parse(responseText);
+    } catch {
+      console.error('Response not JSON:', responseText);
+      throw new Error('Error del servidor. Verifica que Cloudinary esté configurado.');
     }
 
-    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || 'Error al subir imágenes');
+    }
+
     return data.urls;
   };
 
