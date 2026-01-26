@@ -8,10 +8,28 @@
 export const prerender = false;
 
 import type { APIRoute } from 'astro';
-import { uploadImage, uploadMultipleImages } from '../../../lib/cloudinary/config';
+import { uploadImage, uploadMultipleImages, isCloudinaryConfigured } from '../../../lib/cloudinary/config';
+
+console.log('>>> Cloudinary upload endpoint loaded');
 
 export const POST: APIRoute = async ({ request, cookies }) => {
   console.log('=== CLOUDINARY UPLOAD START ===');
+  console.log('Request URL:', request.url);
+  console.log('Request method:', request.method);
+  
+  // Verificar configuración de Cloudinary primero
+  const cloudinaryOk = isCloudinaryConfigured();
+  console.log('Cloudinary configured:', cloudinaryOk);
+  
+  if (!cloudinaryOk) {
+    return new Response(JSON.stringify({ 
+      error: 'Cloudinary no está configurado correctamente',
+      details: 'Faltan variables de entorno CLOUDINARY_*'
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
   
   try {
     // Verificar autenticación de admin
