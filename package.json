@@ -21,13 +21,17 @@
     "astro": "^5.16.7",
     "chart.js": "^4.5.1",
     "cloudinary": "^2.8.0",
+    "jspdf": "^4.0.0",
+    "jspdf-autotable": "^5.0.7",
     "nanostores": "^1.1.0",
     "nodemailer": "^7.0.12",
     "react": "^19.2.3",
     "react-chartjs-2": "^5.3.1",
     "react-dom": "^19.2.3",
+    "resend": "^6.8.0",
     "stripe": "^20.1.2",
-    "tailwindcss": "^4.1.18"
+    "tailwindcss": "^4.1.18",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@types/nodemailer": "^7.0.5"
