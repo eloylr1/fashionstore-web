@@ -33,6 +33,7 @@ if (accessToken) {
       
       if (user) {
         userEmail = user.email || '';
+        
         // Obtener perfil para el nombre
         const { data: profile } = await supabase
           .from('profiles')
@@ -40,11 +41,20 @@ if (accessToken) {
           .eq('id', user.id)
           .single();
         
-        if (profile?.full_name) {
+        // Buscar nombre en: 1) perfil, 2) user_metadata, 3) email
+        if (profile?.full_name && profile.full_name !== 'Admin') {
           userName = profile.full_name;
           userInitial = profile.full_name.charAt(0).toUpperCase();
+        } else if (user.user_metadata?.full_name) {
+          userName = user.user_metadata.full_name;
+          userInitial = userName.charAt(0).toUpperCase();
+        } else if (user.user_metadata?.name) {
+          userName = user.user_metadata.name;
+          userInitial = userName.charAt(0).toUpperCase();
         } else if (user.email) {
-          userName = user.email.split('@')[0];
+          // Usar parte del email antes del @, capitalizado
+          const emailName = user.email.split('@')[0];
+          userName = emailName.charAt(0).toUpperCase() + emailName.slice(1);
           userInitial = userName.charAt(0).toUpperCase();
         }
       }
