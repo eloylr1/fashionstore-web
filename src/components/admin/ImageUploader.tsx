@@ -46,14 +46,26 @@ export default function ImageUploader({
     });
     formData.append('folder', folder);
 
-    const response = await fetch('/api/cloudinary/upload', {
-      method: 'POST',
-      credentials: 'include',
-      body: formData
-    });
+    console.log('Enviando petición a /api/cloudinary/upload...');
+    
+    let response: Response;
+    try {
+      response = await fetch('/api/cloudinary/upload', {
+        method: 'POST',
+        credentials: 'include',
+        body: formData
+      });
+    } catch (fetchError) {
+      console.error('Fetch failed:', fetchError);
+      throw new Error('Error de conexión. No se pudo contactar el servidor.');
+    }
+
+    console.log('Response status:', response.status);
+    console.log('Response headers:', Object.fromEntries(response.headers.entries()));
 
     // Intentar leer la respuesta como texto primero
     const responseText = await response.text();
+    console.log('Response text:', responseText.substring(0, 500));
     
     // Intentar parsear como JSON
     let data;
@@ -61,11 +73,15 @@ export default function ImageUploader({
       data = JSON.parse(responseText);
     } catch {
       console.error('Response not JSON:', responseText);
-      throw new Error('Error del servidor. Verifica que Cloudinary esté configurado.');
+      // Mostrar más información sobre el error
+      if (responseText.includes('<!DOCTYPE') || responseText.includes('<html')) {
+        throw new Error('El servidor devolvió HTML en lugar de JSON. Posible error 404 o redirección.');
+      }
+      throw new Error(`Error del servidor: ${responseText.substring(0, 100)}`);
     }
 
     if (!response.ok) {
-      throw new Error(data.error || 'Error al subir imágenes');
+      throw new Error(data.error || data.details || 'Error al subir imágenes');
     }
 
     return data.urls;

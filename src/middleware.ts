@@ -14,6 +14,11 @@ const LOGIN_ROUTE = '/admin/acceso-seguro';
 export const onRequest = defineMiddleware(async (context, next) => {
   const { pathname } = context.url;
   
+  // Log para debug de API calls
+  if (pathname.startsWith('/api/')) {
+    console.log(`[MIDDLEWARE] API call: ${context.request.method} ${pathname}`);
+  }
+  
   // Verificar si la ruta requiere autenticación
   const isProtectedRoute = PROTECTED_ROUTES.some(route => 
     pathname.startsWith(route) && pathname !== LOGIN_ROUTE
