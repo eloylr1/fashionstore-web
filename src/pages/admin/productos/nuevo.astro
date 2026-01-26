@@ -46,7 +46,30 @@ if (isSupabaseConfigured() && supabase) {
   if (realCategories?.length) categories = realCategories;
 }
 
-const sizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
+// Tallas por defecto (ropa)
+const defaultSizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
+
+// Mapeo de categorías a tipos de talla
+const categorySizeTypes: Record<string, string> = {
+  'pantalones': 'pantalones',
+  'zapatos-de-vestir': 'zapatos',
+  'calcetines': 'calcetines',
+  'cinturones': 'cinturones',
+  'corbatas': 'unica',
+  'panuelos': 'unica',
+  'gemelos': 'unica',
+  'tirantes': 'unica',
+};
+
+// Opciones de tallas por tipo
+const sizeOptions: Record<string, string[]> = {
+  'ropa': ['XS', 'S', 'M', 'L', 'XL', 'XXL'],
+  'pantalones': ['46', '48', '50', '52', '54', '56'],
+  'zapatos': ['39', '40', '41', '42', '43', '44', '45'],
+  'calcetines': ['39-42', '43-46'],
+  'cinturones': ['85', '90', '95', '100', '105', '110'],
+  'unica': ['Única'],
+};
 ---
 
 <AdminLayout title="Nuevo Producto">
@@ -112,7 +135,7 @@ const sizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
             >
               <option value="">Seleccionar categoría</option>
               {categories?.map((cat) => (
-                <option value={cat.id}>{cat.name}</option>
+                <option value={cat.id} data-slug={cat.slug}>{cat.name}</option>
               ))}
             </select>
           </div>
@@ -196,17 +219,18 @@ const sizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
           <div>
             <label class="block text-sm font-medium text-charcoal-700 mb-3">
               Tallas disponibles *
+              <span id="size-type-label" class="text-xs font-normal text-charcoal-400 ml-2">(Ropa)</span>
             </label>
-            <div class="flex flex-wrap gap-3">
-              {sizes.map((size) => (
-                <label class="cursor-pointer">
+            <div id="sizes-container" class="flex flex-wrap gap-3">
+              {defaultSizes.map((size) => (
+                <label class="cursor-pointer size-option">
                   <input
                     type="checkbox"
                     name="sizes"
                     value={size}
                     class="peer sr-only"
                   />
-                  <span class="inline-flex items-center justify-center w-12 h-12 border border-charcoal-200 text-sm font-medium text-charcoal-600 peer-checked:border-navy-900 peer-checked:bg-navy-900 peer-checked:text-white transition-colors">
+                  <span class="inline-flex items-center justify-center min-w-[48px] h-12 px-3 border border-charcoal-200 text-sm font-medium text-charcoal-600 peer-checked:border-navy-900 peer-checked:bg-navy-900 peer-checked:text-white transition-colors">
                     {size}
                   </span>
                 </label>
@@ -263,6 +287,69 @@ const sizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
   </div>
   
   <script>
+    // Configuración de tallas por categoría
+    const categorySizeTypes: Record<string, string> = {
+      'pantalones': 'pantalones',
+      'zapatos-de-vestir': 'zapatos',
+      'calcetines': 'calcetines',
+      'cinturones': 'cinturones',
+      'corbatas': 'unica',
+      'panuelos': 'unica',
+      'gemelos': 'unica',
+      'tirantes': 'unica',
+    };
+
+    const sizeOptions: Record<string, { sizes: string[], label: string }> = {
+      'ropa': { sizes: ['XS', 'S', 'M', 'L', 'XL', 'XXL'], label: 'Ropa' },
+      'pantalones': { sizes: ['46', '48', '50', '52', '54', '56'], label: 'Talla europea' },
+      'zapatos': { sizes: ['39', '40', '41', '42', '43', '44', '45'], label: 'Número de pie' },
+      'calcetines': { sizes: ['39-42', '43-46'], label: 'Rango de talla' },
+      'cinturones': { sizes: ['85', '90', '95', '100', '105', '110'], label: 'Centímetros' },
+      'unica': { sizes: ['Única'], label: 'Talla única' },
+    };
+
+    // Elementos del DOM
+    const categorySelect = document.getElementById('category_id') as HTMLSelectElement;
+    const sizesContainer = document.getElementById('sizes-container') as HTMLDivElement;
+    const sizeTypeLabel = document.getElementById('size-type-label') as HTMLSpanElement;
+
+    // Función para actualizar las tallas según la categoría
+    function updateSizesForCategory(categorySlug: string) {
+      const sizeType = categorySizeTypes[categorySlug] || 'ropa';
+      const { sizes, label } = sizeOptions[sizeType];
+      
+      // Actualizar etiqueta
+      sizeTypeLabel.textContent = `(${label})`;
+      
+      // Generar nuevos checkboxes
+      sizesContainer.innerHTML = sizes.map(size => `
+        <label class="cursor-pointer size-option">
+          <input
+            type="checkbox"
+            name="sizes"
+            value="${size}"
+            class="peer sr-only"
+          />
+          <span class="inline-flex items-center justify-center min-w-[48px] h-12 px-3 border border-charcoal-200 text-sm font-medium text-charcoal-600 peer-checked:border-navy-900 peer-checked:bg-navy-900 peer-checked:text-white transition-colors">
+            ${size}
+          </span>
+        </label>
+      `).join('');
+      
+      // Si es talla única, seleccionarla automáticamente
+      if (sizeType === 'unica') {
+        const checkbox = sizesContainer.querySelector('input[type="checkbox"]') as HTMLInputElement;
+        if (checkbox) checkbox.checked = true;
+      }
+    }
+
+    // Evento de cambio de categoría
+    categorySelect.addEventListener('change', () => {
+      const selectedOption = categorySelect.options[categorySelect.selectedIndex];
+      const slug = selectedOption.dataset.slug || '';
+      updateSizesForCategory(slug);
+    });
+
     // Auto-generate slug from name
     const nameInput = document.getElementById('name') as HTMLInputElement;
     const slugInput = document.getElementById('slug') as HTMLInputElement;
