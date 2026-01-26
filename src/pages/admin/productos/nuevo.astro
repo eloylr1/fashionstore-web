@@ -263,8 +263,6 @@ const sizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
   </div>
   
   <script>
-    import { supabase, isSupabaseConfigured } from '../../../lib/supabase/client';
-    
     // Auto-generate slug from name
     const nameInput = document.getElementById('name') as HTMLInputElement;
     const slugInput = document.getElementById('slug') as HTMLInputElement;
@@ -286,11 +284,6 @@ const sizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
     
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
-      
-      if (!isSupabaseConfigured() || !supabase) {
-        alert('Supabase no está configurado. Configure las variables de entorno.');
-        return;
-      }
       
       submitBtn.disabled = true;
       submitBtn.textContent = 'Creando...';
@@ -333,11 +326,23 @@ const sizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
           images,
         };
         
-        const { error } = await supabase
-          .from('products')
-          .insert([productData] as any);
+        console.log('Creando producto:', productData);
         
-        if (error) throw error;
+        // Usar la API en lugar de Supabase directamente
+        const response = await fetch('/api/admin/products', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+          body: JSON.stringify(productData)
+        });
+        
+        const result = await response.json();
+        
+        if (!response.ok) {
+          throw new Error(result.error || 'Error al crear el producto');
+        }
         
         window.location.href = '/admin/productos';
       } catch (error: any) {

@@ -100,8 +100,8 @@ if (!product) {
     </div>
     
     <!-- Form -->
-    <form method="POST" action={`/api/admin/products/${id}`} class="space-y-8">
-      <input type="hidden" name="_method" value="PUT" />
+    <form id="product-form" class="space-y-8">
+      <input type="hidden" name="id" value={id} />
       
       <!-- Basic Info -->
       <div class="bg-white p-6 rounded-lg shadow-sm border border-charcoal-100">
@@ -286,11 +286,106 @@ if (!product) {
         </a>
         <button 
           type="submit"
+          id="submit-btn"
           class="px-6 py-3 bg-navy-900 text-white text-sm font-medium hover:bg-navy-800 transition-colors"
         >
           Guardar cambios
         </button>
       </div>
     </form>
+    
+    <!-- Status messages -->
+    <div id="form-message" class="hidden fixed bottom-4 right-4 p-4 rounded-lg shadow-lg max-w-md z-50"></div>
   </div>
 </AdminLayout>
+
+<script define:vars={{ productId: id }}>
+  document.addEventListener('DOMContentLoaded', () => {
+    const form = document.getElementById('product-form');
+    const submitBtn = document.getElementById('submit-btn');
+    const messageDiv = document.getElementById('form-message');
+    
+    function showMessage(message, isError = false) {
+      messageDiv.textContent = message;
+      messageDiv.className = `fixed bottom-4 right-4 p-4 rounded-lg shadow-lg max-w-md z-50 ${
+        isError ? 'bg-red-100 text-red-800 border border-red-300' : 'bg-green-100 text-green-800 border border-green-300'
+      }`;
+      messageDiv.classList.remove('hidden');
+      setTimeout(() => messageDiv.classList.add('hidden'), 5000);
+    }
+    
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const originalText = submitBtn.textContent;
+      submitBtn.textContent = 'Guardando...';
+      submitBtn.disabled = true;
+      
+      try {
+        const formData = new FormData(form);
+        
+        // Procesar tallas y colores como arrays
+        const sizesStr = formData.get('sizes') || '';
+        const colorsStr = formData.get('colors') || '';
+        const sizes = sizesStr ? sizesStr.split(',').map(s => s.trim()).filter(Boolean) : [];
+        const colors = colorsStr ? colorsStr.split(',').map(c => c.trim()).filter(Boolean) : [];
+        
+        // Obtener imágenes del hidden input
+        const imagesInput = document.getElementById('images');
+        let images = [];
+        try {
+          images = JSON.parse(imagesInput.value || '[]');
+        } catch (e) {
+          console.error('Error parsing images:', e);
+        }
+        
+        // Construir el objeto de datos
+        const data = {
+          name: formData.get('name'),
+          slug: formData.get('slug') || null,
+          description: formData.get('description') || null,
+          category_id: formData.get('category_id'),
+          material: formData.get('material') || null,
+          price: parseInt(formData.get('price'), 10),
+          compare_at_price: formData.get('compare_at_price') ? parseInt(formData.get('compare_at_price'), 10) : null,
+          stock: parseInt(formData.get('stock'), 10),
+          featured: formData.get('featured') === 'on',
+          sizes,
+          colors,
+          images
+        };
+        
+        console.log('Enviando datos:', data);
+        
+        const response = await fetch(`/api/admin/products/${productId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+          body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        
+        if (!response.ok) {
+          throw new Error(result.error || 'Error al guardar el producto');
+        }
+        
+        showMessage('¡Producto actualizado correctamente!');
+        
+        // Redirigir después de éxito
+        setTimeout(() => {
+          window.location.href = '/admin/productos';
+        }, 1500);
+        
+      } catch (error) {
+        console.error('Error:', error);
+        showMessage(error.message || 'Error al guardar el producto', true);
+      } finally {
+        submitBtn.textContent = originalText;
+        submitBtn.disabled = false;
+      }
+    });
+  });
+</script>

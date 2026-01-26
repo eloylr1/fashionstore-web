@@ -22,7 +22,7 @@ const getSupabase = () => {
 
 // GET - Listar productos con filtros opcionales
 export const GET: APIRoute = async ({ cookies, url }) => {
-  const userRole = cookies.get('user-role')?.value;
+  const userRole = cookies.get('user-role')?.value?.toLowerCase();
   if (userRole !== 'admin') {
     return new Response(JSON.stringify({ error: 'No autorizado' }), {
       status: 401,
@@ -109,7 +109,7 @@ export const GET: APIRoute = async ({ cookies, url }) => {
 
 // POST - Crear nuevo producto
 export const POST: APIRoute = async ({ request, cookies }) => {
-  const userRole = cookies.get('user-role')?.value;
+  const userRole = cookies.get('user-role')?.value?.toLowerCase();
   if (userRole !== 'admin') {
     return new Response(JSON.stringify({ error: 'No autorizado' }), {
       status: 401,

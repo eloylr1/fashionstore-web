@@ -32,7 +32,7 @@ const generateSlug = (name: string): string => {
 
 // GET - Obtener un producto
 export const GET: APIRoute = async ({ params, cookies }) => {
-  const userRole = cookies.get('user-role')?.value;
+  const userRole = cookies.get('user-role')?.value?.toLowerCase();
   if (userRole !== 'admin') {
     return new Response(JSON.stringify({ error: 'No autorizado' }), {
       status: 401,
@@ -87,7 +87,7 @@ export const GET: APIRoute = async ({ params, cookies }) => {
 
 // PUT - Actualizar un producto
 export const PUT: APIRoute = async ({ params, request, cookies }) => {
-  const userRole = cookies.get('user-role')?.value;
+  const userRole = cookies.get('user-role')?.value?.toLowerCase();
   if (userRole !== 'admin') {
     return new Response(JSON.stringify({ error: 'No autorizado' }), {
       status: 401,
@@ -188,7 +188,7 @@ export const PUT: APIRoute = async ({ params, request, cookies }) => {
 
 // DELETE - Eliminar un producto
 export const DELETE: APIRoute = async ({ params, cookies }) => {
-  const userRole = cookies.get('user-role')?.value;
+  const userRole = cookies.get('user-role')?.value?.toLowerCase();
   if (userRole !== 'admin') {
     return new Response(JSON.stringify({ error: 'No autorizado' }), {
       status: 401,
