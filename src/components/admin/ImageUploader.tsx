@@ -273,33 +273,39 @@ export default function ImageUploader({
                 </span>
               )}
               
-              {/* Botón eliminar */}
+              {/* Botón eliminar - siempre visible */}
               <button
                 type="button"
                 onClick={() => removeImage(index)}
+                title="Eliminar imagen"
                 style={{
                   position: 'absolute',
                   top: '8px',
                   right: '8px',
-                  width: '28px',
-                  height: '28px',
+                  width: '32px',
+                  height: '32px',
                   borderRadius: '50%',
-                  backgroundColor: '#8b2635',
+                  backgroundColor: '#dc2626',
                   color: '#ffffff',
-                  border: 'none',
+                  border: '2px solid #ffffff',
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  opacity: 0,
-                  transition: 'opacity 0.2s ease'
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.3)',
+                  transition: 'transform 0.15s ease, background-color 0.15s ease'
                 }}
-                className="group-hover:opacity-100"
-                onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
-                onMouseLeave={(e) => e.currentTarget.style.opacity = '0'}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = '#b91c1c';
+                  e.currentTarget.style.transform = 'scale(1.1)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = '#dc2626';
+                  e.currentTarget.style.transform = 'scale(1)';
+                }}
               >
-                <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
             </div>
