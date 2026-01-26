@@ -56,6 +56,10 @@ export default function CategoriesManager({ initialCategories }: CategoriesManag
     try {
       const response = await fetch(`/api/admin/categories/${deleteModal.category.id}`, {
         method: 'DELETE',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
       });
 
       if (response.ok) {
@@ -63,10 +67,12 @@ export default function CategoriesManager({ initialCategories }: CategoriesManag
         showToast('success', `Categoría "${deleteModal.category.name}" eliminada correctamente`);
         setDeleteModal({ isOpen: false, category: null });
       } else {
-        const error = await response.json();
+        const error = await response.json().catch(() => ({ error: 'Error desconocido' }));
+        console.error('Error deleting category:', error);
         showToast('error', error.error || 'Error al eliminar la categoría');
       }
     } catch (error) {
+      console.error('Network error:', error);
       showToast('error', 'Error de conexión al eliminar la categoría');
     } finally {
       setLoading(false);
@@ -89,6 +95,7 @@ export default function CategoriesManager({ initialCategories }: CategoriesManag
 
       const response = await fetch(url, {
         method,
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
       });
