@@ -12,10 +12,40 @@ import { uploadImage, uploadMultipleImages, isCloudinaryConfigured } from '../..
 
 console.log('>>> Cloudinary upload endpoint loaded');
 
+// Headers CORS para todas las respuestas
+const getCorsHeaders = (origin: string | null) => {
+  // Permitir el origen de la petición o el dominio principal
+  const allowedOrigin = origin || 'https://eloyfashionstore.victoriafp.online';
+  
+  return {
+    'Content-Type': 'application/json',
+    'Access-Control-Allow-Origin': allowedOrigin,
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With',
+    'Access-Control-Allow-Credentials': 'true',
+    'Access-Control-Max-Age': '86400',
+  };
+};
+
+// Handler para preflight OPTIONS
+export const OPTIONS: APIRoute = async ({ request }) => {
+  const origin = request.headers.get('origin');
+  console.log('OPTIONS preflight request from:', origin);
+  
+  return new Response(null, {
+    status: 204,
+    headers: getCorsHeaders(origin)
+  });
+};
+
 export const POST: APIRoute = async ({ request, cookies }) => {
+  const origin = request.headers.get('origin');
+  const headers = getCorsHeaders(origin);
+  
   console.log('=== CLOUDINARY UPLOAD START ===');
   console.log('Request URL:', request.url);
   console.log('Request method:', request.method);
+  console.log('Origin:', origin);
   
   // Verificar configuración de Cloudinary primero
   const cloudinaryOk = isCloudinaryConfigured();
@@ -27,7 +57,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       details: 'Faltan variables de entorno CLOUDINARY_*'
     }), {
       status: 500,
-      headers: { 'Content-Type': 'application/json' }
+      headers
     });
   }
   
@@ -42,7 +72,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       console.log('Auth failed - No autorizado');
       return new Response(JSON.stringify({ error: 'No autorizado' }), {
         status: 401,
-        headers: { 'Content-Type': 'application/json' }
+        headers
       });
     }
 
@@ -56,7 +86,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       console.log('No files received');
       return new Response(JSON.stringify({ error: 'No se enviaron imágenes' }), {
         status: 400,
-        headers: { 'Content-Type': 'application/json' }
+        headers
       });
     }
 
@@ -91,7 +121,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       message: `${urls.length} imagen(es) subida(s) correctamente`
     }), {
       status: 200,
-      headers: { 'Content-Type': 'application/json' }
+      headers
     });
 
   } catch (error) {
@@ -102,7 +132,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       details: error instanceof Error ? error.message : 'Error desconocido'
     }), {
       status: 500,
-      headers: { 'Content-Type': 'application/json' }
+      headers
     });
   }
 };
