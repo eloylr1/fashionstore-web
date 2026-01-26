@@ -183,14 +183,13 @@ const formatDate = (date: string) => {
             </h1>
             <p class="text-charcoal-500">{user.email}</p>
           </div>
-          <form action="/api/auth/logout" method="POST">
-            <button 
-              type="submit"
-              class="px-4 py-2 text-sm border border-charcoal-300 rounded-md hover:bg-charcoal-50 transition-colors"
-            >
-              Cerrar sesión
-            </button>
-          </form>
+          <button 
+            type="button"
+            onclick="window.location.href='/api/auth/logout'"
+            class="px-4 py-2 text-sm border border-charcoal-300 rounded-md hover:bg-charcoal-50 transition-colors"
+          >
+            Cerrar sesión
+          </button>
         </div>
       </div>
 
