@@ -17,24 +17,31 @@ export const GET: APIRoute = async ({ cookies }) => {
   // Verificar autenticación admin
   const token = cookies.get('sb-access-token')?.value;
   if (!token) {
-    return new Response(JSON.stringify({ error: 'No autorizado' }), { status: 401 });
+    return new Response(JSON.stringify({ error: 'No autorizado - Sin token' }), { status: 401 });
   }
 
   try {
     // Obtener usuario y verificar rol admin
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
     if (authError || !user) {
-      return new Response(JSON.stringify({ error: 'No autorizado' }), { status: 401 });
+      console.error('Auth error:', authError);
+      return new Response(JSON.stringify({ error: 'No autorizado - Token inválido' }), { status: 401 });
     }
 
-    const { data: profile } = await supabase
+    const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('role')
       .eq('id', user.id)
       .single();
 
-    if (profile?.role !== 'admin') {
-      return new Response(JSON.stringify({ error: 'Acceso denegado' }), { status: 403 });
+    console.log('User ID:', user.id, 'Profile role:', profile?.role, 'Profile error:', profileError);
+
+    // Verificar si es admin (también acepta 'Admin' o 'ADMIN')
+    const isAdmin = profile?.role?.toLowerCase() === 'admin';
+    if (!isAdmin) {
+      return new Response(JSON.stringify({ 
+        error: `Acceso denegado - Rol: ${profile?.role || 'sin rol'}` 
+      }), { status: 403 });
     }
 
     // ═══════════════════════════════════════════════════════════════════════

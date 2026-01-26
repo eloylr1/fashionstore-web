@@ -8,12 +8,51 @@
 
 import AdminNotifications from './AdminNotifications.tsx';
 import AdminSearch from './AdminSearch.tsx';
+import { createClient } from '@supabase/supabase-js';
 
 interface Props {
   title: string;
 }
 
 const { title } = Astro.props;
+
+// Obtener datos del usuario desde Supabase
+let userName = 'Admin';
+let userEmail = '';
+let userInitial = 'A';
+
+const accessToken = Astro.cookies.get('sb-access-token')?.value;
+if (accessToken) {
+  try {
+    const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
+    const supabaseServiceKey = import.meta.env.SUPABASE_SERVICE_ROLE_KEY;
+    
+    if (supabaseUrl && supabaseServiceKey) {
+      const supabase = createClient(supabaseUrl, supabaseServiceKey);
+      const { data: { user } } = await supabase.auth.getUser(accessToken);
+      
+      if (user) {
+        userEmail = user.email || '';
+        // Obtener perfil para el nombre
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('full_name')
+          .eq('id', user.id)
+          .single();
+        
+        if (profile?.full_name) {
+          userName = profile.full_name;
+          userInitial = profile.full_name.charAt(0).toUpperCase();
+        } else if (user.email) {
+          userName = user.email.split('@')[0];
+          userInitial = userName.charAt(0).toUpperCase();
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error getting user data:', error);
+  }
+}
 
 // Obtener hora para mostrar
 const now = new Date();
@@ -73,11 +112,11 @@ const timeString = now.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2
           id="user-menu-btn"
         >
           <div class="w-9 h-9 bg-gradient-to-br from-navy-700 to-navy-900 rounded-full flex items-center justify-center shadow-sm">
-            <span class="text-sm font-semibold text-white">A</span>
+            <span class="text-sm font-semibold text-white">{userInitial}</span>
           </div>
           <div class="hidden sm:block text-left">
             <p class="text-sm font-medium text-navy-900 group-hover:text-leather transition-colors">
-              Admin
+              {userName}
             </p>
             <p class="text-xs text-charcoal-400">
               Administrador
@@ -94,8 +133,8 @@ const timeString = now.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2
           class="absolute right-0 top-full mt-2 w-56 bg-white border border-charcoal-100 shadow-xl opacity-0 invisible transition-all duration-200 z-50"
         >
           <div class="px-4 py-3 border-b border-charcoal-100">
-            <p class="text-sm font-medium text-navy-900">Admin</p>
-            <p class="text-xs text-charcoal-500 truncate">admin@fashionmarket.com</p>
+            <p class="text-sm font-medium text-navy-900">{userName}</p>
+            <p class="text-xs text-charcoal-500 truncate">{userEmail || 'Administrador'}</p>
           </div>
           
           <div class="py-2">
