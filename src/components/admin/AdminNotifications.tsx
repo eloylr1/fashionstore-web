@@ -1,7 +1,7 @@
 /**
  * ═══════════════════════════════════════════════════════════════════════════
  * FASHIONMARKET - Admin Notifications Component (React)
- * Panel de notificaciones interactivo para el admin
+ * Panel de notificaciones con datos reales y persistencia
  * ═══════════════════════════════════════════════════════════════════════════
  */
 
@@ -12,65 +12,80 @@ interface Notification {
   type: 'order' | 'stock' | 'customer';
   title: string;
   message: string;
-  timestamp: Date;
-  read: boolean;
+  timestamp: string;
   link?: string;
+}
+
+const STORAGE_KEY = 'fm_admin_read_notifications';
+
+// Obtener IDs de notificaciones leídas desde localStorage
+function getReadNotifications(): Set<string> {
+  if (typeof window === 'undefined') return new Set();
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      const data = JSON.parse(stored);
+      // Limpiar notificaciones de más de 30 días
+      const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
+      const filtered = Object.entries(data)
+        .filter(([_, timestamp]) => (timestamp as number) > thirtyDaysAgo)
+        .map(([id]) => id);
+      return new Set(filtered);
+    }
+  } catch (e) {
+    console.error('Error reading notifications storage:', e);
+  }
+  return new Set();
+}
+
+// Guardar ID de notificación leída
+function saveReadNotification(id: string) {
+  if (typeof window === 'undefined') return;
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    const data = stored ? JSON.parse(stored) : {};
+    data[id] = Date.now();
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  } catch (e) {
+    console.error('Error saving notification:', e);
+  }
+}
+
+// Marcar todas como leídas
+function saveAllAsRead(ids: string[]) {
+  if (typeof window === 'undefined') return;
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    const data = stored ? JSON.parse(stored) : {};
+    const now = Date.now();
+    ids.forEach(id => { data[id] = now; });
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  } catch (e) {
+    console.error('Error saving notifications:', e);
+  }
 }
 
 export default function AdminNotifications() {
   const [isOpen, setIsOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [readIds, setReadIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Cargar notificaciones
+  // Cargar notificaciones leídas al inicio
+  useEffect(() => {
+    setReadIds(getReadNotifications());
+  }, []);
+
+  // Cargar notificaciones desde la API
   useEffect(() => {
     const fetchNotifications = async () => {
       try {
-        // Simular carga de notificaciones (en producción, esto vendría de una API)
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        // Datos de demostración
-        const mockNotifications: Notification[] = [
-          {
-            id: '1',
-            type: 'order',
-            title: 'Nuevo pedido recibido',
-            message: 'Pedido #1234 por €299.00',
-            timestamp: new Date(Date.now() - 1000 * 60 * 5), // Hace 5 minutos
-            read: false,
-            link: '/admin/pedidos'
-          },
-          {
-            id: '2',
-            type: 'stock',
-            title: 'Stock bajo',
-            message: 'Traje Italiano Slim Fit - Solo quedan 3 unidades',
-            timestamp: new Date(Date.now() - 1000 * 60 * 30), // Hace 30 minutos
-            read: false,
-            link: '/admin/productos'
-          },
-          {
-            id: '3',
-            type: 'customer',
-            title: 'Nuevo cliente registrado',
-            message: 'Carlos García se ha registrado',
-            timestamp: new Date(Date.now() - 1000 * 60 * 60), // Hace 1 hora
-            read: true,
-            link: '/admin/clientes'
-          },
-          {
-            id: '4',
-            type: 'order',
-            title: 'Pedido enviado',
-            message: 'Pedido #1230 marcado como enviado',
-            timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2), // Hace 2 horas
-            read: true,
-            link: '/admin/pedidos'
-          }
-        ];
-        
-        setNotifications(mockNotifications);
+        const response = await fetch('/api/admin/notifications');
+        if (response.ok) {
+          const data = await response.json();
+          setNotifications(data.notifications || []);
+        }
       } catch (error) {
         console.error('Error fetching notifications:', error);
       } finally {
@@ -80,8 +95,8 @@ export default function AdminNotifications() {
 
     fetchNotifications();
 
-    // Polling cada 30 segundos para nuevas notificaciones
-    const interval = setInterval(fetchNotifications, 30000);
+    // Actualizar cada 2 minutos
+    const interval = setInterval(fetchNotifications, 120000);
     return () => clearInterval(interval);
   }, []);
 
@@ -97,16 +112,17 @@ export default function AdminNotifications() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const unreadCount = notifications.filter(n => !n.read).length;
+  const unreadCount = notifications.filter(n => !readIds.has(n.id)).length;
 
   const markAsRead = (id: string) => {
-    setNotifications(prev =>
-      prev.map(n => n.id === id ? { ...n, read: true } : n)
-    );
+    saveReadNotification(id);
+    setReadIds(prev => new Set([...prev, id]));
   };
 
   const markAllAsRead = () => {
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    const allIds = notifications.map(n => n.id);
+    saveAllAsRead(allIds);
+    setReadIds(new Set(allIds));
   };
 
   const getIcon = (type: Notification['type']) => {
@@ -143,17 +159,30 @@ export default function AdminNotifications() {
     }
   };
 
-  const formatTime = (date: Date) => {
+  // Formatear tiempo relativo correctamente
+  const formatTime = (timestamp: string) => {
+    const date = new Date(timestamp);
     const now = new Date();
-    const diff = now.getTime() - date.getTime();
-    const minutes = Math.floor(diff / 60000);
-    const hours = Math.floor(diff / 3600000);
-    const days = Math.floor(diff / 86400000);
+    const diffMs = now.getTime() - date.getTime();
+    
+    const minutes = Math.floor(diffMs / 60000);
+    const hours = Math.floor(diffMs / 3600000);
+    const days = Math.floor(diffMs / 86400000);
+    const weeks = Math.floor(days / 7);
 
-    if (minutes < 1) return 'Ahora';
-    if (minutes < 60) return `Hace ${minutes}m`;
+    if (minutes < 1) return 'Ahora mismo';
+    if (minutes < 60) return `Hace ${minutes} min`;
     if (hours < 24) return `Hace ${hours}h`;
-    return `Hace ${days}d`;
+    if (days === 1) return 'Ayer';
+    if (days < 7) return `Hace ${days} dias`;
+    if (weeks === 1) return 'Hace 1 semana';
+    if (weeks < 4) return `Hace ${weeks} semanas`;
+    
+    // Si es más antiguo, mostrar fecha
+    return date.toLocaleDateString('es-ES', { 
+      day: 'numeric', 
+      month: 'short' 
+    });
   };
 
   return (
@@ -186,7 +215,7 @@ export default function AdminNotifications() {
                 onClick={markAllAsRead}
                 className="text-xs text-blue-600 hover:text-blue-800 font-medium"
               >
-                Marcar todo como leído
+                Marcar todo como leido
               </button>
             )}
           </div>
@@ -210,36 +239,40 @@ export default function AdminNotifications() {
                 <svg className="w-12 h-12 mx-auto text-gray-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                 </svg>
-                <p className="text-gray-500">No hay notificaciones</p>
+                <p className="text-gray-500 text-sm">No hay notificaciones</p>
+                <p className="text-gray-400 text-xs mt-1">Las notificaciones apareceran cuando haya actividad</p>
               </div>
             ) : (
               <div className="divide-y divide-gray-100">
-                {notifications.map(notification => (
-                  <a
-                    key={notification.id}
-                    href={notification.link || '#'}
-                    onClick={() => markAsRead(notification.id)}
-                    className={`flex gap-3 p-4 hover:bg-gray-50 transition-colors ${
-                      !notification.read ? 'bg-blue-50/50' : ''
-                    }`}
-                  >
-                    <div className={`w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center ${getIconBg(notification.type)}`}>
-                      {getIcon(notification.type)}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between gap-2">
-                        <p className={`text-sm ${!notification.read ? 'font-semibold text-gray-900' : 'font-medium text-gray-700'}`}>
-                          {notification.title}
-                        </p>
-                        {!notification.read && (
-                          <span className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 mt-1.5" />
-                        )}
+                {notifications.map(notification => {
+                  const isRead = readIds.has(notification.id);
+                  return (
+                    <a
+                      key={notification.id}
+                      href={notification.link || '#'}
+                      onClick={() => markAsRead(notification.id)}
+                      className={`flex gap-3 p-4 hover:bg-gray-50 transition-colors ${
+                        !isRead ? 'bg-blue-50/50' : ''
+                      }`}
+                    >
+                      <div className={`w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center ${getIconBg(notification.type)}`}>
+                        {getIcon(notification.type)}
                       </div>
-                      <p className="text-sm text-gray-500 truncate">{notification.message}</p>
-                      <p className="text-xs text-gray-400 mt-1">{formatTime(notification.timestamp)}</p>
-                    </div>
-                  </a>
-                ))}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-2">
+                          <p className={`text-sm ${!isRead ? 'font-semibold text-gray-900' : 'font-medium text-gray-700'}`}>
+                            {notification.title}
+                          </p>
+                          {!isRead && (
+                            <span className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 mt-1.5" />
+                          )}
+                        </div>
+                        <p className="text-sm text-gray-500 truncate">{notification.message}</p>
+                        <p className="text-xs text-gray-400 mt-1">{formatTime(notification.timestamp)}</p>
+                      </div>
+                    </a>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -247,12 +280,15 @@ export default function AdminNotifications() {
           {/* Footer */}
           {notifications.length > 0 && (
             <div className="border-t border-gray-100 p-3 bg-gray-50">
-              <a
-                href="/admin/notificaciones"
-                className="block text-center text-sm text-blue-600 hover:text-blue-800 font-medium transition-colors"
+              <button
+                onClick={() => {
+                  markAllAsRead();
+                  setIsOpen(false);
+                }}
+                className="block w-full text-center text-sm text-blue-600 hover:text-blue-800 font-medium transition-colors"
               >
                 Ver todas las notificaciones
-              </a>
+              </button>
             </div>
           )}
         </div>
