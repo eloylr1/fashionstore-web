@@ -13,7 +13,7 @@ import { supabaseAdmin, isSupabaseAdminConfigured } from '../../../lib/supabase/
 
 // Verificar autenticación
 const accessToken = Astro.cookies.get('sb-access-token')?.value;
-const userRole = Astro.cookies.get('user-role')?.value;
+const userRole = Astro.cookies.get('user-role')?.value?.toLowerCase();
 
 if (!accessToken || userRole !== 'admin') {
   return Astro.redirect('/admin/acceso-seguro');
