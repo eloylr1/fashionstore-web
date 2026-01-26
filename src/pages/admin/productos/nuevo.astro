@@ -287,16 +287,36 @@ const sizeOptions: Record<string, string[]> = {
   </div>
   
   <script>
-    // Configuración de tallas por categoría
+    // Configuración de tallas por categoría (soporta múltiples variantes de slug)
     const categorySizeTypes: Record<string, string> = {
+      // Pantalones
       'pantalones': 'pantalones',
+      // Zapatos - todas las variantes posibles
       'zapatos-de-vestir': 'zapatos',
+      'zapatos-vestir': 'zapatos',
+      'zapatos': 'zapatos',
+      // Calcetines
       'calcetines': 'calcetines',
+      // Cinturones
       'cinturones': 'cinturones',
+      // Talla única
       'corbatas': 'unica',
       'panuelos': 'unica',
       'gemelos': 'unica',
       'tirantes': 'unica',
+    };
+
+    // Palabras clave para detectar categoría por nombre (fallback)
+    const categoryKeywords: Record<string, string> = {
+      'zapato': 'zapatos',
+      'calcetin': 'calcetines',
+      'cinturon': 'cinturones',
+      'pantalon': 'pantalones',
+      'corbata': 'unica',
+      'pañuelo': 'unica',
+      'panuelo': 'unica',
+      'gemelo': 'unica',
+      'tirante': 'unica',
     };
 
     const sizeOptions: Record<string, { sizes: string[], label: string }> = {
@@ -313,10 +333,31 @@ const sizeOptions: Record<string, string[]> = {
     const sizesContainer = document.getElementById('sizes-container') as HTMLDivElement;
     const sizeTypeLabel = document.getElementById('size-type-label') as HTMLSpanElement;
 
+    // Función para detectar el tipo de talla
+    function getSizeType(slug: string, categoryName: string): string {
+      // Primero intentar por slug
+      if (categorySizeTypes[slug]) {
+        return categorySizeTypes[slug];
+      }
+      
+      // Si no, buscar por palabra clave en el nombre
+      const nameLower = categoryName.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      for (const [keyword, type] of Object.entries(categoryKeywords)) {
+        if (nameLower.includes(keyword)) {
+          return type;
+        }
+      }
+      
+      // Por defecto, ropa
+      return 'ropa';
+    }
+
     // Función para actualizar las tallas según la categoría
-    function updateSizesForCategory(categorySlug: string) {
-      const sizeType = categorySizeTypes[categorySlug] || 'ropa';
+    function updateSizesForCategory(categorySlug: string, categoryName: string) {
+      const sizeType = getSizeType(categorySlug, categoryName);
       const { sizes, label } = sizeOptions[sizeType];
+      
+      console.log('Categoría:', categoryName, '| Slug:', categorySlug, '| Tipo talla:', sizeType);
       
       // Actualizar etiqueta
       sizeTypeLabel.textContent = `(${label})`;
@@ -347,7 +388,8 @@ const sizeOptions: Record<string, string[]> = {
     categorySelect.addEventListener('change', () => {
       const selectedOption = categorySelect.options[categorySelect.selectedIndex];
       const slug = selectedOption.dataset.slug || '';
-      updateSizesForCategory(slug);
+      const name = selectedOption.textContent || '';
+      updateSizesForCategory(slug, name);
     });
 
     // Auto-generate slug from name
