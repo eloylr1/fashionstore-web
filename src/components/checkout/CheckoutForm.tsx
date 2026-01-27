@@ -35,6 +35,7 @@ interface CheckoutFormProps {
   items?: CartItem[];
   shippingAddress?: ShippingAddress;
   customerNif?: string;
+  discountCodeId?: string; // ID del código de descuento aplicado
   onSuccess?: (paymentIntentId: string, orderId?: string, invoiceId?: string) => void;
   onError?: (error: string) => void;
 }
@@ -53,7 +54,19 @@ const getCartFromStorage = (): { items: CartItem[]; total: number } => {
   }
 };
 
-export default function CheckoutForm({ amount: propAmount, items: propItems, shippingAddress, customerNif, onSuccess, onError }: CheckoutFormProps) {
+// Helper para obtener el código de descuento aplicado desde localStorage
+const getAppliedDiscountFromStorage = (): { discount_code_id: string; code: string; discount_amount: number } | null => {
+  if (typeof window === 'undefined') return null;
+  
+  try {
+    const saved = localStorage.getItem('fashionmarket-applied-discount');
+    return saved ? JSON.parse(saved) : null;
+  } catch {
+    return null;
+  }
+};
+
+export default function CheckoutForm({ amount: propAmount, items: propItems, shippingAddress, customerNif, discountCodeId: propDiscountCodeId, onSuccess, onError }: CheckoutFormProps) {
   const [stripe, setStripe] = useState<Stripe | null>(null);
   const [elements, setElements] = useState<StripeElements | null>(null);
   const [clientSecret, setClientSecret] = useState<string>('');
@@ -65,11 +78,22 @@ export default function CheckoutForm({ amount: propAmount, items: propItems, shi
   // Estado del carrito
   const [cartData, setCartData] = useState<{ items: CartItem[]; total: number }>({ items: [], total: 0 });
   
-  // Obtener datos del carrito al montar el componente
+  // Estado del descuento (se lee de localStorage o de props)
+  const [discountCodeId, setDiscountCodeId] = useState<string | undefined>(propDiscountCodeId);
+  
+  // Obtener datos del carrito y descuento al montar el componente
   useEffect(() => {
     const data = getCartFromStorage();
     setCartData(data);
-  }, []);
+    
+    // Leer descuento aplicado de localStorage si no viene por props
+    if (!propDiscountCodeId) {
+      const appliedDiscount = getAppliedDiscountFromStorage();
+      if (appliedDiscount?.discount_code_id) {
+        setDiscountCodeId(appliedDiscount.discount_code_id);
+      }
+    }
+  }, [propDiscountCodeId]);
   
   // Usar el amount proporcionado o el del carrito
   const amount = propAmount && propAmount > 0 ? propAmount : cartData.total;
@@ -204,12 +228,17 @@ export default function CheckoutForm({ amount: propAmount, items: propItems, shi
               items: items || [],
               shippingAddress: shippingAddress,
               customerNif: customerNif,
+              discountCodeId: discountCodeId, // Pasar el ID del código de descuento
             }),
           });
 
           const completeData = await completeResponse.json();
           
           if (completeData.success) {
+            // Limpiar carrito y descuento aplicado del localStorage
+            localStorage.removeItem('fashionmarket-cart');
+            localStorage.removeItem('fashionmarket-applied-discount');
+            
             setOrderInfo({
               orderId: completeData.orderId,
               invoiceId: completeData.invoiceId,

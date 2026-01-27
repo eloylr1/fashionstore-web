@@ -359,7 +359,11 @@ if (accessToken?.value) {
               });
               
               if (response.ok) {
-                window.location.href = '/tienda';
+                // Marcar para mostrar popup de NEWSLETTER15
+                localStorage.setItem('show-newsletter-code', 'true');
+                // Marcar que ya vio el popup de bienvenida (ya que se registró)
+                localStorage.setItem('welcome-popup-seen', 'true');
+                window.location.href = '/';
               } else {
                 throw new Error('Error al guardar la sesión');
               }

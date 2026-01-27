@@ -59,6 +59,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       items, // Array de { productId, name, quantity, price, size?, color? }
       shippingAddress,
       discountCode,
+      discountCodeId, // ID del código de descuento
       discountAmount = 0,
       customerEmail,
       customerName,
@@ -158,6 +159,27 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 
     if (itemsError) {
       console.error('Error creating order items:', itemsError);
+    }
+
+    // Registrar uso del código de descuento
+    if (discountCodeId && discountAmount > 0) {
+      try {
+        // Insertar redención del código
+        await supabase
+          .from('discount_code_redemptions')
+          .insert({
+            code_id: discountCodeId,
+            user_id: user.id,
+            order_id: order.id,
+            discount_amount: discountAmount,
+          });
+
+        // Incrementar contador de usos
+        await supabase.rpc('increment_discount_uses', { code_id: discountCodeId });
+      } catch (redemptionError) {
+        console.error('Error registering discount code redemption:', redemptionError);
+        // No fallamos el pedido por esto, solo lo registramos
+      }
     }
 
     // Generar número de factura

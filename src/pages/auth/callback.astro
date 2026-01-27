@@ -151,8 +151,19 @@ import '../../styles/global.css';
               });
               
               if (loginResponse.ok) {
-                // ¡Éxito! Redirigir a la cuenta
-                window.location.href = '/cuenta';
+                // Verificar si es un usuario nuevo (creado hace menos de 5 minutos)
+                const createdAt = new Date(user.created_at);
+                const now = new Date();
+                const isNewUser = (now.getTime() - createdAt.getTime()) < 5 * 60 * 1000; // 5 minutos
+                
+                if (isNewUser) {
+                  // Marcar para mostrar popup de código NEWSLETTER15
+                  localStorage.setItem('show-newsletter-code', 'true');
+                  localStorage.setItem('welcome-popup-seen', 'true');
+                }
+                
+                // ¡Éxito! Redirigir a la página principal si es nuevo, o cuenta si ya existe
+                window.location.href = isNewUser ? '/' : '/cuenta';
                 return;
               } else {
                 showError('Error al guardar la sesión');

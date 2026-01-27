@@ -48,11 +48,23 @@ if (isSupabaseConfigured() && supabase) {
   if (realCategories?.length) categories = realCategories as typeof categories;
 }
 
+// Verificar si el usuario está logueado
+const accessToken = Astro.cookies.get('sb-access-token')?.value;
+const isLoggedIn = Boolean(accessToken);
+
 import NewsletterPopup from '../components/newsletter/NewsletterPopup';
 import OffersPopup from '../components/offers/OffersPopup';
+import WelcomePopup from '../components/promotions/WelcomePopup';
+import NewsletterSuccessPopup from '../components/promotions/NewsletterSuccessPopup';
 ---
 
 <BaseLayout title="Moda Masculina Premium">
+  <!-- Welcome Popup para nuevos visitantes (solo si no está logueado) -->
+  <WelcomePopup client:load isLoggedIn={isLoggedIn} />
+  
+  <!-- Newsletter Success Popup (después de registro) -->
+  <NewsletterSuccessPopup client:load />
+  
   <!-- Offers Popup (aparece primero) -->
   <OffersPopup client:load />
   

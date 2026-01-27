@@ -315,6 +315,9 @@ const user = sessionData.user;
           code: data.code,
           discount_amount: data.discount_amount,
         };
+        
+        // Guardar en localStorage para que el CheckoutForm pueda leerlo
+        localStorage.setItem('fashionmarket-applied-discount', JSON.stringify(appliedDiscount));
 
         discountCodeInput.parentElement?.classList.add('hidden');
         discountApplied?.classList.remove('hidden');
@@ -336,6 +339,8 @@ const user = sessionData.user;
       discountCodeInput.value = '';
       discountCodeInput.parentElement?.classList.remove('hidden');
       discountApplied?.classList.add('hidden');
+      // Limpiar del localStorage
+      localStorage.removeItem('fashionmarket-applied-discount');
       updateTotals();
     });
 
