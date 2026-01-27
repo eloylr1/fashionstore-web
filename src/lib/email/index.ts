@@ -96,26 +96,51 @@ interface OrderData {
   }>;
   subtotal: number;
   shippingCost: number;
+  codExtraCost?: number; // Costo adicional por contrareembolso
   discount?: number;
   tax: number;
   total: number;
   shippingAddress: {
-    full_name: string;
-    address_line1: string;
+    full_name?: string;
+    address_line1?: string;
+    address?: string;
     address_line2?: string;
-    city: string;
+    city?: string;
     province?: string;
-    postal_code: string;
-    country: string;
+    postal_code?: string;
+    country?: string;
   };
+  shippingMethod?: 'standard' | 'express';
+  estimatedDeliveryDays?: number;
+  paymentMethod?: string; // 'card', 'transfer', 'cash_on_delivery'
   invoiceNumber: string;
   invoiceUrl: string;
+  // Datos bancarios para transferencia
+  bankDetails?: {
+    bank: string;
+    iban: string;
+    beneficiary: string;
+    reference: string;
+  };
 }
 
 /**
  * Envía email de confirmación de pedido con factura
  */
 export async function sendOrderConfirmationEmail(data: OrderData): Promise<EmailResult> {
+  // Determinar texto del método de pago
+  const paymentMethodText: Record<string, string> = {
+    'card': '💳 Tarjeta de crédito/débito',
+    'transfer': '🏦 Transferencia bancaria',
+    'cash_on_delivery': '💵 Contrareembolso',
+  };
+  
+  const paymentLabel = paymentMethodText[data.paymentMethod || 'card'] || '💳 Tarjeta';
+  
+  // Determinar método de envío
+  const shippingMethodText = data.shippingMethod === 'express' ? '🚀 Envío Express' : '📦 Envío Estándar';
+  const deliveryDays = data.estimatedDeliveryDays || (data.shippingMethod === 'express' ? 1 : 3);
+  
   const itemsHtml = data.items.map(item => `
     <tr>
       <td style="padding: 12px; border-bottom: 1px solid #e5e7eb;">
@@ -205,9 +230,15 @@ export async function sendOrderConfirmationEmail(data: OrderData): Promise<Email
             </tr>
             ` : ''}
             <tr>
-              <td style="color: #6b7280; padding: 4px 0;">Envío</td>
-              <td style="text-align: right; color: #374151;">${data.shippingCost === 0 ? 'Gratis' : formatPrice(data.shippingCost)}</td>
+              <td style="color: #6b7280; padding: 4px 0;">Envío (${shippingMethodText})</td>
+              <td style="text-align: right; color: #374151;">${data.shippingCost === 0 ? '✅ Gratis' : formatPrice(data.shippingCost)}</td>
             </tr>
+            ${data.codExtraCost && data.codExtraCost > 0 ? `
+            <tr>
+              <td style="color: #6b7280; padding: 4px 0;">Cargo por contrareembolso</td>
+              <td style="text-align: right; color: #374151;">${formatPrice(data.codExtraCost)}</td>
+            </tr>
+            ` : ''}
             <tr>
               <td style="color: #6b7280; padding: 4px 0;">IVA (21%)</td>
               <td style="text-align: right; color: #374151;">${formatPrice(data.tax)}</td>
@@ -222,15 +253,71 @@ export async function sendOrderConfirmationEmail(data: OrderData): Promise<Email
           </table>
         </div>
 
+        <!-- Método de pago y entrega -->
+        <div style="margin-top: 24px; display: flex; gap: 16px;">
+          <div style="flex: 1; padding: 16px; background: #f0fdf4; border-radius: 8px; border: 1px solid #bbf7d0;">
+            <p style="margin: 0 0 4px; font-size: 12px; color: #15803d; text-transform: uppercase; font-weight: 600;">Método de pago</p>
+            <p style="margin: 0; color: #166534; font-weight: 500;">${paymentLabel}</p>
+          </div>
+          <div style="flex: 1; padding: 16px; background: #eff6ff; border-radius: 8px; border: 1px solid #bfdbfe;">
+            <p style="margin: 0 0 4px; font-size: 12px; color: #1d4ed8; text-transform: uppercase; font-weight: 600;">Entrega estimada</p>
+            <p style="margin: 0; color: #1e40af; font-weight: 500;">${deliveryDays === 1 ? '24-48 horas' : `${deliveryDays}-${deliveryDays + 2} días laborables`}</p>
+          </div>
+        </div>
+
+        ${data.paymentMethod === 'cash_on_delivery' ? `
+        <!-- Aviso contrareembolso -->
+        <div style="margin-top: 24px; padding: 16px; background: #fef3c7; border-radius: 8px; border: 1px solid #fcd34d;">
+          <h4 style="margin: 0 0 8px; color: #92400e;">💵 Pago a la entrega</h4>
+          <p style="margin: 0; color: #a16207; font-size: 14px;">
+            Deberás abonar <strong>${formatPrice(data.total)}</strong> al repartidor cuando recibas tu pedido.
+            Ten preparado el importe exacto en efectivo.
+          </p>
+        </div>
+        ` : ''}
+
+        ${data.paymentMethod === 'transfer' && data.bankDetails ? `
+        <!-- Datos bancarios para transferencia -->
+        <div style="margin-top: 24px; padding: 20px; background: #f0f9ff; border-radius: 8px; border: 1px solid #bae6fd;">
+          <h4 style="margin: 0 0 12px; color: #0369a1;">🏦 Datos para la transferencia</h4>
+          <table style="width: 100%;">
+            <tr>
+              <td style="color: #6b7280; padding: 6px 0; font-size: 14px;">Banco:</td>
+              <td style="color: #0c4a6e; font-weight: 500; font-size: 14px;">${data.bankDetails.bank}</td>
+            </tr>
+            <tr>
+              <td style="color: #6b7280; padding: 6px 0; font-size: 14px;">Beneficiario:</td>
+              <td style="color: #0c4a6e; font-weight: 500; font-size: 14px;">${data.bankDetails.beneficiary}</td>
+            </tr>
+            <tr>
+              <td style="color: #6b7280; padding: 6px 0; font-size: 14px;">IBAN:</td>
+              <td style="color: #0c4a6e; font-weight: 600; font-size: 14px; letter-spacing: 1px;">${data.bankDetails.iban}</td>
+            </tr>
+            <tr>
+              <td style="color: #6b7280; padding: 6px 0; font-size: 14px;">Concepto:</td>
+              <td style="color: #0c4a6e; font-weight: 600; font-size: 14px;">${data.bankDetails.reference}</td>
+            </tr>
+            <tr>
+              <td style="color: #6b7280; padding: 6px 0; font-size: 14px;">Importe:</td>
+              <td style="color: #0c4a6e; font-weight: 700; font-size: 16px;">${formatPrice(data.total)}</td>
+            </tr>
+          </table>
+          <p style="margin: 12px 0 0; color: #0369a1; font-size: 13px; font-style: italic;">
+            ⚠️ Por favor, incluye el número de pedido como concepto para identificar tu pago.
+            Tu pedido se procesará una vez confirmemos la transferencia.
+          </p>
+        </div>
+        ` : ''}
+
         <!-- Dirección de envío -->
         <div style="margin-top: 24px; padding-top: 24px; border-top: 1px solid #e5e7eb;">
           <h3 style="color: #1e3a5f; font-size: 16px; margin: 0 0 12px;">📦 Dirección de envío</h3>
           <p style="color: #374151; margin: 0; line-height: 1.6;">
-            ${data.shippingAddress.full_name}<br>
-            ${data.shippingAddress.address_line1}<br>
+            ${data.shippingAddress.full_name || ''}<br>
+            ${data.shippingAddress.address_line1 || data.shippingAddress.address || ''}<br>
             ${data.shippingAddress.address_line2 ? data.shippingAddress.address_line2 + '<br>' : ''}
-            ${data.shippingAddress.postal_code} ${data.shippingAddress.city}${data.shippingAddress.province ? ', ' + data.shippingAddress.province : ''}<br>
-            ${data.shippingAddress.country}
+            ${data.shippingAddress.postal_code || ''} ${data.shippingAddress.city || ''}${data.shippingAddress.province ? ', ' + data.shippingAddress.province : ''}<br>
+            ${data.shippingAddress.country || 'España'}
           </p>
         </div>
 

@@ -66,6 +66,20 @@ const getAppliedDiscountFromStorage = (): { discount_code_id: string; code: stri
   }
 };
 
+// Helper para obtener opciones de checkout desde localStorage
+const getCheckoutOptionsFromStorage = (): { shippingMethod: string; paymentMethod: string; shippingCost: number; codCost: number } => {
+  if (typeof window === 'undefined') {
+    return { shippingMethod: 'standard', paymentMethod: 'card', shippingCost: 499, codCost: 0 };
+  }
+  
+  try {
+    const saved = localStorage.getItem('fashionmarket-checkout-options');
+    return saved ? JSON.parse(saved) : { shippingMethod: 'standard', paymentMethod: 'card', shippingCost: 499, codCost: 0 };
+  } catch {
+    return { shippingMethod: 'standard', paymentMethod: 'card', shippingCost: 499, codCost: 0 };
+  }
+};
+
 export default function CheckoutForm({ amount: propAmount, items: propItems, shippingAddress, customerNif, discountCodeId: propDiscountCodeId, onSuccess, onError }: CheckoutFormProps) {
   const [stripe, setStripe] = useState<Stripe | null>(null);
   const [elements, setElements] = useState<StripeElements | null>(null);
@@ -81,6 +95,9 @@ export default function CheckoutForm({ amount: propAmount, items: propItems, shi
   // Estado del descuento (se lee de localStorage o de props)
   const [discountCodeId, setDiscountCodeId] = useState<string | undefined>(propDiscountCodeId);
   
+  // Estado de las opciones de checkout
+  const [checkoutOptions, setCheckoutOptions] = useState(getCheckoutOptionsFromStorage());
+  
   // Obtener datos del carrito y descuento al montar el componente
   useEffect(() => {
     const data = getCartFromStorage();
@@ -93,6 +110,26 @@ export default function CheckoutForm({ amount: propAmount, items: propItems, shi
         setDiscountCodeId(appliedDiscount.discount_code_id);
       }
     }
+    
+    // Leer opciones de checkout
+    setCheckoutOptions(getCheckoutOptionsFromStorage());
+    
+    // Escuchar cambios en localStorage para actualizar opciones
+    const handleStorageChange = () => {
+      setCheckoutOptions(getCheckoutOptionsFromStorage());
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    
+    // También actualizar periódicamente por si cambian las opciones en la misma página
+    const interval = setInterval(() => {
+      setCheckoutOptions(getCheckoutOptionsFromStorage());
+    }, 500);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      clearInterval(interval);
+    };
   }, [propDiscountCodeId]);
   
   // Usar el amount proporcionado o el del carrito
@@ -220,6 +257,10 @@ export default function CheckoutForm({ amount: propAmount, items: propItems, shi
       } else if (paymentIntent && paymentIntent.status === 'succeeded') {
         // Llamar a la API para completar el pedido y generar factura
         try {
+          // Obtener opciones actualizadas
+          const currentOptions = getCheckoutOptionsFromStorage();
+          const appliedDiscount = getAppliedDiscountFromStorage();
+          
           const completeResponse = await fetch('/api/orders/complete', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -227,8 +268,12 @@ export default function CheckoutForm({ amount: propAmount, items: propItems, shi
               paymentIntentId: paymentIntent.id,
               items: items || [],
               shippingAddress: shippingAddress,
+              shippingMethod: currentOptions.shippingMethod,
+              paymentMethod: 'card',
               customerNif: customerNif,
-              discountCodeId: discountCodeId, // Pasar el ID del código de descuento
+              discountCodeId: discountCodeId || appliedDiscount?.discount_code_id,
+              discountCode: appliedDiscount?.code,
+              discountAmount: appliedDiscount?.discount_amount || 0,
             }),
           });
 

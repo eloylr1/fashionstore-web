@@ -1,15 +1,18 @@
 /**
  * ═══════════════════════════════════════════════════════════════════════════
  * FASHIONMARKET - API: Crear Pedido
- * Endpoint completo para crear pedido, actualizar stock y aplicar descuento
+ * Endpoint completo para crear pedido con cualquier método de pago
+ * Incluye: contrareembolso, transferencia bancaria, etc.
  * ═══════════════════════════════════════════════════════════════════════════
  */
 
 import type { APIRoute } from 'astro';
 import { createClient } from '@supabase/supabase-js';
+import { sendOrderConfirmationEmail } from '../../../lib/email';
 
 const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL || '';
 const supabaseServiceKey = import.meta.env.SUPABASE_SERVICE_ROLE_KEY || '';
+const siteUrl = import.meta.env.SITE_URL || 'http://localhost:4322';
 
 interface CartItem {
   product_id: string;
@@ -36,10 +39,11 @@ interface ShippingAddress {
 interface CreateOrderRequest {
   items: CartItem[];
   shipping_address: ShippingAddress;
+  shipping_method?: 'standard' | 'express';
   payment_method?: string;
   discount_code_id?: string;
+  discount_code?: string;
   discount_amount?: number;
-  shipping_cost?: number;
   notes?: string;
 }
 
@@ -81,10 +85,11 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     const { 
       items, 
       shipping_address, 
+      shipping_method = 'standard',
       payment_method = 'card',
       discount_code_id,
+      discount_code,
       discount_amount = 0,
-      shipping_cost = 0,
       notes 
     } = body;
 
@@ -145,17 +150,75 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       }
     }
 
+    // Obtener configuración de la tienda
+    const { data: settingsData } = await supabase
+      .from('store_settings')
+      .select('category, settings')
+      .in('category', ['shipping', 'payments', 'taxes']);
+
+    const storeSettings: Record<string, any> = {
+      shipping: { 
+        free_shipping_threshold: 10000, 
+        standard_shipping_cost: 499, 
+        express_shipping_cost: 999,
+        estimated_delivery_days: 3,
+        express_delivery_days: 1,
+      },
+      payments: { 
+        cod_extra_cost: 0,
+        transfer_enabled: true,
+        cash_on_delivery_enabled: true,
+      },
+      taxes: { tax_rate: 21, prices_include_tax: true },
+    };
+
+    if (settingsData) {
+      for (const item of settingsData) {
+        if (item.category && item.settings) {
+          storeSettings[item.category] = { ...storeSettings[item.category], ...item.settings };
+        }
+      }
+    }
+
     // 2) Calcular totales
     const subtotal = items.reduce((sum, item) => sum + (item.unit_price * item.quantity), 0);
+    
+    // Calcular costo de envío según configuración
+    let shipping_cost = 0;
+    if (subtotal < storeSettings.shipping.free_shipping_threshold) {
+      shipping_cost = shipping_method === 'express' 
+        ? storeSettings.shipping.express_shipping_cost 
+        : storeSettings.shipping.standard_shipping_cost;
+    }
+
+    // Costo adicional por contrareembolso
+    const cod_extra_cost = payment_method === 'cash_on_delivery' 
+      ? (storeSettings.payments.cod_extra_cost || 0) 
+      : 0;
+
     const tax = 0; // IVA ya incluido en precio
-    const total = subtotal - discount_amount + shipping_cost + tax;
+    const total = subtotal - discount_amount + shipping_cost + cod_extra_cost + tax;
+
+    // Determinar estado inicial según método de pago
+    let orderStatus = 'pending';
+    if (payment_method === 'transfer') {
+      orderStatus = 'awaiting_payment'; // Esperando transferencia
+    } else if (payment_method === 'cash_on_delivery') {
+      orderStatus = 'pending'; // Pendiente de preparar, pago a la entrega
+    } else if (payment_method === 'card') {
+      orderStatus = 'paid'; // Pagado con tarjeta
+    }
+
+    // Generar número de pedido
+    const orderNumber = `FM-${Date.now().toString(36).toUpperCase()}`;
 
     // 3) Crear pedido
     const { data: order, error: orderError } = await supabase
       .from('orders')
       .insert({
         user_id: userId,
-        status: 'pending',
+        order_number: orderNumber,
+        status: orderStatus,
         shipping_name: shipping_address.full_name,
         shipping_phone: shipping_address.phone,
         shipping_address_line1: shipping_address.address_line1,
@@ -164,9 +227,12 @@ export const POST: APIRoute = async ({ request, cookies }) => {
         shipping_province: shipping_address.province,
         shipping_postal_code: shipping_address.postal_code,
         shipping_country: shipping_address.country || 'España',
+        shipping_method: shipping_method,
         subtotal,
         shipping_cost,
+        cod_extra_cost,
         discount: discount_amount,
+        discount_code: discount_code,
         tax,
         total,
         payment_method,
@@ -261,13 +327,124 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       }
     }
 
+    // 7) Generar factura
+    const year = new Date().getFullYear();
+    const { count } = await supabase
+      .from('invoices')
+      .select('*', { count: 'exact', head: true })
+      .ilike('invoice_number', `FM-${year}-%`);
+    
+    const invoiceNumber = `FM-${year}-${String((count || 0) + 1).padStart(6, '0')}`;
+
+    const invoiceStatus = payment_method === 'card' ? 'paid' : 'pending';
+    
+    const { data: invoice } = await supabase
+      .from('invoices')
+      .insert({
+        order_id: order.id,
+        user_id: userId,
+        invoice_number: invoiceNumber,
+        customer_name: shipping_address.full_name,
+        customer_email: sessionData.user.email,
+        customer_address: shipping_address,
+        subtotal,
+        shipping_cost,
+        cod_extra_cost,
+        tax_rate: storeSettings.taxes.tax_rate,
+        tax_amount: tax,
+        total,
+        status: invoiceStatus,
+        payment_method,
+        items: items.map((item) => ({
+          name: item.product_name,
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          total: item.unit_price * item.quantity,
+          size: item.size,
+        })),
+      })
+      .select()
+      .single();
+
+    // 8) Enviar email de confirmación
+    const customerEmail = sessionData.user.email || '';
+    const deliveryDays = shipping_method === 'express' 
+      ? storeSettings.shipping.express_delivery_days 
+      : storeSettings.shipping.estimated_delivery_days;
+
+    await sendOrderConfirmationEmail({
+      orderNumber: order.order_number || orderNumber,
+      customerName: shipping_address.full_name,
+      customerEmail,
+      items: items.map((item) => ({
+        name: item.product_name,
+        quantity: item.quantity,
+        price: item.unit_price,
+        size: item.size || undefined,
+      })),
+      subtotal,
+      shippingCost: shipping_cost,
+      codExtraCost: cod_extra_cost,
+      discount: discount_amount,
+      tax,
+      total,
+      shippingAddress: shipping_address,
+      shippingMethod: shipping_method,
+      estimatedDeliveryDays: deliveryDays,
+      paymentMethod: payment_method,
+      invoiceNumber: invoice?.invoice_number || invoiceNumber,
+      invoiceUrl: invoice ? `${siteUrl}/api/invoices/${invoice.id}` : '',
+      // Datos bancarios para transferencia
+      bankDetails: payment_method === 'transfer' ? {
+        bank: 'Banco FashionMarket',
+        iban: 'ES00 0000 0000 0000 0000 0000',
+        beneficiary: 'FashionMarket S.L.',
+        reference: order.order_number || orderNumber,
+      } : undefined,
+    });
+
+    // Construir respuesta según método de pago
+    let paymentInfo = null;
+    if (payment_method === 'transfer') {
+      paymentInfo = {
+        type: 'transfer',
+        message: 'Por favor realiza la transferencia con el número de pedido como referencia',
+        bank: 'Banco FashionMarket',
+        iban: 'ES00 0000 0000 0000 0000 0000',
+        beneficiary: 'FashionMarket S.L.',
+        reference: order.order_number || orderNumber,
+        amount: total,
+      };
+    } else if (payment_method === 'cash_on_delivery') {
+      paymentInfo = {
+        type: 'cash_on_delivery',
+        message: `Pagarás ${(total / 100).toFixed(2)}€ al recibir tu pedido`,
+        amountDue: total,
+        codExtraCost: cod_extra_cost,
+      };
+    }
+
     return new Response(
       JSON.stringify({
         success: true,
         order_id: order.id,
-        order_number: order.order_number,
+        order_number: order.order_number || orderNumber,
+        status: orderStatus,
         total: order.total,
-        message: 'Pedido creado correctamente',
+        shipping_cost,
+        payment_method,
+        shipping_method,
+        estimated_delivery_days: deliveryDays,
+        invoice: invoice ? {
+          id: invoice.id,
+          invoice_number: invoice.invoice_number,
+        } : null,
+        paymentInfo,
+        message: payment_method === 'transfer' 
+          ? 'Pedido creado. Por favor, realiza la transferencia para confirmar.'
+          : payment_method === 'cash_on_delivery'
+          ? 'Pedido creado. Pagarás al recibir tu pedido.'
+          : 'Pedido creado correctamente',
       }),
       { status: 201, headers: { 'Content-Type': 'application/json' } }
     );

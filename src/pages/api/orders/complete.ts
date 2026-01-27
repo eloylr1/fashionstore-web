@@ -93,10 +93,36 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       );
     }
 
+    // Obtener configuración de la tienda
+    const { data: settingsData } = await supabase
+      .from('store_settings')
+      .select('category, settings')
+      .in('category', ['shipping', 'taxes']);
+
+    const storeSettings: Record<string, any> = {
+      shipping: { 
+        free_shipping_threshold: 10000, 
+        standard_shipping_cost: 499,
+        estimated_delivery_days: 3,
+      },
+      taxes: { tax_rate: 21 },
+    };
+
+    if (settingsData) {
+      for (const item of settingsData) {
+        if (item.category && item.settings) {
+          storeSettings[item.category] = { ...storeSettings[item.category], ...item.settings };
+        }
+      }
+    }
+
     // Calcular totales
     const subtotal = items.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0);
-    const shippingCost = subtotal >= 10000 ? 0 : 499; // Envío gratis si > 100€
-    const taxRate = 21; // IVA 21%
+    // Envío gratis si supera el umbral configurado
+    const shippingCost = subtotal >= storeSettings.shipping.free_shipping_threshold 
+      ? 0 
+      : storeSettings.shipping.standard_shipping_cost;
+    const taxRate = storeSettings.taxes.tax_rate || 21;
     const taxAmount = Math.round((subtotal - discountAmount) * taxRate / 100);
     const total = subtotal - discountAmount + shippingCost;
 

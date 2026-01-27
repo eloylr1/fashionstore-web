@@ -17,6 +17,7 @@ let paymentConfig = {
   paypal_enabled: false,
   transfer_enabled: true,
   cash_on_delivery_enabled: false,
+  cod_extra_cost: 0,
   currency: 'EUR',
   currency_symbol: '€'
 };
@@ -158,15 +159,26 @@ if (isSupabaseConfigured() && supabase) {
               type="checkbox" 
               name="cash_on_delivery_enabled" 
               class="sr-only peer"
+              id="cod-toggle"
               checked={paymentConfig.cash_on_delivery_enabled}
             />
             <div class="w-11 h-6 bg-charcoal-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-navy-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-navy-600"></div>
           </label>
         </div>
-        <div class="mt-4 pl-16">
-          <p class="text-xs text-charcoal-400">
-            Puede incluir un coste adicional para el cliente
-          </p>
+        <div class="mt-4 pl-16" id="cod-options">
+          <div class="max-w-xs mb-3">
+            <label class="block text-sm font-medium text-charcoal-700 mb-1">Cargo adicional (€)</label>
+            <input 
+              type="number" 
+              name="cod_extra_cost" 
+              value={(paymentConfig.cod_extra_cost || 0) / 100}
+              step="0.01"
+              min="0"
+              class="input-elegant"
+              placeholder="0,00"
+            />
+            <p class="text-xs text-charcoal-400 mt-1">Coste extra que se añadirá al pedido por pagar contrareembolso</p>
+          </div>
         </div>
       </div>
 
@@ -250,6 +262,7 @@ if (isSupabaseConfigured() && supabase) {
         paypal_enabled: formData.get('paypal_enabled') === 'on',
         transfer_enabled: formData.get('transfer_enabled') === 'on',
         cash_on_delivery_enabled: formData.get('cash_on_delivery_enabled') === 'on',
+        cod_extra_cost: Math.round(parseFloat(formData.get('cod_extra_cost') as string || '0') * 100), // Convertir a céntimos
         currency: formData.get('currency'),
         currency_symbol: formData.get('currency_symbol')
       };

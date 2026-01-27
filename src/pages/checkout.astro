@@ -114,7 +114,7 @@ const user = sessionData.user;
             <div class="space-y-3 mb-6">
               <div class="flex justify-between text-sm">
                 <span class="text-charcoal-600">Subtotal</span>
-                <span id="subtotal-display" class="text-navy-900 font-medium">349,99€</span>
+                <span id="subtotal-display" class="text-navy-900 font-medium">0,00€</span>
               </div>
               <div id="discount-row" class="flex justify-between text-sm hidden">
                 <span class="text-green-600">Descuento</span>
@@ -122,7 +122,11 @@ const user = sessionData.user;
               </div>
               <div class="flex justify-between text-sm">
                 <span class="text-charcoal-600">Envío</span>
-                <span class="text-green-600 font-medium">GRATIS</span>
+                <span id="shipping-display" class="text-navy-900 font-medium">Calculando...</span>
+              </div>
+              <div id="cod-row" class="flex justify-between text-sm hidden">
+                <span class="text-charcoal-600">Cargo contrareembolso</span>
+                <span id="cod-display" class="text-navy-900 font-medium">0,00€</span>
               </div>
               <div class="flex justify-between text-base font-semibold pt-3 border-t border-charcoal-100">
                 <span class="text-navy-900">Total</span>
@@ -130,19 +134,79 @@ const user = sessionData.user;
               </div>
             </div>
 
+            <!-- Selección de método de envío -->
+            <div class="mb-6 pb-6 border-b border-charcoal-100" id="shipping-method-section">
+              <label class="block text-sm font-medium text-navy-900 mb-3">
+                Método de envío
+              </label>
+              <div class="space-y-2" id="shipping-options">
+                <label class="flex items-center justify-between p-3 border border-charcoal-200 rounded-lg cursor-pointer hover:border-gold-matte transition-colors has-[:checked]:border-gold-matte has-[:checked]:bg-gold-matte/5">
+                  <div class="flex items-center gap-3">
+                    <input type="radio" name="shipping-method" value="standard" checked class="w-4 h-4 text-gold-matte focus:ring-gold-matte" />
+                    <div>
+                      <span class="font-medium text-navy-900">Envío Estándar</span>
+                      <p class="text-xs text-charcoal-500" id="standard-delivery-time">3-5 días laborables</p>
+                    </div>
+                  </div>
+                  <span id="standard-price" class="font-medium text-navy-900">4,99€</span>
+                </label>
+                <label id="express-option" class="flex items-center justify-between p-3 border border-charcoal-200 rounded-lg cursor-pointer hover:border-gold-matte transition-colors has-[:checked]:border-gold-matte has-[:checked]:bg-gold-matte/5 hidden">
+                  <div class="flex items-center gap-3">
+                    <input type="radio" name="shipping-method" value="express" class="w-4 h-4 text-gold-matte focus:ring-gold-matte" />
+                    <div>
+                      <span class="font-medium text-navy-900">🚀 Envío Express</span>
+                      <p class="text-xs text-charcoal-500" id="express-delivery-time">24-48 horas</p>
+                    </div>
+                  </div>
+                  <span id="express-price" class="font-medium text-navy-900">9,99€</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- Selección de método de pago -->
+            <div class="mb-6" id="payment-method-section">
+              <label class="block text-sm font-medium text-navy-900 mb-3">
+                Método de pago
+              </label>
+              <div class="space-y-2" id="payment-options">
+                <label id="card-option" class="flex items-center justify-between p-3 border border-charcoal-200 rounded-lg cursor-pointer hover:border-gold-matte transition-colors has-[:checked]:border-gold-matte has-[:checked]:bg-gold-matte/5">
+                  <div class="flex items-center gap-3">
+                    <input type="radio" name="payment-method" value="card" checked class="w-4 h-4 text-gold-matte focus:ring-gold-matte" />
+                    <div>
+                      <span class="font-medium text-navy-900">💳 Tarjeta de crédito/débito</span>
+                      <p class="text-xs text-charcoal-500">Visa, Mastercard, American Express</p>
+                    </div>
+                  </div>
+                </label>
+                <label id="transfer-option" class="hidden flex items-center justify-between p-3 border border-charcoal-200 rounded-lg cursor-pointer hover:border-gold-matte transition-colors has-[:checked]:border-gold-matte has-[:checked]:bg-gold-matte/5">
+                  <div class="flex items-center gap-3">
+                    <input type="radio" name="payment-method" value="transfer" class="w-4 h-4 text-gold-matte focus:ring-gold-matte" />
+                    <div>
+                      <span class="font-medium text-navy-900">🏦 Transferencia bancaria</span>
+                      <p class="text-xs text-charcoal-500">Procesamos tu pedido al recibir el pago</p>
+                    </div>
+                  </div>
+                </label>
+                <label id="cod-option" class="hidden flex items-center justify-between p-3 border border-charcoal-200 rounded-lg cursor-pointer hover:border-gold-matte transition-colors has-[:checked]:border-gold-matte has-[:checked]:bg-gold-matte/5">
+                  <div class="flex items-center gap-3">
+                    <input type="radio" name="payment-method" value="cash_on_delivery" class="w-4 h-4 text-gold-matte focus:ring-gold-matte" />
+                    <div>
+                      <span class="font-medium text-navy-900">💵 Contrareembolso</span>
+                      <p class="text-xs text-charcoal-500" id="cod-extra-text">Paga al recibir tu pedido</p>
+                    </div>
+                  </div>
+                  <span id="cod-price" class="font-medium text-charcoal-500 hidden">+0,00€</span>
+                </label>
+              </div>
+            </div>
+
             <!-- Métodos de pago aceptados -->
             <div class="border-t border-charcoal-100 pt-4">
-              <p class="text-xs text-charcoal-500 mb-2">Métodos de pago aceptados:</p>
+              <p class="text-xs text-charcoal-500 mb-2">Pago 100% seguro</p>
               <div class="flex items-center gap-2 flex-wrap">
-                <div class="px-2 py-1 bg-charcoal-50 rounded text-xs text-charcoal-600 flex items-center gap-1">
-                  💳 Tarjeta
-                </div>
-                <div class="px-2 py-1 bg-charcoal-50 rounded text-xs text-charcoal-600 flex items-center gap-1">
-                   Apple Pay
-                </div>
-                <div class="px-2 py-1 bg-charcoal-50 rounded text-xs text-charcoal-600 flex items-center gap-1">
-                  🔵 Google Pay
-                </div>
+                <div class="px-2 py-1 bg-charcoal-50 rounded text-xs text-charcoal-600">🔒 SSL</div>
+                <div class="px-2 py-1 bg-charcoal-50 rounded text-xs text-charcoal-600">Visa</div>
+                <div class="px-2 py-1 bg-charcoal-50 rounded text-xs text-charcoal-600">Mastercard</div>
               </div>
             </div>
           </div>
@@ -191,12 +255,33 @@ const user = sessionData.user;
   </main>
 
   <script>
-    // Estado del descuento
+    // Configuración de la tienda (se carga desde API)
+    let storeSettings = {
+      shipping: {
+        free_shipping_threshold: 10000,
+        standard_shipping_cost: 499,
+        express_shipping_cost: 999,
+        express_shipping_enabled: true,
+        estimated_delivery_days: 3,
+        express_delivery_days: 1,
+      },
+      payments: {
+        stripe_enabled: true,
+        transfer_enabled: false,
+        cash_on_delivery_enabled: false,
+        cod_extra_cost: 0,
+      },
+    };
+
+    // Estado del checkout
     let appliedDiscount: {
       discount_code_id: string;
       code: string;
       discount_amount: number;
     } | null = null;
+    
+    let selectedShippingMethod = 'standard';
+    let selectedPaymentMethod = 'card';
     
     // Obtener carrito del localStorage
     const getCart = () => {
@@ -217,6 +302,116 @@ const user = sessionData.user;
         style: 'currency',
         currency: 'EUR',
       }).format(cents / 100);
+    };
+
+    // Cargar configuración de la tienda
+    const loadStoreSettings = async () => {
+      try {
+        const response = await fetch('/api/store/settings');
+        if (response.ok) {
+          const data = await response.json();
+          storeSettings = { ...storeSettings, ...data };
+          
+          // Actualizar UI con configuración
+          updateShippingOptions();
+          updatePaymentOptions();
+          updateTotals();
+        }
+      } catch (error) {
+        console.error('Error loading store settings:', error);
+      }
+    };
+
+    // Actualizar opciones de envío
+    const updateShippingOptions = () => {
+      const standardPrice = document.getElementById('standard-price');
+      const expressOption = document.getElementById('express-option');
+      const expressPrice = document.getElementById('express-price');
+      const standardDelivery = document.getElementById('standard-delivery-time');
+      const expressDelivery = document.getElementById('express-delivery-time');
+      
+      // Actualizar precio estándar (o gratis si supera el umbral)
+      if (standardPrice) {
+        if (subtotal >= storeSettings.shipping.free_shipping_threshold) {
+          standardPrice.textContent = '✅ GRATIS';
+          standardPrice.classList.add('text-green-600');
+        } else {
+          standardPrice.textContent = formatPrice(storeSettings.shipping.standard_shipping_cost);
+          standardPrice.classList.remove('text-green-600');
+        }
+      }
+      
+      // Mostrar/ocultar envío express
+      if (expressOption && storeSettings.shipping.express_shipping_enabled) {
+        expressOption.classList.remove('hidden');
+        if (expressPrice) {
+          if (subtotal >= storeSettings.shipping.free_shipping_threshold) {
+            expressPrice.textContent = formatPrice(storeSettings.shipping.express_shipping_cost);
+          } else {
+            expressPrice.textContent = formatPrice(storeSettings.shipping.express_shipping_cost);
+          }
+        }
+      }
+      
+      // Actualizar tiempos de entrega
+      if (standardDelivery) {
+        const days = storeSettings.shipping.estimated_delivery_days || 3;
+        standardDelivery.textContent = `${days}-${days + 2} días laborables`;
+      }
+      if (expressDelivery) {
+        const days = storeSettings.shipping.express_delivery_days || 1;
+        expressDelivery.textContent = days === 1 ? '24-48 horas' : `${days} días`;
+      }
+    };
+
+    // Actualizar opciones de pago
+    const updatePaymentOptions = () => {
+      const transferOption = document.getElementById('transfer-option');
+      const codOption = document.getElementById('cod-option');
+      const codPrice = document.getElementById('cod-price');
+      const codExtraText = document.getElementById('cod-extra-text');
+      
+      // Mostrar transferencia si está habilitada
+      if (transferOption && storeSettings.payments.transfer_enabled) {
+        transferOption.classList.remove('hidden');
+        transferOption.classList.add('flex');
+      }
+      
+      // Mostrar contrareembolso si está habilitado
+      if (codOption && storeSettings.payments.cash_on_delivery_enabled) {
+        codOption.classList.remove('hidden');
+        codOption.classList.add('flex');
+        
+        // Mostrar cargo adicional si existe
+        if (storeSettings.payments.cod_extra_cost > 0) {
+          if (codPrice) {
+            codPrice.textContent = `+${formatPrice(storeSettings.payments.cod_extra_cost)}`;
+            codPrice.classList.remove('hidden');
+          }
+          if (codExtraText) {
+            codExtraText.textContent = `Paga al recibir (+${formatPrice(storeSettings.payments.cod_extra_cost)})`;
+          }
+        }
+      }
+    };
+
+    // Calcular costo de envío
+    const calculateShippingCost = () => {
+      if (subtotal >= storeSettings.shipping.free_shipping_threshold) {
+        return selectedShippingMethod === 'express' 
+          ? storeSettings.shipping.express_shipping_cost 
+          : 0;
+      }
+      return selectedShippingMethod === 'express'
+        ? storeSettings.shipping.express_shipping_cost
+        : storeSettings.shipping.standard_shipping_cost;
+    };
+
+    // Calcular cargo de contrareembolso
+    const calculateCodCost = () => {
+      return selectedPaymentMethod === 'cash_on_delivery' 
+        ? (storeSettings.payments.cod_extra_cost || 0) 
+        : 0;
     };
 
     // Renderizar items del carrito
@@ -250,22 +445,58 @@ const user = sessionData.user;
     // Actualizar totales
     const updateTotals = () => {
       const discount = appliedDiscount?.discount_amount || 0;
-      const total = subtotal - discount;
+      const shippingCost = calculateShippingCost();
+      const codCost = calculateCodCost();
+      const total = subtotal - discount + shippingCost + codCost;
       
       const subtotalDisplay = document.getElementById('subtotal-display');
       const totalDisplay = document.getElementById('total-display');
       const discountRow = document.getElementById('discount-row');
       const discountTotal = document.getElementById('discount-total');
+      const shippingDisplay = document.getElementById('shipping-display');
+      const codRow = document.getElementById('cod-row');
+      const codDisplay = document.getElementById('cod-display');
       
       if (subtotalDisplay) subtotalDisplay.textContent = formatPrice(subtotal);
       if (totalDisplay) totalDisplay.textContent = formatPrice(total);
       
+      // Envío
+      if (shippingDisplay) {
+        if (shippingCost === 0 && subtotal >= storeSettings.shipping.free_shipping_threshold) {
+          shippingDisplay.textContent = '✅ GRATIS';
+          shippingDisplay.classList.add('text-green-600');
+        } else if (shippingCost === 0) {
+          shippingDisplay.textContent = 'GRATIS';
+          shippingDisplay.classList.add('text-green-600');
+        } else {
+          shippingDisplay.textContent = formatPrice(shippingCost);
+          shippingDisplay.classList.remove('text-green-600');
+        }
+      }
+      
+      // Descuento
       if (discount > 0 && discountRow && discountTotal) {
         discountRow.classList.remove('hidden');
         discountTotal.textContent = `-${formatPrice(discount)}`;
       } else if (discountRow) {
         discountRow.classList.add('hidden');
       }
+      
+      // Contrareembolso
+      if (codCost > 0 && codRow && codDisplay) {
+        codRow.classList.remove('hidden');
+        codDisplay.textContent = formatPrice(codCost);
+      } else if (codRow) {
+        codRow.classList.add('hidden');
+      }
+      
+      // Guardar método de envío y pago en localStorage para el checkout
+      localStorage.setItem('fashionmarket-checkout-options', JSON.stringify({
+        shippingMethod: selectedShippingMethod,
+        paymentMethod: selectedPaymentMethod,
+        shippingCost,
+        codCost,
+      }));
     };
 
     // Elementos del DOM
@@ -356,6 +587,34 @@ const user = sessionData.user;
       discountCodeInput.value = discountCodeInput.value.toUpperCase();
     });
 
+    // Manejar cambio de método de envío
+    document.querySelectorAll('input[name="shipping-method"]').forEach(radio => {
+      radio.addEventListener('change', (e) => {
+        selectedShippingMethod = (e.target as HTMLInputElement).value;
+        updateTotals();
+      });
+    });
+
+    // Manejar cambio de método de pago
+    document.querySelectorAll('input[name="payment-method"]').forEach(radio => {
+      radio.addEventListener('change', (e) => {
+        selectedPaymentMethod = (e.target as HTMLInputElement).value;
+        updateTotals();
+        
+        // Mostrar/ocultar formulario de Stripe según método de pago
+        const checkoutForm = document.querySelector('[data-checkout-form]');
+        const altPaymentBtn = document.getElementById('alt-payment-btn');
+        
+        if (selectedPaymentMethod === 'card') {
+          checkoutForm?.classList.remove('hidden');
+          altPaymentBtn?.classList.add('hidden');
+        } else {
+          checkoutForm?.classList.add('hidden');
+          altPaymentBtn?.classList.remove('hidden');
+        }
+      });
+    });
+
     // Manejar resultado del pago
     window.addEventListener('message', (event) => {
       if (event.data.type === 'payment-success') {
@@ -366,6 +625,6 @@ const user = sessionData.user;
 
     // Inicializar al cargar
     renderCartItems();
-    updateTotals();
+    loadStoreSettings();
   </script>
 </BaseLayout>
