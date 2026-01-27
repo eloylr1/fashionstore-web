@@ -56,11 +56,13 @@ export const POST: APIRoute = async ({ request }) => {
       );
     }
 
-    // Crear Payment Intent solo con tarjeta
+    // Crear Payment Intent con todos los métodos de pago disponibles
     const paymentIntent = await stripe.paymentIntents.create({
       amount: Math.round(amount), // Monto en céntimos
       currency,
-      payment_method_types: ['card'], // Solo tarjeta de crédito/débito
+      automatic_payment_methods: {
+        enabled: true, // Habilita todos los métodos: tarjeta, Google Pay, Apple Pay, etc.
+      },
       metadata, // Información adicional (order_id, user_id, etc.)
     });
 
