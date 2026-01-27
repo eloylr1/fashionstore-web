@@ -80,6 +80,18 @@ const getCheckoutOptionsFromStorage = (): { shippingMethod: string; paymentMetho
   }
 };
 
+// Helper para obtener la dirección de envío desde localStorage
+const getShippingAddressFromStorage = (): ShippingAddress | null => {
+  if (typeof window === 'undefined') return null;
+  
+  try {
+    const saved = localStorage.getItem('fashionmarket-shipping-address');
+    return saved ? JSON.parse(saved) : null;
+  } catch {
+    return null;
+  }
+};
+
 export default function CheckoutForm({ amount: propAmount, items: propItems, shippingAddress, customerNif, discountCodeId: propDiscountCodeId, onSuccess, onError }: CheckoutFormProps) {
   const [stripe, setStripe] = useState<Stripe | null>(null);
   const [elements, setElements] = useState<StripeElements | null>(null);
@@ -98,6 +110,9 @@ export default function CheckoutForm({ amount: propAmount, items: propItems, shi
   // Estado de las opciones de checkout
   const [checkoutOptions, setCheckoutOptions] = useState(getCheckoutOptionsFromStorage());
   
+  // Estado de la dirección de envío (leído de localStorage si no viene de props)
+  const [storedShippingAddress, setStoredShippingAddress] = useState<ShippingAddress | null>(null);
+  
   // Obtener datos del carrito y descuento al montar el componente
   useEffect(() => {
     const data = getCartFromStorage();
@@ -114,9 +129,17 @@ export default function CheckoutForm({ amount: propAmount, items: propItems, shi
     // Leer opciones de checkout
     setCheckoutOptions(getCheckoutOptionsFromStorage());
     
+    // Leer dirección de envío de localStorage si no viene por props
+    if (!shippingAddress) {
+      setStoredShippingAddress(getShippingAddressFromStorage());
+    }
+    
     // Escuchar cambios en localStorage para actualizar opciones
     const handleStorageChange = () => {
       setCheckoutOptions(getCheckoutOptionsFromStorage());
+      if (!shippingAddress) {
+        setStoredShippingAddress(getShippingAddressFromStorage());
+      }
     };
     
     window.addEventListener('storage', handleStorageChange);
@@ -130,7 +153,7 @@ export default function CheckoutForm({ amount: propAmount, items: propItems, shi
       window.removeEventListener('storage', handleStorageChange);
       clearInterval(interval);
     };
-  }, [propDiscountCodeId]);
+  }, [propDiscountCodeId, shippingAddress]);
   
   // Usar el amount proporcionado o el del carrito
   const amount = propAmount && propAmount > 0 ? propAmount : cartData.total;
@@ -261,13 +284,16 @@ export default function CheckoutForm({ amount: propAmount, items: propItems, shi
           const currentOptions = getCheckoutOptionsFromStorage();
           const appliedDiscount = getAppliedDiscountFromStorage();
           
+          // Usar dirección de props o la almacenada en localStorage
+          const finalShippingAddress = shippingAddress || storedShippingAddress || getShippingAddressFromStorage();
+          
           const completeResponse = await fetch('/api/orders/complete', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               paymentIntentId: paymentIntent.id,
               items: items || [],
-              shippingAddress: shippingAddress,
+              shippingAddress: finalShippingAddress,
               shippingMethod: currentOptions.shippingMethod,
               paymentMethod: 'card',
               customerNif: customerNif,
@@ -283,6 +309,8 @@ export default function CheckoutForm({ amount: propAmount, items: propItems, shi
             // Limpiar carrito y descuento aplicado del localStorage
             localStorage.removeItem('fashionmarket-cart');
             localStorage.removeItem('fashionmarket-applied-discount');
+            localStorage.removeItem('fashionmarket-shipping-address');
+            localStorage.removeItem('fashionmarket-checkout-options');
             
             setOrderInfo({
               orderId: completeData.orderId,
@@ -290,17 +318,25 @@ export default function CheckoutForm({ amount: propAmount, items: propItems, shi
               invoiceNumber: completeData.invoiceNumber,
             });
             setSucceeded(true);
+            
+            // Emitir evento de pago exitoso para el checkout
+            window.dispatchEvent(new CustomEvent('payment-success'));
+            
             onSuccess?.(paymentIntent.id, completeData.orderId, completeData.invoiceId);
           } else {
             // Pago exitoso pero error al crear pedido - aún así mostramos éxito
             console.error('Error creating order:', completeData.error);
             setSucceeded(true);
+            // Emitir evento de pago exitoso para el checkout
+            window.dispatchEvent(new CustomEvent('payment-success'));
             onSuccess?.(paymentIntent.id);
           }
         } catch (completeError) {
           // Pago exitoso pero error al crear pedido
           console.error('Error completing order:', completeError);
           setSucceeded(true);
+          // Emitir evento de pago exitoso para el checkout
+          window.dispatchEvent(new CustomEvent('payment-success'));
           onSuccess?.(paymentIntent.id);
         }
       }

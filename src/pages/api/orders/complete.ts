@@ -76,20 +76,25 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       );
     }
 
-    // Obtener usuario de la cookie
+    // Obtener usuario de la cookie (opcional para invitados)
     const accessToken = cookies.get('sb-access-token')?.value;
-    if (!accessToken) {
-      return new Response(
-        JSON.stringify({ error: 'No autenticado' }),
-        { status: 401, headers: { 'Content-Type': 'application/json' } }
-      );
+    let user: any = null;
+    
+    if (accessToken) {
+      const { data: { user: authUser }, error: userError } = await supabase.auth.getUser(accessToken);
+      if (!userError && authUser) {
+        user = authUser;
+      }
     }
 
-    const { data: { user }, error: userError } = await supabase.auth.getUser(accessToken);
-    if (userError || !user) {
+    // Para invitados, necesitamos el email de la dirección de envío
+    const guestEmail = shippingAddress?.email;
+    const guestName = shippingAddress?.name;
+    
+    if (!user && !guestEmail) {
       return new Response(
-        JSON.stringify({ error: 'Usuario no válido' }),
-        { status: 401, headers: { 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: 'Se requiere un email para completar el pedido' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
       );
     }
 
@@ -145,7 +150,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     const { data: order, error: orderError } = await supabase
       .from('orders')
       .insert({
-        user_id: user.id,
+        user_id: user?.id || null, // null para invitados
         order_number: orderNumber,
         status: 'paid',
         subtotal,
@@ -156,6 +161,8 @@ export const POST: APIRoute = async ({ request, cookies }) => {
         stripe_payment_intent_id: paymentIntentId,
         discount_code: discountCode,
         discount_amount: discountAmount,
+        guest_email: !user ? guestEmail : null, // Guardar email para invitados
+        guest_name: !user ? guestName : null, // Guardar nombre para invitados
       })
       .select()
       .single();
@@ -195,7 +202,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
           .from('discount_code_redemptions')
           .insert({
             code_id: discountCodeId,
-            user_id: user.id,
+            user_id: user?.id || null, // null para invitados
             order_id: order.id,
             discount_amount: discountAmount,
           });
@@ -218,14 +225,17 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     const invoiceNumber = `FM-${year}-${String((count || 0) + 1).padStart(6, '0')}`;
 
     // Crear factura
+    const finalEmail = customerEmail || user?.email || guestEmail || '';
+    const finalName = customerName || shippingAddress?.name || user?.email?.split('@')[0] || guestName || 'Cliente';
+    
     const { data: invoice, error: invoiceError } = await supabase
       .from('invoices')
       .insert({
         order_id: order.id,
-        user_id: user.id,
+        user_id: user?.id || null, // null para invitados
         invoice_number: invoiceNumber,
-        customer_name: customerName || shippingAddress?.full_name || user.email,
-        customer_email: customerEmail || user.email,
+        customer_name: finalName,
+        customer_email: finalEmail,
         customer_nif: customerNif,
         customer_address: shippingAddress,
         subtotal,
@@ -255,8 +265,8 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     // Enviar email de confirmación con la factura
     const emailResult = await sendOrderConfirmationEmail({
       orderNumber: order.order_number,
-      customerName: customerName || shippingAddress?.full_name || user.email?.split('@')[0] || 'Cliente',
-      customerEmail: customerEmail || user.email || '',
+      customerName: finalName,
+      customerEmail: finalEmail,
       items: items.map((item: any) => ({
         name: item.name,
         quantity: item.quantity,
