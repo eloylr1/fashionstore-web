@@ -1,0 +1,334 @@
+---
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * FASHIONMARKET - Admin Customer Detail
+ * Página de detalle de cliente
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
+
+export const prerender = false;
+
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { supabase, isSupabaseConfigured } from '../../../lib/supabase/client';
+
+// Verificar autenticación
+const accessToken = Astro.cookies.get('sb-access-token')?.value;
+const userRole = Astro.cookies.get('user-role')?.value;
+
+if (!accessToken || userRole !== 'admin') {
+  return Astro.redirect('/admin/acceso-seguro');
+}
+
+// Obtener ID del cliente
+const { id } = Astro.params;
+
+if (!id) {
+  return Astro.redirect('/admin/clientes');
+}
+
+// Obtener datos del cliente
+let customer: any = null;
+let orders: any[] = [];
+let addresses: any[] = [];
+let totalSpent = 0;
+
+if (isSupabaseConfigured() && supabase) {
+  try {
+    // Obtener perfil del cliente
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', id)
+      .single();
+    
+    customer = profile;
+
+    if (customer) {
+      // Obtener pedidos del cliente
+      const { data: orderData } = await supabase
+        .from('orders')
+        .select('*')
+        .eq('user_id', id)
+        .order('created_at', { ascending: false });
+      
+      orders = orderData || [];
+
+      // Calcular total gastado
+      totalSpent = orders.reduce((sum, order) => sum + (order.total || 0), 0);
+
+      // Obtener direcciones del cliente
+      const { data: addressData } = await supabase
+        .from('addresses')
+        .select('*')
+        .eq('user_id', id)
+        .order('is_default', { ascending: false });
+      
+      addresses = addressData || [];
+    }
+  } catch (error) {
+    console.error('Error fetching customer:', error);
+  }
+}
+
+if (!customer) {
+  return Astro.redirect('/admin/clientes');
+}
+
+// Funciones de formato
+function formatDate(dateString: string) {
+  if (!dateString) return 'N/A';
+  return new Date(dateString).toLocaleDateString('es-ES', {
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric'
+  });
+}
+
+function formatDateTime(dateString: string) {
+  if (!dateString) return 'N/A';
+  return new Date(dateString).toLocaleDateString('es-ES', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+}
+
+// Estados de pedidos
+const orderStatuses: Record<string, { label: string; color: string; bg: string }> = {
+  'pending': { label: 'Pendiente', color: 'text-amber-700', bg: 'bg-amber-100' },
+  'paid': { label: 'Pagado', color: 'text-emerald-700', bg: 'bg-emerald-100' },
+  'processing': { label: 'Procesando', color: 'text-blue-700', bg: 'bg-blue-100' },
+  'shipped': { label: 'Enviado', color: 'text-purple-700', bg: 'bg-purple-100' },
+  'delivered': { label: 'Entregado', color: 'text-green-700', bg: 'bg-green-100' },
+  'cancelled': { label: 'Cancelado', color: 'text-red-700', bg: 'bg-red-100' },
+  'refunded': { label: 'Reembolsado', color: 'text-gray-700', bg: 'bg-gray-100' },
+};
+---
+
+<AdminLayout title={`Cliente: ${customer.full_name || customer.email}`}>
+  <div class="space-y-6">
+    <!-- Header con navegación -->
+    <div class="flex items-center gap-4">
+      <a 
+        href="/admin/clientes" 
+        class="p-2 text-charcoal-400 hover:text-navy-700 hover:bg-navy-50 transition-colors"
+      >
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+        </svg>
+      </a>
+      <div>
+        <h1 class="text-2xl font-serif font-semibold text-navy-900">
+          {customer.full_name || 'Sin nombre'}
+        </h1>
+        <p class="text-charcoal-500">{customer.email}</p>
+      </div>
+    </div>
+
+    <!-- Información principal -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <!-- Perfil del cliente -->
+      <div class="bg-white border border-charcoal-100 p-6">
+        <div class="flex items-center gap-4 mb-6">
+          <div class="w-16 h-16 bg-navy-100 flex items-center justify-center text-2xl font-bold text-navy-700">
+            {(customer.full_name || customer.email || '?').charAt(0).toUpperCase()}
+          </div>
+          <div>
+            <h2 class="font-semibold text-navy-900">{customer.full_name || 'Sin nombre'}</h2>
+            <span class={`inline-flex items-center px-2.5 py-1 text-xs font-medium rounded-full ${
+              customer.role === 'admin' 
+                ? 'bg-purple-100 text-purple-700' 
+                : 'bg-charcoal-100 text-charcoal-600'
+            }`}>
+              {customer.role === 'admin' ? 'Administrador' : 'Cliente'}
+            </span>
+          </div>
+        </div>
+
+        <div class="space-y-4">
+          <div>
+            <p class="text-xs text-charcoal-400 uppercase tracking-wider mb-1">Email</p>
+            <p class="text-sm text-navy-900">{customer.email}</p>
+          </div>
+          
+          <div>
+            <p class="text-xs text-charcoal-400 uppercase tracking-wider mb-1">Teléfono</p>
+            <p class="text-sm text-navy-900">{customer.phone || 'No especificado'}</p>
+          </div>
+
+          <div>
+            <p class="text-xs text-charcoal-400 uppercase tracking-wider mb-1">Fecha de registro</p>
+            <p class="text-sm text-navy-900">{formatDate(customer.created_at)}</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Estadísticas -->
+      <div class="lg:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div class="bg-white border border-charcoal-100 p-6">
+          <div class="flex items-center gap-3">
+            <div class="w-12 h-12 bg-blue-100 flex items-center justify-center">
+              <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+              </svg>
+            </div>
+            <div>
+              <p class="text-2xl font-bold text-navy-900">{orders.length}</p>
+              <p class="text-sm text-charcoal-500">Pedidos</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-white border border-charcoal-100 p-6">
+          <div class="flex items-center gap-3">
+            <div class="w-12 h-12 bg-green-100 flex items-center justify-center">
+              <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div>
+              <p class="text-2xl font-bold text-navy-900">{(totalSpent / 100).toFixed(2)}€</p>
+              <p class="text-sm text-charcoal-500">Total gastado</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-white border border-charcoal-100 p-6">
+          <div class="flex items-center gap-3">
+            <div class="w-12 h-12 bg-purple-100 flex items-center justify-center">
+              <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+            </div>
+            <div>
+              <p class="text-2xl font-bold text-navy-900">{addresses.length}</p>
+              <p class="text-sm text-charcoal-500">Direcciones</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pedidos del cliente -->
+    <div class="bg-white border border-charcoal-100 overflow-hidden">
+      <div class="px-6 py-4 border-b border-charcoal-100">
+        <h3 class="font-semibold text-navy-900">Historial de pedidos</h3>
+      </div>
+
+      {orders.length > 0 ? (
+        <div class="overflow-x-auto">
+          <table class="w-full">
+            <thead>
+              <tr class="bg-charcoal-50 border-b border-charcoal-100">
+                <th class="text-left px-6 py-3 text-xs font-semibold uppercase tracking-wider text-charcoal-600">
+                  Pedido
+                </th>
+                <th class="text-left px-6 py-3 text-xs font-semibold uppercase tracking-wider text-charcoal-600">
+                  Fecha
+                </th>
+                <th class="text-left px-6 py-3 text-xs font-semibold uppercase tracking-wider text-charcoal-600">
+                  Total
+                </th>
+                <th class="text-left px-6 py-3 text-xs font-semibold uppercase tracking-wider text-charcoal-600">
+                  Estado
+                </th>
+                <th class="text-right px-6 py-3 text-xs font-semibold uppercase tracking-wider text-charcoal-600">
+                  Acciones
+                </th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-charcoal-100">
+              {orders.map((order) => {
+                const status = orderStatuses[order.status] || orderStatuses['pending'];
+                return (
+                  <tr class="hover:bg-charcoal-50/50 transition-colors">
+                    <td class="px-6 py-4">
+                      <p class="text-sm font-semibold text-navy-900">
+                        #{order.order_number}
+                      </p>
+                    </td>
+                    <td class="px-6 py-4">
+                      <span class="text-sm text-charcoal-600">
+                        {formatDateTime(order.created_at)}
+                      </span>
+                    </td>
+                    <td class="px-6 py-4">
+                      <span class="text-sm font-semibold text-navy-900">
+                        {(order.total / 100).toFixed(2)}€
+                      </span>
+                    </td>
+                    <td class="px-6 py-4">
+                      <span class={`inline-flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-full ${status.bg} ${status.color}`}>
+                        <span class="w-1.5 h-1.5 rounded-full bg-current"></span>
+                        {status.label}
+                      </span>
+                    </td>
+                    <td class="px-6 py-4 text-right">
+                      <a 
+                        href={`/admin/pedidos/${order.id}`}
+                        class="inline-flex items-center gap-1 text-sm font-medium text-navy-700 hover:text-leather transition-colors"
+                      >
+                        Ver detalles
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                        </svg>
+                      </a>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <div class="p-12 text-center">
+          <div class="w-16 h-16 mx-auto bg-charcoal-100 flex items-center justify-center mb-4">
+            <svg class="w-8 h-8 text-charcoal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+            </svg>
+          </div>
+          <h4 class="text-lg font-medium text-navy-900 mb-2">Sin pedidos</h4>
+          <p class="text-charcoal-500">Este cliente aún no ha realizado ningún pedido</p>
+        </div>
+      )}
+    </div>
+
+    <!-- Direcciones del cliente -->
+    {addresses.length > 0 && (
+      <div class="bg-white border border-charcoal-100 overflow-hidden">
+        <div class="px-6 py-4 border-b border-charcoal-100">
+          <h3 class="font-semibold text-navy-900">Direcciones guardadas</h3>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 p-6">
+          {addresses.map((address) => (
+            <div class={`p-4 border rounded-lg ${address.is_default ? 'border-navy-300 bg-navy-50' : 'border-charcoal-200'}`}>
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-sm font-semibold text-navy-900">{address.label}</span>
+                {address.is_default && (
+                  <span class="px-2 py-0.5 text-xs bg-navy-200 text-navy-700 rounded-full">
+                    Principal
+                  </span>
+                )}
+              </div>
+              <p class="text-sm text-charcoal-600">{address.full_name}</p>
+              <p class="text-sm text-charcoal-600">{address.address_line1}</p>
+              {address.address_line2 && (
+                <p class="text-sm text-charcoal-600">{address.address_line2}</p>
+              )}
+              <p class="text-sm text-charcoal-600">
+                {address.postal_code} {address.city}, {address.province}
+              </p>
+              <p class="text-sm text-charcoal-600">{address.country}</p>
+              {address.phone && (
+                <p class="text-sm text-charcoal-500 mt-2">Tel: {address.phone}</p>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    )}
+  </div>
+</AdminLayout>

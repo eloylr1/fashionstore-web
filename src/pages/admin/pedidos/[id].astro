@@ -1,0 +1,429 @@
+---
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * FASHIONMARKET - Admin Order Detail
+ * Página de detalle de pedido
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
+
+export const prerender = false;
+
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { supabase, isSupabaseConfigured } from '../../../lib/supabase/client';
+
+// Verificar autenticación
+const accessToken = Astro.cookies.get('sb-access-token')?.value;
+const userRole = Astro.cookies.get('user-role')?.value;
+
+if (!accessToken || userRole !== 'admin') {
+  return Astro.redirect('/admin/acceso-seguro');
+}
+
+// Obtener ID del pedido
+const { id } = Astro.params;
+
+if (!id) {
+  return Astro.redirect('/admin/pedidos');
+}
+
+// Obtener datos del pedido
+let order: any = null;
+let customer: any = null;
+let orderItems: any[] = [];
+
+if (isSupabaseConfigured() && supabase) {
+  try {
+    // Obtener pedido con datos del cliente
+    const { data: orderData } = await supabase
+      .from('orders')
+      .select(`
+        *,
+        profiles:user_id (
+          id,
+          full_name,
+          email,
+          phone
+        )
+      `)
+      .eq('id', id)
+      .single();
+    
+    order = orderData;
+    customer = orderData?.profiles;
+
+    // Obtener items del pedido
+    if (order) {
+      const { data: items } = await supabase
+        .from('order_items')
+        .select(`
+          *,
+          products (
+            id,
+            name,
+            slug,
+            images
+          )
+        `)
+        .eq('order_id', id);
+      
+      orderItems = items || [];
+    }
+  } catch (error) {
+    console.error('Error fetching order:', error);
+  }
+}
+
+if (!order) {
+  return Astro.redirect('/admin/pedidos');
+}
+
+// Funciones de formato
+function formatDateTime(dateString: string) {
+  if (!dateString) return 'N/A';
+  return new Date(dateString).toLocaleDateString('es-ES', {
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+}
+
+// Estados de pedidos
+const orderStatuses: Record<string, { label: string; color: string; bg: string; icon: string }> = {
+  'pending': { label: 'Pendiente', color: 'text-amber-700', bg: 'bg-amber-100', icon: 'clock' },
+  'paid': { label: 'Pagado', color: 'text-emerald-700', bg: 'bg-emerald-100', icon: 'check' },
+  'processing': { label: 'Procesando', color: 'text-blue-700', bg: 'bg-blue-100', icon: 'cog' },
+  'shipped': { label: 'Enviado', color: 'text-purple-700', bg: 'bg-purple-100', icon: 'truck' },
+  'delivered': { label: 'Entregado', color: 'text-green-700', bg: 'bg-green-100', icon: 'check-circle' },
+  'cancelled': { label: 'Cancelado', color: 'text-red-700', bg: 'bg-red-100', icon: 'x' },
+  'refunded': { label: 'Reembolsado', color: 'text-gray-700', bg: 'bg-gray-100', icon: 'refresh' },
+};
+
+const currentStatus = orderStatuses[order.status] || orderStatuses['pending'];
+
+// Obtener dirección de envío
+const shippingAddress = order.shipping_address || {};
+
+// Método de pago
+const paymentMethods: Record<string, string> = {
+  'card': 'Tarjeta de crédito/débito',
+  'transfer': 'Transferencia bancaria',
+  'cash_on_delivery': 'Contrareembolso',
+  'stripe': 'Stripe'
+};
+---
+
+<AdminLayout title={`Pedido #${order.order_number}`}>
+  <div class="space-y-6">
+    <!-- Header con navegación -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div class="flex items-center gap-4">
+        <a 
+          href="/admin/pedidos" 
+          class="p-2 text-charcoal-400 hover:text-navy-700 hover:bg-navy-50 transition-colors"
+        >
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+          </svg>
+        </a>
+        <div>
+          <h1 class="text-2xl font-serif font-semibold text-navy-900">
+            Pedido #{order.order_number}
+          </h1>
+          <p class="text-charcoal-500">{formatDateTime(order.created_at)}</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <span class={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-full ${currentStatus.bg} ${currentStatus.color}`}>
+          <span class="w-2 h-2 rounded-full bg-current"></span>
+          {currentStatus.label}
+        </span>
+        
+        <select 
+          id="status-select"
+          data-order-id={order.id}
+          class="px-4 py-2 text-sm border border-charcoal-200 focus:border-navy-500 focus:ring-2 focus:ring-navy-500/20 outline-none"
+        >
+          {Object.entries(orderStatuses).map(([value, { label }]) => (
+            <option value={value} selected={order.status === value}>{label}</option>
+          ))}
+        </select>
+      </div>
+    </div>
+
+    <!-- Información principal -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <!-- Columna principal -->
+      <div class="lg:col-span-2 space-y-6">
+        <!-- Productos del pedido -->
+        <div class="bg-white border border-charcoal-100 overflow-hidden">
+          <div class="px-6 py-4 border-b border-charcoal-100">
+            <h3 class="font-semibold text-navy-900">Productos ({orderItems.length})</h3>
+          </div>
+          
+          {orderItems.length > 0 ? (
+            <div class="divide-y divide-charcoal-100">
+              {orderItems.map((item) => (
+                <div class="flex items-center gap-4 p-4">
+                  <div class="w-16 h-16 bg-cream flex-shrink-0 overflow-hidden">
+                    <img 
+                      src={item.products?.images?.[0] || '/placeholder-product.svg'} 
+                      alt={item.products?.name || item.product_name}
+                      class="w-full h-full object-cover"
+                    />
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <p class="text-sm font-semibold text-navy-900">
+                      {item.products?.name || item.product_name}
+                    </p>
+                    <div class="flex items-center gap-2 mt-1 text-xs text-charcoal-500">
+                      {item.size && <span>Talla: {item.size}</span>}
+                      {item.color && <span>Color: {item.color}</span>}
+                    </div>
+                    <p class="text-xs text-charcoal-400 mt-1">
+                      Cantidad: {item.quantity}
+                    </p>
+                  </div>
+                  <div class="text-right">
+                    <p class="text-sm font-semibold text-navy-900">
+                      {(item.price / 100).toFixed(2)}€
+                    </p>
+                    <p class="text-xs text-charcoal-500">
+                      {((item.price * item.quantity) / 100).toFixed(2)}€ total
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div class="p-6 text-center text-charcoal-500">
+              No hay items en este pedido
+            </div>
+          )}
+
+          <!-- Resumen del pedido -->
+          <div class="px-6 py-4 bg-charcoal-50 border-t border-charcoal-100">
+            <div class="space-y-2">
+              <div class="flex justify-between text-sm">
+                <span class="text-charcoal-600">Subtotal</span>
+                <span class="text-navy-900">{((order.subtotal || order.total - (order.shipping_cost || 0)) / 100).toFixed(2)}€</span>
+              </div>
+              <div class="flex justify-between text-sm">
+                <span class="text-charcoal-600">Envío</span>
+                <span class="text-navy-900">{((order.shipping_cost || 0) / 100).toFixed(2)}€</span>
+              </div>
+              {order.discount_amount > 0 && (
+                <div class="flex justify-between text-sm">
+                  <span class="text-charcoal-600">Descuento</span>
+                  <span class="text-green-600">-{(order.discount_amount / 100).toFixed(2)}€</span>
+                </div>
+              )}
+              {order.tax > 0 && (
+                <div class="flex justify-between text-sm">
+                  <span class="text-charcoal-600">Impuestos</span>
+                  <span class="text-navy-900">{(order.tax / 100).toFixed(2)}€</span>
+                </div>
+              )}
+              <div class="flex justify-between text-base font-semibold pt-2 border-t border-charcoal-200">
+                <span class="text-navy-900">Total</span>
+                <span class="text-navy-900">{(order.total / 100).toFixed(2)}€</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Línea de tiempo del pedido -->
+        <div class="bg-white border border-charcoal-100 p-6">
+          <h3 class="font-semibold text-navy-900 mb-4">Historial del pedido</h3>
+          <div class="relative">
+            <div class="absolute left-4 top-0 bottom-0 w-0.5 bg-charcoal-200"></div>
+            <div class="space-y-6">
+              <div class="relative flex items-start gap-4">
+                <div class="w-8 h-8 bg-navy-100 rounded-full flex items-center justify-center z-10">
+                  <svg class="w-4 h-4 text-navy-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                  </svg>
+                </div>
+                <div>
+                  <p class="text-sm font-medium text-navy-900">Pedido creado</p>
+                  <p class="text-xs text-charcoal-500">{formatDateTime(order.created_at)}</p>
+                </div>
+              </div>
+
+              {order.status !== 'pending' && (
+                <div class="relative flex items-start gap-4">
+                  <div class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center z-10">
+                    <svg class="w-4 h-4 text-green-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p class="text-sm font-medium text-navy-900">Estado actualizado a: {currentStatus.label}</p>
+                    <p class="text-xs text-charcoal-500">{formatDateTime(order.updated_at)}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Columna lateral -->
+      <div class="space-y-6">
+        <!-- Información del cliente -->
+        <div class="bg-white border border-charcoal-100 p-6">
+          <h3 class="font-semibold text-navy-900 mb-4">Cliente</h3>
+          
+          {customer ? (
+            <div class="space-y-4">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-navy-100 flex items-center justify-center font-bold text-navy-700">
+                  {(customer.full_name || customer.email || '?').charAt(0).toUpperCase()}
+                </div>
+                <div>
+                  <p class="text-sm font-medium text-navy-900">{customer.full_name || 'Sin nombre'}</p>
+                  <p class="text-xs text-charcoal-500">{customer.email}</p>
+                </div>
+              </div>
+              
+              {customer.phone && (
+                <div>
+                  <p class="text-xs text-charcoal-400 uppercase tracking-wider mb-1">Teléfono</p>
+                  <p class="text-sm text-navy-900">{customer.phone}</p>
+                </div>
+              )}
+
+              <a 
+                href={`/admin/clientes/${customer.id}`}
+                class="inline-flex items-center gap-1 text-sm font-medium text-navy-700 hover:text-leather transition-colors"
+              >
+                Ver perfil del cliente
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                </svg>
+              </a>
+            </div>
+          ) : (
+            <p class="text-sm text-charcoal-500">Cliente no disponible</p>
+          )}
+        </div>
+
+        <!-- Dirección de envío -->
+        <div class="bg-white border border-charcoal-100 p-6">
+          <h3 class="font-semibold text-navy-900 mb-4">Dirección de envío</h3>
+          
+          {Object.keys(shippingAddress).length > 0 ? (
+            <div class="text-sm text-charcoal-700 space-y-1">
+              <p class="font-medium">{shippingAddress.full_name || shippingAddress.name}</p>
+              <p>{shippingAddress.address_line1 || shippingAddress.address}</p>
+              {shippingAddress.address_line2 && <p>{shippingAddress.address_line2}</p>}
+              <p>
+                {shippingAddress.postal_code} {shippingAddress.city}
+                {shippingAddress.province && `, ${shippingAddress.province}`}
+              </p>
+              <p>{shippingAddress.country || 'España'}</p>
+              {shippingAddress.phone && (
+                <p class="text-charcoal-500 mt-2">Tel: {shippingAddress.phone}</p>
+              )}
+            </div>
+          ) : (
+            <p class="text-sm text-charcoal-500">No hay dirección de envío</p>
+          )}
+        </div>
+
+        <!-- Información de pago -->
+        <div class="bg-white border border-charcoal-100 p-6">
+          <h3 class="font-semibold text-navy-900 mb-4">Información de pago</h3>
+          
+          <div class="space-y-3">
+            <div>
+              <p class="text-xs text-charcoal-400 uppercase tracking-wider mb-1">Método de pago</p>
+              <p class="text-sm text-navy-900">
+                {paymentMethods[order.payment_method] || order.payment_method || 'No especificado'}
+              </p>
+            </div>
+            
+            {order.stripe_payment_intent && (
+              <div>
+                <p class="text-xs text-charcoal-400 uppercase tracking-wider mb-1">ID de transacción</p>
+                <p class="text-xs text-charcoal-600 font-mono break-all">
+                  {order.stripe_payment_intent}
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <!-- Notas del pedido -->
+        {order.notes && (
+          <div class="bg-white border border-charcoal-100 p-6">
+            <h3 class="font-semibold text-navy-900 mb-4">Notas del cliente</h3>
+            <p class="text-sm text-charcoal-700">{order.notes}</p>
+          </div>
+        )}
+
+        <!-- Acciones -->
+        <div class="bg-white border border-charcoal-100 p-6 space-y-3">
+          <h3 class="font-semibold text-navy-900 mb-4">Acciones</h3>
+          
+          <button 
+            type="button"
+            id="print-order"
+            class="w-full flex items-center justify-center gap-2 px-4 py-2 bg-charcoal-100 text-charcoal-700 hover:bg-charcoal-200 transition-colors text-sm font-medium"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+            </svg>
+            Imprimir pedido
+          </button>
+          
+          <a 
+            href={`/api/invoices/${order.id}/pdf`}
+            target="_blank"
+            class="w-full flex items-center justify-center gap-2 px-4 py-2 bg-navy-900 text-white hover:bg-navy-800 transition-colors text-sm font-medium"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            Descargar factura
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Actualizar estado del pedido
+    const statusSelect = document.getElementById('status-select') as HTMLSelectElement;
+    
+    statusSelect?.addEventListener('change', async (e) => {
+      const select = e.target as HTMLSelectElement;
+      const orderId = select.dataset.orderId;
+      const newStatus = select.value;
+
+      try {
+        const response = await fetch(`/api/admin/orders/${orderId}/status`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: newStatus })
+        });
+
+        if (response.ok) {
+          window.location.reload();
+        } else {
+          alert('Error al actualizar el estado');
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        alert('Error al actualizar el estado');
+      }
+    });
+
+    // Imprimir pedido
+    document.getElementById('print-order')?.addEventListener('click', () => {
+      window.print();
+    });
+  </script>
+</AdminLayout>

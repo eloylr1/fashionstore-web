@@ -60,6 +60,8 @@ const SPECIAL_KEYWORDS = {
   'entregados': { type: 'orders_by_status', status: 'delivered' },
   'pedidos cancelados': { type: 'orders_by_status', status: 'cancelled' },
   'cancelados': { type: 'orders_by_status', status: 'cancelled' },
+  'pedidos pagados': { type: 'orders_by_status', status: 'paid' },
+  'pagados': { type: 'orders_by_status', status: 'paid' },
   
   // Productos destacados
   'destacados': { type: 'featured_products' },
@@ -152,7 +154,7 @@ export const GET: APIRoute = async ({ url, cookies }) => {
                 id: p.id,
                 type: 'product',
                 title: p.name,
-                subtitle: `⚠️ Stock: ${p.stock} unidades - €${(p.price / 100).toFixed(2)}`,
+                subtitle: `Stock: ${p.stock} unidades - ${(p.price / 100).toFixed(2)}€`,
                 link: `/admin/productos/${p.id}`,
                 stock: p.stock,
                 price: p.price
@@ -177,7 +179,7 @@ export const GET: APIRoute = async ({ url, cookies }) => {
                 id: p.id,
                 type: 'product',
                 title: p.name,
-                subtitle: `❌ Sin stock - €${(p.price / 100).toFixed(2)}`,
+                subtitle: `Sin stock - ${(p.price / 100).toFixed(2)}€`,
                 link: `/admin/productos/${p.id}`,
                 stock: 0,
                 price: p.price
@@ -190,11 +192,12 @@ export const GET: APIRoute = async ({ url, cookies }) => {
         case 'orders_by_status': {
           // Pedidos por estado
           const statusLabels: Record<string, string> = {
-            pending: '🟡 Pendiente',
-            processing: '🔵 Procesando',
-            shipped: '📦 Enviado',
-            delivered: '✅ Entregado',
-            cancelled: '❌ Cancelado'
+            pending: 'Pendiente',
+            paid: 'Pagado',
+            processing: 'Procesando',
+            shipped: 'Enviado',
+            delivered: 'Entregado',
+            cancelled: 'Cancelado'
           };
 
           const { data: orders } = await supabase
@@ -241,8 +244,8 @@ export const GET: APIRoute = async ({ url, cookies }) => {
               results.push({
                 id: p.id,
                 type: 'product',
-                title: `⭐ ${p.name}`,
-                subtitle: `€${(p.price / 100).toFixed(2)} - Stock: ${p.stock}`,
+                title: p.name,
+                subtitle: `${(p.price / 100).toFixed(2)}€ - Stock: ${p.stock} - Destacado`,
                 link: `/admin/productos/${p.id}`,
                 stock: p.stock,
                 price: p.price
@@ -285,11 +288,12 @@ export const GET: APIRoute = async ({ url, cookies }) => {
         case 'recent_orders': {
           // Pedidos recientes
           const statusLabels: Record<string, string> = {
-            pending: '🟡 Pendiente',
-            processing: '🔵 Procesando',
-            shipped: '📦 Enviado',
-            delivered: '✅ Entregado',
-            cancelled: '❌ Cancelado'
+            pending: 'Pendiente',
+            paid: 'Pagado',
+            processing: 'Procesando',
+            shipped: 'Enviado',
+            delivered: 'Entregado',
+            cancelled: 'Cancelado'
           };
 
           const { data: orders } = await supabase
@@ -335,12 +339,12 @@ export const GET: APIRoute = async ({ url, cookies }) => {
 
       if (products) {
         products.forEach(p => {
-          const stockWarning = p.stock < 10 ? '⚠️ ' : '';
+          const stockWarning = p.stock < 10 ? 'Stock bajo - ' : '';
           results.push({
             id: p.id,
             type: 'product',
             title: p.name,
-            subtitle: `${stockWarning}€${(p.price / 100).toFixed(2)} - Stock: ${p.stock}`,
+            subtitle: `${stockWarning}${(p.price / 100).toFixed(2)}€ - Stock: ${p.stock}`,
             link: `/admin/productos/${p.id}`,
             stock: p.stock,
             price: p.price
@@ -354,11 +358,12 @@ export const GET: APIRoute = async ({ url, cookies }) => {
       
       if (isOrderNumber || query.includes('pedido')) {
         const statusLabels: Record<string, string> = {
-          pending: '🟡 Pendiente',
-          processing: '🔵 Procesando',
-          shipped: '📦 Enviado',
-          delivered: '✅ Entregado',
-          cancelled: '❌ Cancelado'
+          pending: 'Pendiente',
+          paid: 'Pagado',
+          processing: 'Procesando',
+          shipped: 'Enviado',
+          delivered: 'Entregado',
+          cancelled: 'Cancelado'
         };
 
         const { data: orders } = await supabase
@@ -381,7 +386,7 @@ export const GET: APIRoute = async ({ url, cookies }) => {
               id: o.id,
               type: 'order',
               title: `Pedido #${o.order_number}`,
-              subtitle: `${customerName} - €${(o.total / 100).toFixed(2)} - ${statusLabels[o.status] || o.status}`,
+              subtitle: `${customerName} - ${(o.total / 100).toFixed(2)}€ - ${statusLabels[o.status] || o.status}`,
               link: `/admin/pedidos/${o.id}`,
               status: o.status
             });

@@ -18,12 +18,12 @@ interface SearchResult {
 
 // Sugerencias de búsqueda especiales
 const QUICK_SEARCHES = [
-  { label: 'Stock bajo', query: 'stock bajo', icon: '⚠️' },
-  { label: 'Sin stock', query: 'sin stock', icon: '❌' },
-  { label: 'Pendientes', query: 'pedidos pendientes', icon: '🟡' },
-  { label: 'Destacados', query: 'productos destacados', icon: '⭐' },
-  { label: 'Últimos pedidos', query: 'últimos pedidos', icon: '📦' },
-  { label: 'Clientes', query: 'clientes', icon: '👥' },
+  { label: 'Stock bajo', query: 'stock bajo' },
+  { label: 'Sin stock', query: 'sin stock' },
+  { label: 'Pendientes', query: 'pedidos pendientes' },
+  { label: 'Destacados', query: 'productos destacados' },
+  { label: 'Últimos pedidos', query: 'últimos pedidos' },
+  { label: 'Clientes', query: 'clientes' },
 ];
 
 export default function AdminSearch() {
@@ -330,7 +330,6 @@ export default function AdminSearch() {
                           onClick={() => handleQuickSearch(item.query)}
                           className="flex items-center gap-2 px-3 py-2 text-sm bg-gray-50 hover:bg-gray-100 text-gray-700 rounded-lg transition-colors text-left"
                         >
-                          <span>{item.icon}</span>
                           <span>{item.label}</span>
                         </button>
                       ))}
