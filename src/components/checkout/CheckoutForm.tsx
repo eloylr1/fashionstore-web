@@ -6,7 +6,7 @@
  */
 
 import { useState, useEffect, useRef } from 'react';
-import { loadStripe, type Stripe, type StripeCardElement } from '@stripe/stripe-js';
+import { loadStripe, type Stripe, type StripeCardNumberElement } from '@stripe/stripe-js';
 
 interface CartItem {
   productId: string;
@@ -102,18 +102,24 @@ export default function CheckoutForm({
   onError 
 }: CheckoutFormProps) {
   const [stripe, setStripe] = useState<Stripe | null>(null);
-  const [cardElement, setCardElement] = useState<StripeCardElement | null>(null);
+  const [cardNumberElement, setCardNumberElement] = useState<StripeCardNumberElement | null>(null);
   const [clientSecret, setClientSecret] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>('');
-  const [cardError, setCardError] = useState<string>('');
+  const [cardNumberError, setCardNumberError] = useState<string>('');
+  const [cardExpiryError, setCardExpiryError] = useState<string>('');
+  const [cardCvcError, setCardCvcError] = useState<string>('');
   const [succeeded, setSucceeded] = useState(false);
   const [orderInfo, setOrderInfo] = useState<{ orderId?: string; invoiceId?: string; invoiceNumber?: string } | null>(null);
-  const [cardComplete, setCardComplete] = useState(false);
+  const [cardNumberComplete, setCardNumberComplete] = useState(false);
+  const [cardExpiryComplete, setCardExpiryComplete] = useState(false);
+  const [cardCvcComplete, setCardCvcComplete] = useState(false);
   
   // Refs para los elementos
-  const cardElementRef = useRef<HTMLDivElement>(null);
-  const cardMounted = useRef(false);
+  const cardNumberRef = useRef<HTMLDivElement>(null);
+  const cardExpiryRef = useRef<HTMLDivElement>(null);
+  const cardCvcRef = useRef<HTMLDivElement>(null);
+  const elementsMounted = useRef(false);
   
   // Estado del carrito
   const [cartData, setCartData] = useState<{ items: CartItem[]; total: number }>({ items: [], total: 0 });
@@ -248,7 +254,7 @@ export default function CheckoutForm({
 
   // Crear Card Element cuando tenemos stripe y clientSecret
   useEffect(() => {
-    if (!stripe || !clientSecret || !cardElementRef.current || cardMounted.current) return;
+    if (!stripe || !clientSecret || !cardNumberRef.current || !cardExpiryRef.current || !cardCvcRef.current || elementsMounted.current) return;
 
     const elements = stripe.elements({
       clientSecret,
@@ -266,70 +272,99 @@ export default function CheckoutForm({
         },
         rules: {
           '.Input': {
-            border: '1px solid #d1d5db',
+            border: 'none',
             boxShadow: 'none',
-            padding: '12px',
+            padding: '0',
           },
           '.Input:focus': {
-            border: '2px solid #1a1a2e',
+            border: 'none',
             boxShadow: 'none',
           },
           '.Input--invalid': {
-            border: '1px solid #dc2626',
-          },
-          '.Label': {
-            fontWeight: '500',
-            marginBottom: '8px',
+            color: '#dc2626',
           },
         },
       },
     });
 
-    // Crear el elemento de tarjeta con todos los campos
-    const card = elements.create('card', {
-      style: {
-        base: {
-          fontSize: '16px',
-          color: '#1a1a2e',
-          fontFamily: 'system-ui, -apple-system, sans-serif',
-          '::placeholder': {
-            color: '#9ca3af',
-          },
-          iconColor: '#1a1a2e',
+    // Estilo común para todos los elementos
+    const elementStyle = {
+      base: {
+        fontSize: '16px',
+        color: '#1a1a2e',
+        fontFamily: 'system-ui, -apple-system, sans-serif',
+        '::placeholder': {
+          color: '#9ca3af',
         },
-        invalid: {
-          color: '#dc2626',
-          iconColor: '#dc2626',
-        },
+        iconColor: '#1a1a2e',
       },
-      hidePostalCode: true, // Ya tenemos el código postal en el formulario de envío
-    });
+      invalid: {
+        color: '#dc2626',
+        iconColor: '#dc2626',
+      },
+    };
 
-    card.mount(cardElementRef.current);
-    cardMounted.current = true;
-    
-    // Escuchar cambios en el elemento de tarjeta
-    card.on('change', (event) => {
-      setCardComplete(event.complete);
+    // Crear elemento de número de tarjeta
+    const cardNumber = elements.create('cardNumber', {
+      style: elementStyle,
+      showIcon: true,
+    });
+    cardNumber.mount(cardNumberRef.current);
+    cardNumber.on('change', (event) => {
+      setCardNumberComplete(event.complete);
       if (event.error) {
-        setCardError(event.error.message);
+        setCardNumberError(event.error.message);
       } else {
-        setCardError('');
+        setCardNumberError('');
       }
     });
 
-    setCardElement(card);
+    // Crear elemento de fecha de expiración
+    const cardExpiry = elements.create('cardExpiry', {
+      style: elementStyle,
+    });
+    cardExpiry.mount(cardExpiryRef.current);
+    cardExpiry.on('change', (event) => {
+      setCardExpiryComplete(event.complete);
+      if (event.error) {
+        setCardExpiryError(event.error.message);
+      } else {
+        setCardExpiryError('');
+      }
+    });
+
+    // Crear elemento de CVC
+    const cardCvc = elements.create('cardCvc', {
+      style: elementStyle,
+    });
+    cardCvc.mount(cardCvcRef.current);
+    cardCvc.on('change', (event) => {
+      setCardCvcComplete(event.complete);
+      if (event.error) {
+        setCardCvcError(event.error.message);
+      } else {
+        setCardCvcError('');
+      }
+    });
+
+    elementsMounted.current = true;
+    setCardNumberElement(cardNumber);
 
     return () => {
-      card.unmount();
-      cardMounted.current = false;
+      cardNumber.unmount();
+      cardExpiry.unmount();
+      cardCvc.unmount();
+      elementsMounted.current = false;
     };
   }, [stripe, clientSecret]);
+
+  // Verificar si todos los campos están completos
+  const allFieldsComplete = cardNumberComplete && cardExpiryComplete && cardCvcComplete;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!stripe || !cardElement || !clientSecret) {
+    if (!stripe || !cardNumberElement || !clientSecret) {
       return;
     }
 
@@ -338,8 +373,8 @@ export default function CheckoutForm({
       return;
     }
 
-    if (!cardComplete) {
-      setError('Por favor, completa los datos de la tarjeta');
+    if (!allFieldsComplete) {
+      setError('Por favor, completa todos los datos de la tarjeta');
       return;
     }
 
@@ -352,7 +387,7 @@ export default function CheckoutForm({
       
       const { error: stripeError, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
         payment_method: {
-          card: cardElement,
+          card: cardNumberElement,
           billing_details: {
             name: cardholderName,
             email: finalShippingAddress?.email,
@@ -569,18 +604,46 @@ export default function CheckoutForm({
         />
       </div>
 
-      {/* Elemento de tarjeta de Stripe */}
+      {/* Número de tarjeta */}
       <div>
         <label className="block text-sm font-medium text-navy-900 mb-2">
-          Datos de la tarjeta
+          Número de tarjeta
         </label>
         <div 
-          ref={cardElementRef}
-          className="p-4 border border-charcoal-300 rounded-lg bg-white focus-within:ring-2 focus-within:ring-navy-500 focus-within:border-transparent"
+          ref={cardNumberRef}
+          className="px-4 py-3 border border-charcoal-300 rounded-lg bg-white focus-within:ring-2 focus-within:ring-navy-500 focus-within:border-transparent"
         />
-        {cardError && (
-          <p className="mt-2 text-sm text-red-600">{cardError}</p>
+        {cardNumberError && (
+          <p className="mt-1 text-sm text-red-600">{cardNumberError}</p>
         )}
+      </div>
+
+      {/* Fecha de expiración y CVV en la misma fila */}
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-navy-900 mb-2">
+            Fecha de expiración
+          </label>
+          <div 
+            ref={cardExpiryRef}
+            className="px-4 py-3 border border-charcoal-300 rounded-lg bg-white focus-within:ring-2 focus-within:ring-navy-500 focus-within:border-transparent"
+          />
+          {cardExpiryError && (
+            <p className="mt-1 text-sm text-red-600">{cardExpiryError}</p>
+          )}
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-navy-900 mb-2">
+            CVV
+          </label>
+          <div 
+            ref={cardCvcRef}
+            className="px-4 py-3 border border-charcoal-300 rounded-lg bg-white focus-within:ring-2 focus-within:ring-navy-500 focus-within:border-transparent"
+          />
+          {cardCvcError && (
+            <p className="mt-1 text-sm text-red-600">{cardCvcError}</p>
+          )}
+        </div>
       </div>
 
       {/* Mensaje de error general */}
@@ -596,7 +659,7 @@ export default function CheckoutForm({
       {/* Botón de pago */}
       <button
         type="submit"
-        disabled={!stripe || !cardElement || loading || !cardComplete}
+        disabled={!stripe || !cardNumberElement || loading || !allFieldsComplete}
         className="w-full bg-navy-900 text-white py-4 rounded-lg font-semibold hover:bg-navy-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
       >
         {loading ? (
