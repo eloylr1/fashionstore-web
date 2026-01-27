@@ -47,16 +47,15 @@ export const PATCH: APIRoute = async ({ params, request, cookies }) => {
 
     const body = await request.json();
     
-    const updateData: any = {
-      updated_at: new Date().toISOString()
-    };
+    const updateData: Record<string, any> = {};
 
     if (body.active !== undefined) updateData.active = body.active;
     if (body.value !== undefined) updateData.value = body.value;
     if (body.type !== undefined) updateData.type = body.type;
     if (body.min_order_amount !== undefined) updateData.min_order_amount = body.min_order_amount;
     if (body.max_uses !== undefined) updateData.max_uses = body.max_uses;
-    if (body.expires_at !== undefined) updateData.expires_at = body.expires_at;
+    if (body.expires_at !== undefined) updateData.expires_at = body.expires_at || null;
+    if (body.code !== undefined) updateData.code = body.code.toUpperCase();
 
     const { data, error } = await supabase
       .from('discount_codes')

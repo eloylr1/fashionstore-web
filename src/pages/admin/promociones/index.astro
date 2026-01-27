@@ -56,7 +56,7 @@ if (isSupabaseConfigured() && supabase) {
       </div>
       <div class="bg-white p-4 border border-charcoal-100">
         <p class="text-sm text-charcoal-500">Usos Totales</p>
-        <p class="text-2xl font-semibold text-navy-900">{discountCodes.reduce((sum, c) => sum + (c.used_count || 0), 0)}</p>
+        <p class="text-2xl font-semibold text-navy-900">{discountCodes.reduce((sum, c) => sum + (c.uses_count || 0), 0)}</p>
       </div>
       <div class="bg-white p-4 border border-charcoal-100">
         <p class="text-sm text-charcoal-500">Expirados</p>
@@ -78,7 +78,7 @@ if (isSupabaseConfigured() && supabase) {
             <th class="px-6 py-3 text-right text-xs font-semibold text-charcoal-600 uppercase tracking-wider">Acciones</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-charcoal-100">
+        <tbody class="divide-y divide-charcoal-100" id="codes-table">
           {discountCodes.length === 0 ? (
             <tr>
               <td colspan="7" class="px-6 py-12 text-center text-charcoal-500">
@@ -88,10 +88,9 @@ if (isSupabaseConfigured() && supabase) {
           ) : (
             discountCodes.map((code) => {
               const isExpired = code.expires_at && new Date(code.expires_at) < new Date();
-              const usesLeft = code.max_uses ? code.max_uses - (code.used_count || 0) : null;
               
               return (
-                <tr class="hover:bg-charcoal-50 transition-colors">
+                <tr class="hover:bg-charcoal-50 transition-colors" data-code-row={code.id}>
                   <td class="px-6 py-4">
                     <span class="font-mono font-semibold text-navy-900 bg-charcoal-100 px-2 py-1 rounded">
                       {code.code}
@@ -106,7 +105,7 @@ if (isSupabaseConfigured() && supabase) {
                       : `${(code.value / 100).toFixed(2)}€`}
                   </td>
                   <td class="px-6 py-4 text-sm text-charcoal-600">
-                    {code.used_count || 0}
+                    {code.uses_count || 0}
                     {code.max_uses && <span class="text-charcoal-400">/{code.max_uses}</span>}
                   </td>
                   <td class="px-6 py-4 text-sm text-charcoal-600">
@@ -131,6 +130,19 @@ if (isSupabaseConfigured() && supabase) {
                   </td>
                   <td class="px-6 py-4 text-right">
                     <div class="flex items-center justify-end gap-2">
+                      <!-- Botón Editar -->
+                      <button 
+                        type="button"
+                        data-edit-code={code.id}
+                        data-code={JSON.stringify(code)}
+                        class="p-2 text-charcoal-500 hover:text-blue-600 transition-colors"
+                        title="Editar"
+                      >
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                      </button>
+                      <!-- Botón Toggle -->
                       <button 
                         type="button"
                         data-toggle-code={code.id}
@@ -148,6 +160,7 @@ if (isSupabaseConfigured() && supabase) {
                           </svg>
                         )}
                       </button>
+                      <!-- Botón Eliminar -->
                       <button 
                         type="button"
                         data-delete-code={code.id}
@@ -169,11 +182,11 @@ if (isSupabaseConfigured() && supabase) {
     </div>
   </div>
 
-  <!-- Modal para crear código -->
+  <!-- Modal para crear/editar código -->
   <div id="promo-modal" class="fixed inset-0 bg-black/50 z-50 hidden items-center justify-center">
-    <div class="bg-white w-full max-w-md mx-4 shadow-xl">
+    <div class="bg-white w-full max-w-md mx-4 shadow-xl rounded-lg">
       <div class="flex items-center justify-between px-6 py-4 border-b border-charcoal-100">
-        <h3 class="font-semibold text-navy-900">Nuevo Código Promocional</h3>
+        <h3 id="modal-title" class="font-semibold text-navy-900">Nuevo Código Promocional</h3>
         <button type="button" id="close-modal" class="text-charcoal-400 hover:text-charcoal-600">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -182,11 +195,14 @@ if (isSupabaseConfigured() && supabase) {
       </div>
       
       <form id="promo-form" class="p-6 space-y-4">
+        <input type="hidden" name="id" id="code-id" value="" />
+        
         <div>
           <label class="block text-sm font-medium text-charcoal-700 mb-1">Código *</label>
           <input 
             type="text" 
             name="code" 
+            id="code-input"
             required
             class="input-elegant uppercase"
             placeholder="DESCUENTO20"
@@ -198,7 +214,7 @@ if (isSupabaseConfigured() && supabase) {
         <div class="grid grid-cols-2 gap-4">
           <div>
             <label class="block text-sm font-medium text-charcoal-700 mb-1">Tipo *</label>
-            <select name="type" required class="select-elegant">
+            <select name="type" id="type-select" required class="select-elegant">
               <option value="percentage">Porcentaje (%)</option>
               <option value="fixed">Cantidad fija (€)</option>
             </select>
@@ -208,6 +224,7 @@ if (isSupabaseConfigured() && supabase) {
             <input 
               type="number" 
               name="value" 
+              id="value-input"
               required
               min="1"
               class="input-elegant"
@@ -222,10 +239,11 @@ if (isSupabaseConfigured() && supabase) {
             <input 
               type="number" 
               name="min_order" 
+              id="min-order-input"
               min="0"
               step="0.01"
               class="input-elegant"
-              placeholder="50"
+              placeholder="0"
             />
           </div>
           <div>
@@ -233,6 +251,7 @@ if (isSupabaseConfigured() && supabase) {
             <input 
               type="number" 
               name="max_uses" 
+              id="max-uses-input"
               min="1"
               class="input-elegant"
               placeholder="Sin límite"
@@ -245,20 +264,21 @@ if (isSupabaseConfigured() && supabase) {
           <input 
             type="date" 
             name="expires_at"
+            id="expires-input"
             class="input-elegant"
           />
         </div>
         
         <div class="flex items-center gap-2">
-          <input type="checkbox" name="active" id="active" checked class="w-4 h-4 text-navy-900 rounded" />
-          <label for="active" class="text-sm text-charcoal-700">Activar inmediatamente</label>
+          <input type="checkbox" name="active" id="active-checkbox" checked class="w-4 h-4 text-navy-900 rounded" />
+          <label for="active-checkbox" class="text-sm text-charcoal-700">Activar código</label>
         </div>
         
         <div class="flex justify-end gap-3 pt-4">
           <button type="button" id="cancel-modal" class="px-4 py-2 text-sm text-charcoal-600 hover:text-navy-900">
             Cancelar
           </button>
-          <button type="submit" class="px-4 py-2 bg-navy-900 text-white text-sm font-medium hover:bg-navy-800">
+          <button type="submit" id="submit-btn" class="px-4 py-2 bg-navy-900 text-white text-sm font-medium hover:bg-navy-800">
             Crear Código
           </button>
         </div>
@@ -279,36 +299,108 @@ if (isSupabaseConfigured() && supabase) {
 
 <script>
   const modal = document.getElementById('promo-modal');
+  const modalTitle = document.getElementById('modal-title');
   const form = document.getElementById('promo-form') as HTMLFormElement;
+  const submitBtn = document.getElementById('submit-btn');
   const toast = document.getElementById('toast');
   const toastMessage = document.getElementById('toast-message');
+  
+  // Inputs
+  const codeIdInput = document.getElementById('code-id') as HTMLInputElement;
+  const codeInput = document.getElementById('code-input') as HTMLInputElement;
+  const typeSelect = document.getElementById('type-select') as HTMLSelectElement;
+  const valueInput = document.getElementById('value-input') as HTMLInputElement;
+  const minOrderInput = document.getElementById('min-order-input') as HTMLInputElement;
+  const maxUsesInput = document.getElementById('max-uses-input') as HTMLInputElement;
+  const expiresInput = document.getElementById('expires-input') as HTMLInputElement;
+  const activeCheckbox = document.getElementById('active-checkbox') as HTMLInputElement;
+  
+  let isEditMode = false;
   
   function showToast(message: string, isError = false) {
     if (toast && toastMessage) {
       toastMessage.textContent = message;
-      toast.querySelector('div')!.className = `${isError ? 'bg-red-600' : 'bg-green-600'} text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-3`;
+      const toastDiv = toast.querySelector('div');
+      if (toastDiv) {
+        toastDiv.className = `${isError ? 'bg-red-600' : 'bg-green-600'} text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-3`;
+      }
       toast.classList.remove('hidden');
       setTimeout(() => toast.classList.add('hidden'), 3000);
     }
   }
   
-  // Abrir modal
-  document.getElementById('new-promo-btn')?.addEventListener('click', () => {
+  function openModal(editMode = false, codeData: any = null) {
+    isEditMode = editMode;
+    
+    if (editMode && codeData) {
+      // Modo edición
+      if (modalTitle) modalTitle.textContent = 'Editar Código Promocional';
+      if (submitBtn) submitBtn.textContent = 'Guardar Cambios';
+      
+      codeIdInput.value = codeData.id;
+      codeInput.value = codeData.code;
+      typeSelect.value = codeData.type;
+      
+      // Convertir el valor: si es fixed, mostrar en euros
+      if (codeData.type === 'fixed') {
+        valueInput.value = (codeData.value / 100).toString();
+      } else {
+        valueInput.value = codeData.value.toString();
+      }
+      
+      // Convertir min_order de céntimos a euros
+      minOrderInput.value = codeData.min_order_amount ? (codeData.min_order_amount / 100).toString() : '';
+      maxUsesInput.value = codeData.max_uses ? codeData.max_uses.toString() : '';
+      
+      // Fecha de expiración
+      if (codeData.expires_at) {
+        const date = new Date(codeData.expires_at);
+        expiresInput.value = date.toISOString().split('T')[0];
+      } else {
+        expiresInput.value = '';
+      }
+      
+      activeCheckbox.checked = codeData.active;
+    } else {
+      // Modo creación
+      if (modalTitle) modalTitle.textContent = 'Nuevo Código Promocional';
+      if (submitBtn) submitBtn.textContent = 'Crear Código';
+      form.reset();
+      codeIdInput.value = '';
+      activeCheckbox.checked = true;
+    }
+    
     modal?.classList.remove('hidden');
     modal?.classList.add('flex');
-  });
+  }
   
-  // Cerrar modal
-  const closeModal = () => {
+  function closeModal() {
     modal?.classList.add('hidden');
     modal?.classList.remove('flex');
-    form?.reset();
-  };
+    form.reset();
+    codeIdInput.value = '';
+    isEditMode = false;
+  }
   
+  // Abrir modal para nuevo código
+  document.getElementById('new-promo-btn')?.addEventListener('click', () => openModal(false));
+  
+  // Cerrar modal
   document.getElementById('close-modal')?.addEventListener('click', closeModal);
   document.getElementById('cancel-modal')?.addEventListener('click', closeModal);
   
-  // Crear código
+  // Abrir modal para editar
+  document.querySelectorAll('[data-edit-code]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const codeDataStr = (btn as HTMLElement).dataset.code;
+      if (codeDataStr) {
+        const codeData = JSON.parse(codeDataStr);
+        openModal(true, codeData);
+      }
+    });
+  });
+  
+  // Submit del form (crear o editar)
   form?.addEventListener('submit', async (e) => {
     e.preventDefault();
     
@@ -321,36 +413,51 @@ if (isSupabaseConfigured() && supabase) {
       value = Math.round(value * 100);
     }
     
-    const minOrder = formData.get('min_order');
-    const minOrderCents = minOrder ? Math.round(parseFloat(minOrder as string) * 100) : null;
+    const minOrder = formData.get('min_order') as string;
+    const minOrderCents = minOrder ? Math.round(parseFloat(minOrder) * 100) : 0;
     
-    const data = {
+    const data: any = {
       code: (formData.get('code') as string).toUpperCase(),
       type,
       value,
       min_order_amount: minOrderCents,
       max_uses: formData.get('max_uses') ? parseInt(formData.get('max_uses') as string) : null,
       expires_at: formData.get('expires_at') || null,
-      active: formData.get('active') === 'on'
+      active: activeCheckbox.checked
     };
     
     try {
-      const response = await fetch('/api/admin/promotions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(data)
-      });
+      let response;
+      
+      if (isEditMode) {
+        // Editar código existente
+        const id = codeIdInput.value;
+        response = await fetch(`/api/admin/promotions/${id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify(data)
+        });
+      } else {
+        // Crear nuevo código
+        response = await fetch('/api/admin/promotions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify(data)
+        });
+      }
       
       const result = await response.json();
       
-      if (!response.ok) throw new Error(result.error);
+      if (!response.ok) throw new Error(result.error || 'Error en la operación');
       
-      showToast('Código creado correctamente');
+      showToast(isEditMode ? 'Código actualizado correctamente' : 'Código creado correctamente');
       closeModal();
       setTimeout(() => location.reload(), 1000);
     } catch (error: any) {
-      showToast(error.message || 'Error al crear el código', true);
+      console.error('Error:', error);
+      showToast(error.message || 'Error al procesar la operación', true);
     }
   });
   
@@ -368,12 +475,15 @@ if (isSupabaseConfigured() && supabase) {
           body: JSON.stringify({ active: !isActive })
         });
         
-        if (!response.ok) throw new Error('Error al actualizar');
+        if (!response.ok) {
+          const result = await response.json();
+          throw new Error(result.error || 'Error al actualizar');
+        }
         
         showToast(isActive ? 'Código desactivado' : 'Código activado');
         setTimeout(() => location.reload(), 1000);
-      } catch (error) {
-        showToast('Error al actualizar el código', true);
+      } catch (error: any) {
+        showToast(error.message || 'Error al actualizar el código', true);
       }
     });
   });
@@ -391,13 +501,23 @@ if (isSupabaseConfigured() && supabase) {
           credentials: 'include'
         });
         
-        if (!response.ok) throw new Error('Error al eliminar');
+        if (!response.ok) {
+          const result = await response.json();
+          throw new Error(result.error || 'Error al eliminar');
+        }
         
         showToast('Código eliminado');
         setTimeout(() => location.reload(), 1000);
-      } catch (error) {
-        showToast('Error al eliminar el código', true);
+      } catch (error: any) {
+        showToast(error.message || 'Error al eliminar el código', true);
       }
     });
+  });
+  
+  // Cerrar modal al hacer clic fuera
+  modal?.addEventListener('click', (e) => {
+    if (e.target === modal) {
+      closeModal();
+    }
   });
 </script>

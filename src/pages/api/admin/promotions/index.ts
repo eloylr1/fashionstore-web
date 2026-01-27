@@ -106,13 +106,11 @@ export const POST: APIRoute = async ({ request, cookies }) => {
         code: code.toUpperCase(),
         type,
         value,
-        min_order_amount,
-        max_uses,
+        min_order_amount: min_order_amount || 0,
+        max_uses: max_uses || null,
         expires_at: expires_at || null,
         active: active ?? true,
-        used_count: 0,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        uses_count: 0
       })
       .select()
       .single();
