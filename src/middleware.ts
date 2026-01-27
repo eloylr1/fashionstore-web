@@ -11,6 +11,7 @@ import { createClient } from '@supabase/supabase-js';
 
 // Rutas que requieren autenticación de admin
 const PROTECTED_ROUTES = ['/admin'];
+const PUBLIC_ADMIN_ROUTES = ['/admin/acceso-seguro', '/admin/login'];
 const LOGIN_ROUTE = '/admin/acceso-seguro';
 
 // Helper para crear cliente de Supabase
@@ -24,14 +25,29 @@ function getSupabaseClient() {
 export const onRequest = defineMiddleware(async (context, next) => {
   const { pathname } = context.url;
   
+  // Normalizar pathname (quitar trailing slash)
+  const normalizedPath = pathname.endsWith('/') && pathname !== '/' 
+    ? pathname.slice(0, -1) 
+    : pathname;
+  
   // Log para debug de API calls
-  if (pathname.startsWith('/api/')) {
-    console.log(`[MIDDLEWARE] API call: ${context.request.method} ${pathname}`);
+  if (normalizedPath.startsWith('/api/')) {
+    console.log(`[MIDDLEWARE] API call: ${context.request.method} ${normalizedPath}`);
+  }
+  
+  // Verificar si es una ruta pública de admin (login, etc)
+  const isPublicAdminRoute = PUBLIC_ADMIN_ROUTES.some(route => 
+    normalizedPath === route || normalizedPath.startsWith(route + '/')
+  );
+  
+  // Si es ruta pública de admin, continuar sin verificación
+  if (isPublicAdminRoute) {
+    return next();
   }
   
   // Verificar si la ruta requiere autenticación
   const isProtectedRoute = PROTECTED_ROUTES.some(route => 
-    pathname.startsWith(route) && pathname !== LOGIN_ROUTE
+    normalizedPath.startsWith(route)
   );
   
   if (isProtectedRoute) {
