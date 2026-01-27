@@ -15,26 +15,7 @@ import { formatPrice } from '../../../lib/stores/cart';
 import ProductFilters from '../../../components/admin/ProductFilters.tsx';
 import DeleteProductModal from '../../../components/admin/DeleteProductModal.tsx';
 
-// Verificar autenticación basada en cookies
-const accessToken = Astro.cookies.get('sb-access-token')?.value;
-const userRole = Astro.cookies.get('user-role')?.value;
-
-// Siempre verificar rol de admin
-if (!accessToken || userRole !== 'admin') {
-  return Astro.redirect('/admin/acceso-seguro');
-}
-
-// Verificación adicional con Supabase si está disponible
-if (isSupabaseAdminConfigured() && supabaseAdmin) {
-  try {
-    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(accessToken);
-    if (authError || !user) {
-      return Astro.redirect('/admin/acceso-seguro');
-    }
-  } catch (e) {
-    console.error('Error verificando usuario:', e);
-  }
-}
+// La autenticación ya está verificada por el middleware
 
 // Datos de demostración
 let products: any[] = [

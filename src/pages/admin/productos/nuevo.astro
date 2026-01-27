@@ -13,21 +13,7 @@ import ImageUploader from '../../../components/admin/ImageUploader';
 import { supabase, isSupabaseConfigured } from '../../../lib/supabase/client';
 import { supabaseAdmin, isSupabaseAdminConfigured } from '../../../lib/supabase/server';
 
-// Verificar autenticación (solo si Supabase está configurado)
-if (isSupabaseAdminConfigured() && supabaseAdmin) {
-  const accessToken = Astro.cookies.get('sb-access-token')?.value;
-  const userRole = Astro.cookies.get('user-role')?.value;
-
-  if (!accessToken || userRole !== 'admin') {
-    return Astro.redirect('/admin/acceso-seguro');
-  }
-
-  const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(accessToken);
-
-  if (authError || !user) {
-    return Astro.redirect('/admin/acceso-seguro');
-  }
-}
+// La autenticación ya está verificada por el middleware
 
 // Datos de demostración
 let categories: any[] = [

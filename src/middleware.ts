@@ -30,20 +30,32 @@ export const onRequest = defineMiddleware(async (context, next) => {
     ? pathname.slice(0, -1) 
     : pathname;
   
+  // Log para debug
+  console.log(`[MIDDLEWARE] Request: ${normalizedPath}`);
+  
   // Log para debug de API calls
   if (normalizedPath.startsWith('/api/')) {
     console.log(`[MIDDLEWARE] API call: ${context.request.method} ${normalizedPath}`);
   }
   
-  // Verificar si es una ruta pública de admin (login, etc)
+  // Verificar si es una ruta pública de admin (login, etc) - PRIORIDAD MÁXIMA
   const isPublicAdminRoute = PUBLIC_ADMIN_ROUTES.some(route => 
     normalizedPath === route || normalizedPath.startsWith(route + '/')
   );
   
-  // Si es ruta pública de admin, continuar sin verificación
+  // Si es ruta pública de admin, SIEMPRE continuar sin verificación
   if (isPublicAdminRoute) {
+    console.log(`[MIDDLEWARE] Ruta pública admin, permitiendo: ${normalizedPath}`);
     return next();
   }
+  
+  // Para rutas que NO son /admin, continuar directamente
+  if (!normalizedPath.startsWith('/admin')) {
+    return next();
+  }
+  
+  // A partir de aquí, solo rutas /admin protegidas
+  console.log(`[MIDDLEWARE] Ruta protegida: ${normalizedPath}`);
   
   // Verificar si la ruta requiere autenticación
   const isProtectedRoute = PROTECTED_ROUTES.some(route => 

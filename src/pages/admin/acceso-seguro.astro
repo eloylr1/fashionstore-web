@@ -11,13 +11,9 @@ export const prerender = false; // SSR
 
 import '../../styles/global.css';
 
-// Si ya está autenticado como admin, redirigir al panel
-const accessToken = Astro.cookies.get('sb-access-token')?.value;
-const userRole = Astro.cookies.get('user-role')?.value;
-
-if (accessToken && userRole === 'admin') {
-  return Astro.redirect('/admin');
-}
+// NO redirigir automáticamente aunque haya cookies - dejar que el usuario haga login
+// Esto evita bucles de redirección cuando hay cookies corruptas
+// El usuario verá el formulario y si ya está logueado, el JS del cliente redirigirá
 ---
 
 <!doctype html>

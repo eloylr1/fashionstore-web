@@ -10,13 +10,7 @@ export const prerender = false;
 
 import AdminLayout from '../../../layouts/AdminLayout.astro';
 
-// Verificar autenticación
-const accessToken = Astro.cookies.get('sb-access-token')?.value;
-const userRole = Astro.cookies.get('user-role')?.value;
-
-if (!accessToken || userRole !== 'admin') {
-  return Astro.redirect('/admin/acceso-seguro');
-}
+// La autenticación ya está verificada por el middleware
 ---
 
 <AdminLayout title="Notificaciones">
