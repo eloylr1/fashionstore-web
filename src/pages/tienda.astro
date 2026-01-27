@@ -101,23 +101,16 @@ if (isSupabaseConfigured() && supabase) {
 
   let { data: realProducts } = await query;
 
-  // Para "Novedades": mostrar un producto de cada categoría
+  // Para "Novedades": mostrar SOLO un producto de cada categoría
   if (sortFilter === 'nuevos' && !categoryFilter && realProducts?.length && realCategories?.length) {
     const onePerCategory: any[] = [];
     const usedCategories = new Set<string>();
     
-    // Primero, obtener un producto de cada categoría
+    // Obtener solo un producto de cada categoría (el más reciente)
     for (const product of realProducts) {
       if (product.category_id && !usedCategories.has(product.category_id)) {
         onePerCategory.push(product);
         usedCategories.add(product.category_id);
-      }
-    }
-    
-    // Luego agregar el resto de productos
-    for (const product of realProducts) {
-      if (!onePerCategory.find(p => p.id === product.id)) {
-        onePerCategory.push(product);
       }
     }
     
