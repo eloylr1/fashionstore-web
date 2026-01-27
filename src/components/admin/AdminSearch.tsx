@@ -1,11 +1,12 @@
 /**
  * ═══════════════════════════════════════════════════════════════════════════
  * FASHIONMARKET - Admin Search Component (React)
- * Búsqueda global para el panel de administración
+ * Búsqueda global profesional para el panel de administración
+ * Soporta búsquedas especiales: "stock bajo", "pedidos pendientes", etc.
  * ═══════════════════════════════════════════════════════════════════════════
  */
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 
 interface SearchResult {
   id: string;
@@ -15,14 +16,26 @@ interface SearchResult {
   link: string;
 }
 
+// Sugerencias de búsqueda especiales
+const QUICK_SEARCHES = [
+  { label: 'Stock bajo', query: 'stock bajo', icon: '⚠️' },
+  { label: 'Sin stock', query: 'sin stock', icon: '❌' },
+  { label: 'Pendientes', query: 'pedidos pendientes', icon: '🟡' },
+  { label: 'Destacados', query: 'productos destacados', icon: '⭐' },
+  { label: 'Últimos pedidos', query: 'últimos pedidos', icon: '📦' },
+  { label: 'Clientes', query: 'clientes', icon: '👥' },
+];
+
 export default function AdminSearch() {
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
+  const [isSpecialSearch, setIsSpecialSearch] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const modalRef = useRef<HTMLDivElement>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   // Abrir con Ctrl+K / Cmd+K
   useEffect(() => {
@@ -33,6 +46,8 @@ export default function AdminSearch() {
       }
       if (e.key === 'Escape') {
         setIsOpen(false);
+        setQuery('');
+        setResults([]);
       }
     };
 
@@ -61,87 +76,67 @@ export default function AdminSearch() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isOpen]);
 
-  // Buscar con debounce
-  useEffect(() => {
-    if (!query.trim()) {
+  // Función de búsqueda
+  const performSearch = useCallback(async (searchQuery: string) => {
+    if (!searchQuery.trim()) {
       setResults([]);
+      setIsSpecialSearch(false);
       return;
     }
 
-    const timer = setTimeout(async () => {
-      setLoading(true);
-      try {
-        // Búsqueda real usando la API
-        const response = await fetch(`/api/search?q=${encodeURIComponent(query)}&limit=10`);
-        
-        if (response.ok) {
-          const data = await response.json();
-          
-          // Formatear resultados de productos
-          const productResults: SearchResult[] = (data.products || []).map((p: any) => ({
-            id: p.id,
-            type: 'product' as const,
-            title: p.name,
-            subtitle: `€${(p.price / 100).toFixed(2)} - Stock: ${p.stock}`,
-            link: `/admin/productos/${p.id}`
-          }));
+    // Cancelar búsqueda anterior si existe
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
 
-          // También buscar en datos locales/mock para pedidos y clientes
-          const mockOrders: SearchResult[] = query.toLowerCase().includes('pedido') || query.match(/^\d+$/) ? [
-            {
-              id: '1234',
-              type: 'order',
-              title: 'Pedido #1234',
-              subtitle: 'Juan García - €299.00 - Pendiente',
-              link: '/admin/pedidos/1234'
-            }
-          ] : [];
+    abortControllerRef.current = new AbortController();
+    setLoading(true);
 
-          const mockCustomers: SearchResult[] = query.toLowerCase().split(' ').some(word => 
-            ['juan', 'carlos', 'maria', 'cliente'].includes(word)
-          ) ? [
-            {
-              id: 'c1',
-              type: 'customer',
-              title: 'Juan García',
-              subtitle: 'juan@email.com - 3 pedidos',
-              link: '/admin/clientes/1'
-            }
-          ] : [];
+    try {
+      const response = await fetch(
+        `/api/admin/search?q=${encodeURIComponent(searchQuery)}&limit=15`,
+        { signal: abortControllerRef.current.signal }
+      );
 
-          setResults([...productResults, ...mockOrders, ...mockCustomers].slice(0, 10));
-        } else {
-          // Fallback a datos mock si la API falla
-          setResults(getMockResults(query));
-        }
-      } catch (error) {
-        console.error('Search error:', error);
-        setResults(getMockResults(query));
-      } finally {
-        setLoading(false);
+      if (!response.ok) {
+        throw new Error('Error en la búsqueda');
       }
-    }, 300);
+
+      const data = await response.json();
+      
+      if (data.error) {
+        console.error('Search error:', data.error);
+        setResults([]);
+        return;
+      }
+
+      setResults(data.results || []);
+      setIsSpecialSearch(data.isSpecialSearch || false);
+    } catch (error: any) {
+      if (error.name === 'AbortError') {
+        // Búsqueda cancelada, ignorar
+        return;
+      }
+      console.error('Search error:', error);
+      setResults([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Buscar con debounce
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      performSearch(query);
+    }, 250);
 
     return () => clearTimeout(timer);
-  }, [query]);
+  }, [query, performSearch]);
 
-  // Datos mock para demostración
-  const getMockResults = (searchQuery: string): SearchResult[] => {
-    const q = searchQuery.toLowerCase();
-    const mockData: SearchResult[] = [
-      { id: '1', type: 'product', title: 'Traje Italiano Slim Fit', subtitle: '€599.00 - Stock: 10', link: '/admin/productos/1' },
-      { id: '2', type: 'product', title: 'Camisa Oxford Premium', subtitle: '€89.00 - Stock: 25', link: '/admin/productos/2' },
-      { id: '3', type: 'product', title: 'Cinturón de Cuero', subtitle: '€75.00 - Stock: 50', link: '/admin/productos/3' },
-      { id: '1234', type: 'order', title: 'Pedido #1234', subtitle: 'Juan García - €299.00', link: '/admin/pedidos/1234' },
-      { id: '1235', type: 'order', title: 'Pedido #1235', subtitle: 'María López - €599.00', link: '/admin/pedidos/1235' },
-      { id: 'c1', type: 'customer', title: 'Juan García', subtitle: 'juan@email.com - 3 pedidos', link: '/admin/clientes/1' },
-      { id: 'c2', type: 'customer', title: 'María López', subtitle: 'maria@email.com - 5 pedidos', link: '/admin/clientes/2' },
-    ];
-
-    return mockData.filter(item => 
-      item.title.toLowerCase().includes(q) || 
-      item.subtitle.toLowerCase().includes(q)
-    );
+  // Manejar clic en búsqueda rápida
+  const handleQuickSearch = (searchQuery: string) => {
+    setQuery(searchQuery);
+    setActiveIndex(-1);
   };
 
   // Navegación con teclado
@@ -152,7 +147,8 @@ export default function AdminSearch() {
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
       setActiveIndex(prev => (prev > 0 ? prev - 1 : -1));
-    } else if (e.key === 'Enter' && activeIndex >= 0) {
+    } else if (e.key === 'Enter' && activeIndex >= 0 && results[activeIndex]) {
+      e.preventDefault();
       window.location.href = results[activeIndex].link;
     }
   };
@@ -189,6 +185,14 @@ export default function AdminSearch() {
     return badges[type];
   };
 
+  // Limpiar al cerrar
+  const handleClose = () => {
+    setIsOpen(false);
+    setQuery('');
+    setResults([]);
+    setActiveIndex(-1);
+  };
+
   return (
     <>
       {/* Search Button */}
@@ -208,17 +212,17 @@ export default function AdminSearch() {
       {isOpen && (
         <div className="fixed inset-0 z-50 overflow-y-auto">
           {/* Backdrop */}
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" />
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={handleClose} />
           
           {/* Modal */}
           <div className="relative min-h-screen flex items-start justify-center pt-[15vh] px-4">
             <div 
               ref={modalRef}
-              className="w-full max-w-2xl bg-white shadow-2xl border border-gray-200 overflow-hidden"
+              className="w-full max-w-2xl bg-white shadow-2xl border border-gray-200 overflow-hidden rounded-lg"
             >
               {/* Search Input */}
               <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-200">
-                <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
                 <input
@@ -230,12 +234,16 @@ export default function AdminSearch() {
                     setActiveIndex(-1);
                   }}
                   onKeyDown={handleKeyDown}
-                  placeholder="Buscar productos, pedidos, clientes..."
+                  placeholder="Buscar productos, pedidos, clientes o escribir: stock bajo, pedidos pendientes..."
                   className="flex-1 text-base outline-none placeholder-gray-400"
                 />
                 {query && (
                   <button
-                    onClick={() => setQuery('')}
+                    onClick={() => {
+                      setQuery('');
+                      setResults([]);
+                      inputRef.current?.focus();
+                    }}
                     className="p-1 text-gray-400 hover:text-gray-600"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -244,7 +252,7 @@ export default function AdminSearch() {
                   </button>
                 )}
                 <button
-                  onClick={() => setIsOpen(false)}
+                  onClick={handleClose}
                   className="px-2 py-1 text-xs bg-gray-100 text-gray-500 rounded"
                 >
                   ESC
@@ -267,6 +275,11 @@ export default function AdminSearch() {
                   </div>
                 ) : results.length > 0 ? (
                   <div className="py-2">
+                    {isSpecialSearch && (
+                      <div className="px-4 py-2 text-xs text-gray-500 bg-blue-50 border-b border-blue-100">
+                        ✨ Búsqueda especial: mostrando resultados filtrados
+                      </div>
+                    )}
                     {results.map((result, index) => {
                       const badge = getTypeBadge(result.type);
                       return (
@@ -284,13 +297,13 @@ export default function AdminSearch() {
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
                               <p className="font-medium text-gray-900 truncate">{result.title}</p>
-                              <span className={`px-2 py-0.5 text-xs rounded-full ${badge.class}`}>
+                              <span className={`px-2 py-0.5 text-xs rounded-full flex-shrink-0 ${badge.class}`}>
                                 {badge.label}
                               </span>
                             </div>
                             <p className="text-sm text-gray-500 truncate">{result.subtitle}</p>
                           </div>
-                          <svg className="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className="w-4 h-4 text-gray-300 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                           </svg>
                         </a>
@@ -303,20 +316,29 @@ export default function AdminSearch() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                     </svg>
                     <p className="text-gray-500">No se encontraron resultados para "{query}"</p>
+                    <p className="text-gray-400 text-sm mt-2">
+                      Prueba con: stock bajo, pedidos pendientes, sin stock...
+                    </p>
                   </div>
                 ) : (
                   <div className="p-6">
-                    <p className="text-sm text-gray-500 mb-4">Búsquedas rápidas:</p>
-                    <div className="flex flex-wrap gap-2">
-                      {['Trajes', 'Pedidos pendientes', 'Stock bajo', 'Clientes'].map(term => (
+                    <p className="text-sm font-medium text-gray-700 mb-3">Búsquedas rápidas:</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {QUICK_SEARCHES.map(item => (
                         <button
-                          key={term}
-                          onClick={() => setQuery(term)}
-                          className="px-3 py-1.5 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-full transition-colors"
+                          key={item.query}
+                          onClick={() => handleQuickSearch(item.query)}
+                          className="flex items-center gap-2 px-3 py-2 text-sm bg-gray-50 hover:bg-gray-100 text-gray-700 rounded-lg transition-colors text-left"
                         >
-                          {term}
+                          <span>{item.icon}</span>
+                          <span>{item.label}</span>
                         </button>
                       ))}
+                    </div>
+                    <div className="mt-4 pt-4 border-t border-gray-100">
+                      <p className="text-xs text-gray-400">
+                        También puedes buscar por nombre de producto, número de pedido (#1234) o email del cliente.
+                      </p>
                     </div>
                   </div>
                 )}
@@ -335,8 +357,8 @@ export default function AdminSearch() {
                     abrir
                   </span>
                 </div>
-                <span>
-                  Búsqueda global
+                <span className="text-blue-600">
+                  Búsqueda inteligente
                 </span>
               </div>
             </div>
