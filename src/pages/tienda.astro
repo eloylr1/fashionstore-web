@@ -16,7 +16,6 @@ import { supabase, isSupabaseConfigured } from '../lib/supabase/client';
 const url = new URL(Astro.request.url);
 const categoryFilter = url.searchParams.get('categoria') || '';
 const priceFilter = url.searchParams.get('precio') || '';
-const sizeFilter = url.searchParams.get('talla') || '';
 const sortFilter = url.searchParams.get('orden') || 'nuevos';
 
 // Datos de demostración
@@ -36,7 +35,6 @@ const demoCategories = [
 // Obtener datos reales si Supabase está configurado
 let products: any[] = demoProducts;
 let categories: any[] = demoCategories;
-let allSizes: string[] = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
 
 if (isSupabaseConfigured() && supabase) {
   // Construir query base
@@ -94,47 +92,15 @@ if (isSupabaseConfigured() && supabase) {
 
   const { data: realProducts } = await query;
 
-  // Filtrar por talla (después de obtener resultados ya que sizes es un array)
-  let filteredProducts = realProducts || [];
-  if (sizeFilter && filteredProducts.length > 0) {
-    filteredProducts = filteredProducts.filter((p: any) => {
-      if (!p.sizes) return false;
-      const sizes = Array.isArray(p.sizes) ? p.sizes : [];
-      return sizes.some((s: string) => s.toUpperCase() === sizeFilter.toUpperCase());
-    });
-  }
-
   const { data: realCategories } = await supabase
     .from('categories')
     .select('*')
     .order('name');
   
-  if (filteredProducts?.length || realProducts?.length) {
-    products = sizeFilter ? filteredProducts : (realProducts || []);
+  if (realProducts?.length) {
+    products = realProducts;
   }
   if (realCategories?.length) categories = realCategories;
-
-  // Obtener todas las tallas únicas de productos
-  const { data: allProducts } = await supabase.from('products').select('sizes');
-  if (allProducts) {
-    const sizesSet = new Set<string>();
-    allProducts.forEach((p: any) => {
-      if (p.sizes && Array.isArray(p.sizes)) {
-        p.sizes.forEach((s: string) => sizesSet.add(s.toUpperCase()));
-      }
-    });
-    if (sizesSet.size > 0) {
-      const sizeOrder = ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
-      allSizes = Array.from(sizesSet).sort((a, b) => {
-        const indexA = sizeOrder.indexOf(a);
-        const indexB = sizeOrder.indexOf(b);
-        if (indexA === -1 && indexB === -1) return a.localeCompare(b);
-        if (indexA === -1) return 1;
-        if (indexB === -1) return -1;
-        return indexA - indexB;
-      });
-    }
-  }
 }
 
 // Helper para construir URLs con filtros
@@ -256,28 +222,9 @@ const sortOptions = [
               ))}
             </ul>
           </div>
-          
-          <!-- Size Filter -->
-          <div>
-            <h3 class="font-serif text-lg font-medium text-navy-900 mb-4">Talla</h3>
-            <div class="flex flex-wrap gap-2">
-              {allSizes.map((size) => (
-                <a 
-                  href={buildFilterUrl({ talla: sizeFilter === size ? '' : size })}
-                  class={`w-11 h-11 flex items-center justify-center border text-sm transition-all ${
-                    sizeFilter === size 
-                      ? 'border-navy-900 bg-navy-900 text-white font-medium' 
-                      : 'border-charcoal-200 text-charcoal-600 hover:border-navy-900 hover:text-navy-900'
-                  }`}
-                >
-                  {size}
-                </a>
-              ))}
-            </div>
-          </div>
 
           <!-- Clear Filters -->
-          {(categoryFilter || priceFilter || sizeFilter) && (
+          {(categoryFilter || priceFilter) && (
             <div class="pt-4 border-t border-charcoal-100">
               <a 
                 href="/tienda"
@@ -305,9 +252,9 @@ const sortOptions = [
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
             </svg>
             Filtros
-            {(categoryFilter || priceFilter || sizeFilter) && (
+            {(categoryFilter || priceFilter) && (
               <span class="inline-flex items-center justify-center w-5 h-5 bg-navy-900 text-white text-xs rounded-full">
-                {[categoryFilter, priceFilter, sizeFilter].filter(Boolean).length}
+                {[categoryFilter, priceFilter].filter(Boolean).length}
               </span>
             )}
           </button>
@@ -368,28 +315,9 @@ const sortOptions = [
                 ))}
               </ul>
             </div>
-            
-            <!-- Mobile Size -->
-            <div>
-              <h3 class="font-medium text-navy-900 mb-4">Talla</h3>
-              <div class="flex flex-wrap gap-2">
-                {allSizes.map((size) => (
-                  <a 
-                    href={buildFilterUrl({ talla: sizeFilter === size ? '' : size })}
-                    class={`w-12 h-12 flex items-center justify-center border text-sm ${
-                      sizeFilter === size 
-                        ? 'border-navy-900 bg-navy-900 text-white font-medium' 
-                        : 'border-charcoal-200 text-charcoal-600'
-                    }`}
-                  >
-                    {size}
-                  </a>
-                ))}
-              </div>
-            </div>
 
             <!-- Mobile Clear Filters -->
-            {(categoryFilter || priceFilter || sizeFilter) && (
+            {(categoryFilter || priceFilter) && (
               <div class="pt-4 border-t border-charcoal-100">
                 <a 
                   href="/tienda"
@@ -406,7 +334,7 @@ const sortOptions = [
         </div>
 
         <!-- Active Filters Tags -->
-        {(categoryFilter || priceFilter || sizeFilter) && (
+        {(categoryFilter || priceFilter) && (
           <div class="flex flex-wrap items-center gap-2 mb-6 pb-6 border-b border-charcoal-100">
             <span class="text-sm text-charcoal-500">Filtros activos:</span>
             
@@ -428,18 +356,6 @@ const sortOptions = [
                 class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-navy-50 text-navy-900 text-sm rounded-full hover:bg-navy-100 transition-colors"
               >
                 {priceRanges.find(r => r.value === priceFilter)?.label}
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </a>
-            )}
-            
-            {sizeFilter && (
-              <a 
-                href={buildFilterUrl({ talla: '' })}
-                class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-navy-50 text-navy-900 text-sm rounded-full hover:bg-navy-100 transition-colors"
-              >
-                Talla {sizeFilter}
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                 </svg>
