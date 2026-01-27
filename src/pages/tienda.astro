@@ -2,7 +2,7 @@
 /**
  * ═══════════════════════════════════════════════════════════════════════════
  * FASHIONMARKET - Tienda (Catálogo completo)
- * Listado de todos los productos (SSR para Header dinámico)
+ * Listado de todos los productos con filtros funcionales (SSR)
  * ═══════════════════════════════════════════════════════════════════════════
  */
 
@@ -12,12 +12,19 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import ProductCard from '../components/product/ProductCard.astro';
 import { supabase, isSupabaseConfigured } from '../lib/supabase/client';
 
+// Obtener parámetros de URL para filtros
+const url = new URL(Astro.request.url);
+const categoryFilter = url.searchParams.get('categoria') || '';
+const priceFilter = url.searchParams.get('precio') || '';
+const sizeFilter = url.searchParams.get('talla') || '';
+const sortFilter = url.searchParams.get('orden') || 'nuevos';
+
 // Datos de demostración
 const demoProducts = [
-  { id: '1', name: 'Traje Italiano Slim Fit', slug: 'traje-italiano-slim-fit', price: 599.00, images: ['/placeholder-product.svg'], category_id: '1', featured: true, stock: 10, sizes: ['S','M','L','XL'], colors: ['Navy', 'Charcoal'], description: 'Traje de corte italiano', material: 'Lana 100%', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-  { id: '2', name: 'Camisa Oxford Premium', slug: 'camisa-oxford-premium', price: 89.00, images: ['/placeholder-product.svg'], category_id: '2', featured: true, stock: 25, sizes: ['S','M','L','XL'], colors: ['White', 'Light Blue'], description: 'Camisa oxford clásica', material: 'Algodón 100%', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-  { id: '3', name: 'Cinturón de Cuero', slug: 'cinturon-cuero', price: 75.00, images: ['/placeholder-product.svg'], category_id: '3', featured: true, stock: 50, sizes: ['85cm','90cm','95cm','100cm'], colors: ['Brown', 'Black'], description: 'Cinturón artesanal', material: 'Cuero genuino', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-  { id: '4', name: 'Blazer Casual Lino', slug: 'blazer-casual-lino', price: 299.00, images: ['/placeholder-product.svg'], category_id: '1', featured: true, stock: 15, sizes: ['S','M','L','XL'], colors: ['Beige', 'Navy'], description: 'Blazer de verano', material: 'Lino 100%', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+  { id: '1', name: 'Traje Italiano Slim Fit', slug: 'traje-italiano-slim-fit', price: 59900, images: ['/placeholder-product.svg'], category_id: '1', featured: true, stock: 10, sizes: ['S','M','L','XL'], colors: ['Navy', 'Charcoal'], description: 'Traje de corte italiano', material: 'Lana 100%', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+  { id: '2', name: 'Camisa Oxford Premium', slug: 'camisa-oxford-premium', price: 8900, images: ['/placeholder-product.svg'], category_id: '2', featured: true, stock: 25, sizes: ['S','M','L','XL'], colors: ['White', 'Light Blue'], description: 'Camisa oxford clásica', material: 'Algodón 100%', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+  { id: '3', name: 'Cinturón de Cuero', slug: 'cinturon-cuero', price: 7500, images: ['/placeholder-product.svg'], category_id: '3', featured: true, stock: 50, sizes: ['85cm','90cm','95cm','100cm'], colors: ['Brown', 'Black'], description: 'Cinturón artesanal', material: 'Cuero genuino', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+  { id: '4', name: 'Blazer Casual Lino', slug: 'blazer-casual-lino', price: 29900, images: ['/placeholder-product.svg'], category_id: '1', featured: true, stock: 15, sizes: ['S','M','L','XL'], colors: ['Beige', 'Navy'], description: 'Blazer de verano', material: 'Lino 100%', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
 ];
 
 const demoCategories = [
@@ -27,27 +34,145 @@ const demoCategories = [
 ];
 
 // Obtener datos reales si Supabase está configurado
-let products = demoProducts;
-let categories = demoCategories;
+let products: any[] = demoProducts;
+let categories: any[] = demoCategories;
+let allSizes: string[] = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
 
 if (isSupabaseConfigured() && supabase) {
-  const { data: realProducts } = await supabase
+  // Construir query base
+  let query = supabase
     .from('products')
-    .select('*')
-    .order('created_at', { ascending: false });
+    .select('*, categories(id, name, slug)');
+
+  // Aplicar filtro de categoría
+  if (categoryFilter) {
+    const { data: cat } = await supabase
+      .from('categories')
+      .select('id')
+      .eq('slug', categoryFilter)
+      .single();
+    
+    if (cat) {
+      query = query.eq('category_id', cat.id);
+    }
+  }
+
+  // Aplicar filtro de precio (valores en céntimos)
+  if (priceFilter) {
+    switch (priceFilter) {
+      case 'menos-50':
+        query = query.lt('price', 5000);
+        break;
+      case '50-100':
+        query = query.gte('price', 5000).lte('price', 10000);
+        break;
+      case '100-200':
+        query = query.gte('price', 10000).lte('price', 20000);
+        break;
+      case 'mas-200':
+        query = query.gt('price', 20000);
+        break;
+    }
+  }
+
+  // Aplicar ordenación
+  switch (sortFilter) {
+    case 'precio-asc':
+      query = query.order('price', { ascending: true });
+      break;
+    case 'precio-desc':
+      query = query.order('price', { ascending: false });
+      break;
+    case 'populares':
+      query = query.order('featured', { ascending: false }).order('stock', { ascending: false });
+      break;
+    case 'nuevos':
+    default:
+      query = query.order('created_at', { ascending: false });
+      break;
+  }
+
+  const { data: realProducts } = await query;
+
+  // Filtrar por talla (después de obtener resultados ya que sizes es un array)
+  let filteredProducts = realProducts || [];
+  if (sizeFilter && filteredProducts.length > 0) {
+    filteredProducts = filteredProducts.filter((p: any) => {
+      if (!p.sizes) return false;
+      const sizes = Array.isArray(p.sizes) ? p.sizes : [];
+      return sizes.some((s: string) => s.toUpperCase() === sizeFilter.toUpperCase());
+    });
+  }
 
   const { data: realCategories } = await supabase
     .from('categories')
     .select('*')
     .order('name');
   
-  if (realProducts?.length) products = realProducts;
+  if (filteredProducts?.length || realProducts?.length) {
+    products = sizeFilter ? filteredProducts : (realProducts || []);
+  }
   if (realCategories?.length) categories = realCategories;
+
+  // Obtener todas las tallas únicas de productos
+  const { data: allProducts } = await supabase.from('products').select('sizes');
+  if (allProducts) {
+    const sizesSet = new Set<string>();
+    allProducts.forEach((p: any) => {
+      if (p.sizes && Array.isArray(p.sizes)) {
+        p.sizes.forEach((s: string) => sizesSet.add(s.toUpperCase()));
+      }
+    });
+    if (sizesSet.size > 0) {
+      const sizeOrder = ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
+      allSizes = Array.from(sizesSet).sort((a, b) => {
+        const indexA = sizeOrder.indexOf(a);
+        const indexB = sizeOrder.indexOf(b);
+        if (indexA === -1 && indexB === -1) return a.localeCompare(b);
+        if (indexA === -1) return 1;
+        if (indexB === -1) return -1;
+        return indexA - indexB;
+      });
+    }
+  }
 }
+
+// Helper para construir URLs con filtros
+function buildFilterUrl(newParams: Record<string, string>) {
+  const params = new URLSearchParams(url.searchParams);
+  Object.entries(newParams).forEach(([key, value]) => {
+    if (value) {
+      params.set(key, value);
+    } else {
+      params.delete(key);
+    }
+  });
+  const queryString = params.toString();
+  return `/tienda${queryString ? `?${queryString}` : ''}`;
+}
+
+// Obtener nombre de categoría seleccionada
+const selectedCategory = categories.find(c => c.slug === categoryFilter);
+
+// Rangos de precio
+const priceRanges = [
+  { value: 'menos-50', label: 'Menos de 50€' },
+  { value: '50-100', label: '50€ - 100€' },
+  { value: '100-200', label: '100€ - 200€' },
+  { value: 'mas-200', label: 'Más de 200€' },
+];
+
+// Opciones de ordenación
+const sortOptions = [
+  { value: 'nuevos', label: 'Novedades' },
+  { value: 'precio-asc', label: 'Precio: Menor a mayor' },
+  { value: 'precio-desc', label: 'Precio: Mayor a menor' },
+  { value: 'populares', label: 'Más populares' },
+];
 ---
 
 <BaseLayout 
-  title="Tienda"
+  title={selectedCategory ? `${selectedCategory.name} | Tienda` : 'Tienda'}
   description="Explora nuestra colección completa de moda masculina premium. Camisas, pantalones, trajes y más."
 >
   <div class="container-custom py-12">
@@ -56,33 +181,43 @@ if (isSupabaseConfigured() && supabase) {
       <ol class="flex items-center gap-2 text-sm text-charcoal-500">
         <li><a href="/" class="hover:text-navy-900 transition-colors">Inicio</a></li>
         <li>/</li>
-        <li class="text-navy-900">Tienda</li>
+        <li class={selectedCategory ? 'hover:text-navy-900' : 'text-navy-900'}>
+          {selectedCategory ? <a href="/tienda">Tienda</a> : 'Tienda'}
+        </li>
+        {selectedCategory && (
+          <>
+            <li>/</li>
+            <li class="text-navy-900">{selectedCategory.name}</li>
+          </>
+        )}
       </ol>
     </nav>
     
     <!-- Header -->
     <div class="mb-10">
       <h1 class="font-serif text-4xl font-medium text-navy-900 mb-4">
-        Nuestra Colección
+        {selectedCategory ? selectedCategory.name : 'Nuestra Colección'}
       </h1>
       <p class="text-charcoal-500 max-w-2xl">
-        Descubre todas nuestras prendas premium. Cada pieza ha sido seleccionada 
-        cuidadosamente para ofrecerte la máxima calidad y estilo.
+        {selectedCategory 
+          ? selectedCategory.description || `Descubre nuestra selección de ${selectedCategory.name.toLowerCase()}.`
+          : 'Descubre todas nuestras prendas premium. Cada pieza ha sido seleccionada cuidadosamente para ofrecerte la máxima calidad y estilo.'
+        }
       </p>
     </div>
     
     <div class="flex flex-col lg:flex-row gap-10">
-      <!-- Sidebar Filters -->
-      <aside class="lg:w-64 flex-shrink-0">
+      <!-- Sidebar Filters (Desktop) -->
+      <aside class="hidden lg:block lg:w-64 flex-shrink-0">
         <div class="sticky top-24 space-y-8">
           <!-- Categories Filter -->
           <div>
-            <h3 class="font-medium text-navy-900 mb-4">Categorías</h3>
+            <h3 class="font-serif text-lg font-medium text-navy-900 mb-4">Categorías</h3>
             <ul class="space-y-2">
               <li>
                 <a 
                   href="/tienda"
-                  class="text-sm text-navy-900 font-medium"
+                  class={`text-sm transition-colors ${!categoryFilter ? 'text-navy-900 font-semibold' : 'text-charcoal-600 hover:text-navy-900'}`}
                 >
                   Todos los productos
                 </a>
@@ -90,8 +225,8 @@ if (isSupabaseConfigured() && supabase) {
               {categories?.map((category) => (
                 <li>
                   <a 
-                    href={`/categoria/${category.slug}`}
-                    class="text-sm text-charcoal-600 hover:text-navy-900 transition-colors"
+                    href={buildFilterUrl({ categoria: category.slug })}
+                    class={`text-sm transition-colors ${categoryFilter === category.slug ? 'text-navy-900 font-semibold' : 'text-charcoal-600 hover:text-navy-900'}`}
                   >
                     {category.name}
                   </a>
@@ -102,79 +237,291 @@ if (isSupabaseConfigured() && supabase) {
           
           <!-- Price Filter -->
           <div>
-            <h3 class="font-medium text-navy-900 mb-4">Precio</h3>
+            <h3 class="font-serif text-lg font-medium text-navy-900 mb-4">Precio</h3>
             <ul class="space-y-2">
-              <li>
-                <button class="text-sm text-charcoal-600 hover:text-navy-900 transition-colors">
-                  Menos de 50€
-                </button>
-              </li>
-              <li>
-                <button class="text-sm text-charcoal-600 hover:text-navy-900 transition-colors">
-                  50€ - 100€
-                </button>
-              </li>
-              <li>
-                <button class="text-sm text-charcoal-600 hover:text-navy-900 transition-colors">
-                  100€ - 200€
-                </button>
-              </li>
-              <li>
-                <button class="text-sm text-charcoal-600 hover:text-navy-900 transition-colors">
-                  Más de 200€
-                </button>
-              </li>
+              {priceRanges.map((range) => (
+                <li>
+                  <a 
+                    href={buildFilterUrl({ precio: priceFilter === range.value ? '' : range.value })}
+                    class={`text-sm transition-colors flex items-center gap-2 ${priceFilter === range.value ? 'text-navy-900 font-semibold' : 'text-charcoal-600 hover:text-navy-900'}`}
+                  >
+                    {priceFilter === range.value && (
+                      <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                      </svg>
+                    )}
+                    {range.label}
+                  </a>
+                </li>
+              ))}
             </ul>
           </div>
           
           <!-- Size Filter -->
           <div>
-            <h3 class="font-medium text-navy-900 mb-4">Talla</h3>
+            <h3 class="font-serif text-lg font-medium text-navy-900 mb-4">Talla</h3>
             <div class="flex flex-wrap gap-2">
-              {['XS', 'S', 'M', 'L', 'XL', 'XXL'].map((size) => (
-                <button class="w-10 h-10 border border-charcoal-200 text-sm text-charcoal-600 hover:border-navy-900 hover:text-navy-900 transition-colors">
+              {allSizes.map((size) => (
+                <a 
+                  href={buildFilterUrl({ talla: sizeFilter === size ? '' : size })}
+                  class={`w-11 h-11 flex items-center justify-center border text-sm transition-all ${
+                    sizeFilter === size 
+                      ? 'border-navy-900 bg-navy-900 text-white font-medium' 
+                      : 'border-charcoal-200 text-charcoal-600 hover:border-navy-900 hover:text-navy-900'
+                  }`}
+                >
                   {size}
-                </button>
+                </a>
               ))}
             </div>
           </div>
+
+          <!-- Clear Filters -->
+          {(categoryFilter || priceFilter || sizeFilter) && (
+            <div class="pt-4 border-t border-charcoal-100">
+              <a 
+                href="/tienda"
+                class="inline-flex items-center gap-2 text-sm text-red-600 hover:text-red-700 transition-colors"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+                Limpiar filtros
+              </a>
+            </div>
+          )}
         </div>
       </aside>
       
       <!-- Products Grid -->
       <main class="flex-1">
+        <!-- Mobile Filters Toggle -->
+        <div class="lg:hidden mb-6">
+          <button 
+            id="mobile-filters-btn"
+            class="w-full flex items-center justify-center gap-2 py-3 border border-charcoal-200 text-sm font-medium text-navy-900 hover:bg-charcoal-50 transition-colors"
+          >
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+            </svg>
+            Filtros
+            {(categoryFilter || priceFilter || sizeFilter) && (
+              <span class="inline-flex items-center justify-center w-5 h-5 bg-navy-900 text-white text-xs rounded-full">
+                {[categoryFilter, priceFilter, sizeFilter].filter(Boolean).length}
+              </span>
+            )}
+          </button>
+        </div>
+
+        <!-- Mobile Filters Panel -->
+        <div id="mobile-filters-panel" class="hidden lg:hidden fixed inset-0 z-50 bg-white overflow-y-auto">
+          <div class="sticky top-0 bg-white border-b border-charcoal-100 px-4 py-4 flex items-center justify-between">
+            <h2 class="font-serif text-lg font-medium text-navy-900">Filtros</h2>
+            <button id="close-filters-btn" class="p-2 hover:bg-charcoal-50 rounded-full">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          
+          <div class="p-4 space-y-8">
+            <!-- Mobile Categories -->
+            <div>
+              <h3 class="font-medium text-navy-900 mb-4">Categorías</h3>
+              <ul class="space-y-3">
+                <li>
+                  <a href="/tienda" class={`block py-2 text-sm ${!categoryFilter ? 'text-navy-900 font-semibold' : 'text-charcoal-600'}`}>
+                    Todos los productos
+                  </a>
+                </li>
+                {categories?.map((category) => (
+                  <li>
+                    <a 
+                      href={buildFilterUrl({ categoria: category.slug })}
+                      class={`block py-2 text-sm ${categoryFilter === category.slug ? 'text-navy-900 font-semibold' : 'text-charcoal-600'}`}
+                    >
+                      {category.name}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            
+            <!-- Mobile Price -->
+            <div>
+              <h3 class="font-medium text-navy-900 mb-4">Precio</h3>
+              <ul class="space-y-3">
+                {priceRanges.map((range) => (
+                  <li>
+                    <a 
+                      href={buildFilterUrl({ precio: priceFilter === range.value ? '' : range.value })}
+                      class={`block py-2 text-sm flex items-center gap-2 ${priceFilter === range.value ? 'text-navy-900 font-semibold' : 'text-charcoal-600'}`}
+                    >
+                      {priceFilter === range.value && (
+                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                          <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                        </svg>
+                      )}
+                      {range.label}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            
+            <!-- Mobile Size -->
+            <div>
+              <h3 class="font-medium text-navy-900 mb-4">Talla</h3>
+              <div class="flex flex-wrap gap-2">
+                {allSizes.map((size) => (
+                  <a 
+                    href={buildFilterUrl({ talla: sizeFilter === size ? '' : size })}
+                    class={`w-12 h-12 flex items-center justify-center border text-sm ${
+                      sizeFilter === size 
+                        ? 'border-navy-900 bg-navy-900 text-white font-medium' 
+                        : 'border-charcoal-200 text-charcoal-600'
+                    }`}
+                  >
+                    {size}
+                  </a>
+                ))}
+              </div>
+            </div>
+
+            <!-- Mobile Clear Filters -->
+            {(categoryFilter || priceFilter || sizeFilter) && (
+              <div class="pt-4 border-t border-charcoal-100">
+                <a 
+                  href="/tienda"
+                  class="w-full inline-flex items-center justify-center gap-2 py-3 bg-charcoal-100 text-sm font-medium text-charcoal-700"
+                >
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                  Limpiar todos los filtros
+                </a>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <!-- Active Filters Tags -->
+        {(categoryFilter || priceFilter || sizeFilter) && (
+          <div class="flex flex-wrap items-center gap-2 mb-6 pb-6 border-b border-charcoal-100">
+            <span class="text-sm text-charcoal-500">Filtros activos:</span>
+            
+            {categoryFilter && selectedCategory && (
+              <a 
+                href={buildFilterUrl({ categoria: '' })}
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-navy-50 text-navy-900 text-sm rounded-full hover:bg-navy-100 transition-colors"
+              >
+                {selectedCategory.name}
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </a>
+            )}
+            
+            {priceFilter && (
+              <a 
+                href={buildFilterUrl({ precio: '' })}
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-navy-50 text-navy-900 text-sm rounded-full hover:bg-navy-100 transition-colors"
+              >
+                {priceRanges.find(r => r.value === priceFilter)?.label}
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </a>
+            )}
+            
+            {sizeFilter && (
+              <a 
+                href={buildFilterUrl({ talla: '' })}
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-navy-50 text-navy-900 text-sm rounded-full hover:bg-navy-100 transition-colors"
+              >
+                Talla {sizeFilter}
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </a>
+            )}
+          </div>
+        )}
+
         <!-- Sort & Count -->
         <div class="flex items-center justify-between mb-6 pb-6 border-b border-charcoal-100">
           <p class="text-sm text-charcoal-500">
-            {products?.length || 0} productos
+            <span class="font-medium text-navy-900">{products?.length || 0}</span> productos
           </p>
-          <select class="select-elegant w-auto pr-10">
-            <option>Ordenar por: Novedades</option>
-            <option>Precio: Menor a mayor</option>
-            <option>Precio: Mayor a menor</option>
-            <option>Más populares</option>
-          </select>
+          <div class="relative">
+            <select 
+              id="sort-select"
+              class="appearance-none bg-white border border-charcoal-200 rounded-none px-4 py-2.5 pr-10 text-sm text-navy-900 focus:outline-none focus:border-navy-900 cursor-pointer"
+            >
+              {sortOptions.map((option) => (
+                <option value={option.value} selected={sortFilter === option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            <svg class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-charcoal-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+            </svg>
+          </div>
         </div>
         
         <!-- Grid -->
         {products && products.length > 0 ? (
-          <div class="product-grid">
+          <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
             {products.map((product) => (
               <ProductCard product={product} />
             ))}
           </div>
         ) : (
           <div class="text-center py-16">
-            <svg class="w-16 h-16 mx-auto text-charcoal-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+            <svg class="w-20 h-20 mx-auto text-charcoal-200 mb-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            <h3 class="font-serif text-xl text-navy-900 mb-2">No hay productos disponibles</h3>
-            <p class="text-charcoal-500">
-              Vuelve pronto, estamos preparando nuevas prendas para ti.
+            <h3 class="font-serif text-xl text-navy-900 mb-2">No encontramos productos</h3>
+            <p class="text-charcoal-500 mb-6">
+              No hay productos que coincidan con los filtros seleccionados.
             </p>
+            <a 
+              href="/tienda"
+              class="inline-flex items-center gap-2 px-6 py-3 bg-navy-900 text-white text-sm font-medium hover:bg-navy-800 transition-colors"
+            >
+              Ver todos los productos
+            </a>
           </div>
         )}
       </main>
     </div>
   </div>
+
+  <script>
+    // Ordenación por select
+    const sortSelect = document.getElementById('sort-select') as HTMLSelectElement;
+    if (sortSelect) {
+      sortSelect.addEventListener('change', () => {
+        const url = new URL(window.location.href);
+        url.searchParams.set('orden', sortSelect.value);
+        window.location.href = url.toString();
+      });
+    }
+
+    // Mobile filters toggle
+    const mobileFiltersBtn = document.getElementById('mobile-filters-btn');
+    const mobileFiltersPanel = document.getElementById('mobile-filters-panel');
+    const closeFiltersBtn = document.getElementById('close-filters-btn');
+
+    mobileFiltersBtn?.addEventListener('click', () => {
+      mobileFiltersPanel?.classList.remove('hidden');
+      document.body.style.overflow = 'hidden';
+    });
+
+    closeFiltersBtn?.addEventListener('click', () => {
+      mobileFiltersPanel?.classList.add('hidden');
+      document.body.style.overflow = '';
+    });
+  </script>
 </BaseLayout>
