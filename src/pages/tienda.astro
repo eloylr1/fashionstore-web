@@ -73,6 +73,14 @@ if (isSupabaseConfigured() && supabase) {
     }
   }
 
+  // Obtener categorías primero
+  const { data: realCategories } = await supabase
+    .from('categories')
+    .select('*')
+    .order('name');
+  
+  if (realCategories?.length) categories = realCategories;
+
   // Aplicar ordenación
   switch (sortFilter) {
     case 'precio-asc':
@@ -82,7 +90,8 @@ if (isSupabaseConfigured() && supabase) {
       query = query.order('price', { ascending: false });
       break;
     case 'populares':
-      query = query.order('featured', { ascending: false }).order('stock', { ascending: false });
+      // Solo productos destacados
+      query = query.eq('featured', true).order('created_at', { ascending: false });
       break;
     case 'nuevos':
     default:
@@ -90,17 +99,34 @@ if (isSupabaseConfigured() && supabase) {
       break;
   }
 
-  const { data: realProducts } = await query;
+  let { data: realProducts } = await query;
 
-  const { data: realCategories } = await supabase
-    .from('categories')
-    .select('*')
-    .order('name');
+  // Para "Novedades": mostrar un producto de cada categoría
+  if (sortFilter === 'nuevos' && !categoryFilter && realProducts?.length && realCategories?.length) {
+    const onePerCategory: any[] = [];
+    const usedCategories = new Set<string>();
+    
+    // Primero, obtener un producto de cada categoría
+    for (const product of realProducts) {
+      if (product.category_id && !usedCategories.has(product.category_id)) {
+        onePerCategory.push(product);
+        usedCategories.add(product.category_id);
+      }
+    }
+    
+    // Luego agregar el resto de productos
+    for (const product of realProducts) {
+      if (!onePerCategory.find(p => p.id === product.id)) {
+        onePerCategory.push(product);
+      }
+    }
+    
+    realProducts = onePerCategory;
+  }
   
   if (realProducts?.length) {
     products = realProducts;
   }
-  if (realCategories?.length) categories = realCategories;
 }
 
 // Helper para construir URLs con filtros
