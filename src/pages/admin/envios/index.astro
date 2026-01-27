@@ -27,7 +27,7 @@ if (isSupabaseConfigured() && supabase) {
     .from('store_settings')
     .select('*')
     .eq('category', 'shipping')
-    .single();
+    .single() as { data: { settings: typeof shippingConfig } | null };
   
   if (data?.settings) {
     shippingConfig = { ...shippingConfig, ...data.settings };

@@ -26,7 +26,7 @@ if (isSupabaseConfigured() && supabase) {
     .from('store_settings')
     .select('*')
     .eq('category', 'taxes')
-    .single();
+    .single() as { data: { settings: typeof taxConfig } | null };
   
   if (data?.settings) {
     taxConfig = { ...taxConfig, ...data.settings };
