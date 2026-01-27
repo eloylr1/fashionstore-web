@@ -286,6 +286,48 @@ if (isSupabaseConfigured() && supabase) {
     </div>
   </div>
 
+  <!-- Modal de confirmación para eliminar -->
+  <div id="delete-modal" class="fixed inset-0 bg-black/50 z-50 hidden items-center justify-center">
+    <div class="bg-white w-full max-w-sm mx-4 shadow-xl rounded-lg overflow-hidden">
+      <div class="p-6">
+        <!-- Icono de advertencia -->
+        <div class="mx-auto w-14 h-14 bg-red-100 rounded-full flex items-center justify-center mb-4">
+          <svg class="w-7 h-7 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+          </svg>
+        </div>
+        
+        <h3 class="text-lg font-semibold text-navy-900 text-center mb-2">Eliminar Código</h3>
+        <p class="text-charcoal-600 text-center text-sm mb-2">
+          ¿Estás seguro de que quieres eliminar el código promocional?
+        </p>
+        <p class="text-center mb-6">
+          <span id="delete-code-name" class="font-mono font-bold text-navy-900 bg-charcoal-100 px-3 py-1 rounded"></span>
+        </p>
+        <p class="text-charcoal-500 text-center text-xs mb-6">
+          Esta acción no se puede deshacer.
+        </p>
+        
+        <div class="flex gap-3">
+          <button 
+            type="button" 
+            id="cancel-delete"
+            class="flex-1 px-4 py-2.5 border border-charcoal-200 text-charcoal-700 text-sm font-medium rounded-lg hover:bg-charcoal-50 transition-colors"
+          >
+            Cancelar
+          </button>
+          <button 
+            type="button" 
+            id="confirm-delete"
+            class="flex-1 px-4 py-2.5 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors"
+          >
+            Sí, eliminar
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Toast -->
   <div id="toast" class="fixed bottom-4 right-4 hidden transform transition-transform duration-300 z-50">
     <div class="bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-3">
@@ -304,6 +346,11 @@ if (isSupabaseConfigured() && supabase) {
   const submitBtn = document.getElementById('submit-btn');
   const toast = document.getElementById('toast');
   const toastMessage = document.getElementById('toast-message');
+  
+  // Delete modal elements
+  const deleteModal = document.getElementById('delete-modal');
+  const deleteCodeName = document.getElementById('delete-code-name');
+  let pendingDeleteId: string | null = null;
   
   // Inputs
   const codeIdInput = document.getElementById('code-id') as HTMLInputElement;
@@ -488,28 +535,73 @@ if (isSupabaseConfigured() && supabase) {
     });
   });
   
-  // Eliminar
+  // Funciones para el modal de eliminación
+  function openDeleteModal(id: string, codeName: string) {
+    pendingDeleteId = id;
+    if (deleteCodeName) deleteCodeName.textContent = codeName;
+    deleteModal?.classList.remove('hidden');
+    deleteModal?.classList.add('flex');
+  }
+  
+  function closeDeleteModal() {
+    pendingDeleteId = null;
+    deleteModal?.classList.add('hidden');
+    deleteModal?.classList.remove('flex');
+  }
+  
+  // Event listeners para el modal de eliminación
+  document.getElementById('cancel-delete')?.addEventListener('click', closeDeleteModal);
+  
+  deleteModal?.addEventListener('click', (e) => {
+    if (e.target === deleteModal) {
+      closeDeleteModal();
+    }
+  });
+  
+  document.getElementById('confirm-delete')?.addEventListener('click', async () => {
+    if (!pendingDeleteId) return;
+    
+    const confirmBtn = document.getElementById('confirm-delete');
+    if (confirmBtn) {
+      confirmBtn.setAttribute('disabled', 'true');
+      confirmBtn.textContent = 'Eliminando...';
+    }
+    
+    try {
+      const response = await fetch(`/api/admin/promotions/${pendingDeleteId}`, {
+        method: 'DELETE',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      
+      if (!response.ok) {
+        const result = await response.json();
+        throw new Error(result.error || 'Error al eliminar');
+      }
+      
+      closeDeleteModal();
+      showToast('Código eliminado correctamente');
+      setTimeout(() => location.reload(), 1000);
+    } catch (error: any) {
+      console.error('Delete error:', error);
+      closeDeleteModal();
+      showToast(error.message || 'Error al eliminar el código', true);
+      
+      if (confirmBtn) {
+        confirmBtn.removeAttribute('disabled');
+        confirmBtn.textContent = 'Sí, eliminar';
+      }
+    }
+  });
+  
+  // Abrir modal de eliminación al hacer clic en el botón
   document.querySelectorAll('[data-delete-code]').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      if (!confirm('¿Seguro que quieres eliminar este código?')) return;
-      
+    btn.addEventListener('click', () => {
       const id = (btn as HTMLElement).dataset.deleteCode;
+      const codeData = (btn as HTMLElement).closest('tr')?.querySelector('.font-mono')?.textContent?.trim() || 'este código';
       
-      try {
-        const response = await fetch(`/api/admin/promotions/${id}`, {
-          method: 'DELETE',
-          credentials: 'include'
-        });
-        
-        if (!response.ok) {
-          const result = await response.json();
-          throw new Error(result.error || 'Error al eliminar');
-        }
-        
-        showToast('Código eliminado');
-        setTimeout(() => location.reload(), 1000);
-      } catch (error: any) {
-        showToast(error.message || 'Error al eliminar el código', true);
+      if (id) {
+        openDeleteModal(id, codeData);
       }
     });
   });
