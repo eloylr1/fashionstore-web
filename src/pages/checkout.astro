@@ -16,8 +16,8 @@ import { supabase } from '../lib/supabase/client';
 const accessToken = Astro.cookies.get('sb-access-token')?.value;
 const refreshToken = Astro.cookies.get('sb-refresh-token')?.value;
 
-let user = null;
-let userProfile = null;
+let user: any = null;
+let userProfile: any = null;
 
 if (accessToken && refreshToken && supabase) {
   const { data: sessionData } = await supabase.auth.setSession({

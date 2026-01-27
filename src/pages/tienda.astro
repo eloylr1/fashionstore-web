@@ -48,7 +48,7 @@ if (isSupabaseConfigured() && supabase) {
       .from('categories')
       .select('id')
       .eq('slug', categoryFilter)
-      .single();
+      .single() as { data: { id: string } | null };
     
     if (cat) {
       query = query.eq('category_id', cat.id);
@@ -99,7 +99,7 @@ if (isSupabaseConfigured() && supabase) {
       break;
   }
 
-  let { data: realProducts } = await query;
+  let { data: realProducts } = await query as { data: any[] | null };
 
   // Para "Novedades": mostrar SOLO un producto de cada categoría
   if (sortFilter === 'nuevos' && !categoryFilter && realProducts?.length && realCategories?.length) {
