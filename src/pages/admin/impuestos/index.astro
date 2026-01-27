@@ -1,0 +1,257 @@
+---
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * FASHIONMARKET - Admin Impuestos
+ * Configuración de IVA y otros impuestos
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
+
+export const prerender = false;
+
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { supabase, isSupabaseConfigured } from '../../../lib/supabase/client';
+
+// Obtener configuración de impuestos
+let taxConfig = {
+  tax_enabled: true,
+  tax_rate: 21, // 21% IVA España
+  tax_name: 'IVA',
+  prices_include_tax: true,
+  tax_number: '',
+  show_tax_on_checkout: true
+};
+
+if (isSupabaseConfigured() && supabase) {
+  const { data } = await supabase
+    .from('store_settings')
+    .select('*')
+    .eq('category', 'taxes')
+    .single();
+  
+  if (data?.settings) {
+    taxConfig = { ...taxConfig, ...data.settings };
+  }
+}
+---
+
+<AdminLayout title="Impuestos">
+  <div class="space-y-6 max-w-4xl">
+    <!-- Header -->
+    <div>
+      <h1 class="text-2xl font-semibold text-navy-900">Configuración de Impuestos</h1>
+      <p class="text-charcoal-500 mt-1">Gestiona el IVA y otros impuestos de tu tienda</p>
+    </div>
+
+    <form id="taxes-form" class="space-y-6">
+      <!-- Impuesto Principal -->
+      <div class="bg-white border border-charcoal-100 p-6">
+        <div class="flex items-center justify-between mb-6">
+          <div class="flex items-center gap-4">
+            <div class="w-12 h-12 bg-navy-100 rounded-lg flex items-center justify-center">
+              <svg class="w-6 h-6 text-navy-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+              </svg>
+            </div>
+            <div>
+              <h2 class="font-semibold text-navy-900">Impuesto sobre Ventas</h2>
+              <p class="text-sm text-charcoal-500">Configuración del impuesto principal</p>
+            </div>
+          </div>
+          <label class="relative inline-flex items-center cursor-pointer">
+            <input 
+              type="checkbox" 
+              name="tax_enabled" 
+              class="sr-only peer"
+              checked={taxConfig.tax_enabled}
+            />
+            <div class="w-11 h-6 bg-charcoal-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-navy-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-navy-600"></div>
+          </label>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label class="block text-sm font-medium text-charcoal-700 mb-1">Nombre del impuesto</label>
+            <input 
+              type="text" 
+              name="tax_name" 
+              value={taxConfig.tax_name}
+              class="input-elegant"
+              placeholder="IVA"
+            />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-charcoal-700 mb-1">Porcentaje (%)</label>
+            <input 
+              type="number" 
+              name="tax_rate" 
+              step="0.01"
+              min="0"
+              max="100"
+              value={taxConfig.tax_rate}
+              class="input-elegant"
+            />
+          </div>
+        </div>
+      </div>
+
+      <!-- Opciones de Precios -->
+      <div class="bg-white border border-charcoal-100 p-6">
+        <h2 class="font-semibold text-navy-900 mb-4">Opciones de Precios</h2>
+        
+        <div class="space-y-4">
+          <label class="flex items-start gap-3 cursor-pointer">
+            <input 
+              type="radio" 
+              name="prices_include_tax" 
+              value="true"
+              checked={taxConfig.prices_include_tax}
+              class="mt-1 w-4 h-4 text-navy-600 border-charcoal-300 focus:ring-navy-500"
+            />
+            <div>
+              <span class="font-medium text-navy-900">Los precios incluyen impuestos</span>
+              <p class="text-sm text-charcoal-500">Los precios que introduces ya tienen el impuesto incluido. Recomendado para B2C.</p>
+            </div>
+          </label>
+          
+          <label class="flex items-start gap-3 cursor-pointer">
+            <input 
+              type="radio" 
+              name="prices_include_tax" 
+              value="false"
+              checked={!taxConfig.prices_include_tax}
+              class="mt-1 w-4 h-4 text-navy-600 border-charcoal-300 focus:ring-navy-500"
+            />
+            <div>
+              <span class="font-medium text-navy-900">Los precios no incluyen impuestos</span>
+              <p class="text-sm text-charcoal-500">Los impuestos se calcularán y añadirán en el checkout. Recomendado para B2B.</p>
+            </div>
+          </label>
+        </div>
+      </div>
+
+      <!-- Mostrar en Checkout -->
+      <div class="bg-white border border-charcoal-100 p-6">
+        <label class="flex items-center justify-between cursor-pointer">
+          <div>
+            <h2 class="font-semibold text-navy-900">Mostrar desglose en checkout</h2>
+            <p class="text-sm text-charcoal-500 mt-1">Muestra el importe de los impuestos por separado en el proceso de compra</p>
+          </div>
+          <label class="relative inline-flex items-center cursor-pointer">
+            <input 
+              type="checkbox" 
+              name="show_tax_on_checkout" 
+              class="sr-only peer"
+              checked={taxConfig.show_tax_on_checkout}
+            />
+            <div class="w-11 h-6 bg-charcoal-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-navy-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-navy-600"></div>
+          </label>
+        </label>
+      </div>
+
+      <!-- Información Fiscal -->
+      <div class="bg-white border border-charcoal-100 p-6">
+        <h2 class="font-semibold text-navy-900 mb-4">Información Fiscal de la Empresa</h2>
+        
+        <div>
+          <label class="block text-sm font-medium text-charcoal-700 mb-1">NIF/CIF</label>
+          <input 
+            type="text" 
+            name="tax_number" 
+            value={taxConfig.tax_number}
+            class="input-elegant max-w-xs"
+            placeholder="B12345678"
+          />
+          <p class="text-xs text-charcoal-500 mt-1">Este número aparecerá en las facturas</p>
+        </div>
+      </div>
+
+      <!-- Info Box -->
+      <div class="bg-amber-50 border border-amber-200 p-4 flex gap-3">
+        <svg class="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <div class="text-sm text-amber-800">
+          <p class="font-medium">Nota sobre impuestos en España</p>
+          <p class="mt-1">El IVA general en España es del 21%. Para productos específicos pueden aplicarse tipos reducidos (10%) o superreducidos (4%). Consulta con tu asesor fiscal si tienes dudas.</p>
+        </div>
+      </div>
+
+      <!-- Submit -->
+      <div class="flex justify-end">
+        <button 
+          type="submit" 
+          id="submit-btn"
+          class="px-6 py-3 bg-navy-900 text-white font-medium hover:bg-navy-800 transition-colors"
+        >
+          Guardar Cambios
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" class="fixed bottom-4 right-4 hidden z-50">
+    <div id="toast-content" class="bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-3">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+      </svg>
+      <span id="toast-message">Configuración guardada</span>
+    </div>
+  </div>
+</AdminLayout>
+
+<script>
+  const form = document.getElementById('taxes-form') as HTMLFormElement;
+  const submitBtn = document.getElementById('submit-btn') as HTMLButtonElement;
+  const toast = document.getElementById('toast');
+  const toastContent = document.getElementById('toast-content');
+  const toastMessage = document.getElementById('toast-message');
+  
+  function showToast(message: string, isError = false) {
+    if (toast && toastContent && toastMessage) {
+      toastMessage.textContent = message;
+      toastContent.className = `${isError ? 'bg-red-600' : 'bg-green-600'} text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-3`;
+      toast.classList.remove('hidden');
+      setTimeout(() => toast.classList.add('hidden'), 3000);
+    }
+  }
+  
+  form?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const originalText = submitBtn.textContent;
+    submitBtn.textContent = 'Guardando...';
+    submitBtn.disabled = true;
+    
+    try {
+      const formData = new FormData(form);
+      
+      const settings = {
+        tax_enabled: formData.get('tax_enabled') === 'on',
+        tax_name: formData.get('tax_name'),
+        tax_rate: parseFloat(formData.get('tax_rate') as string),
+        prices_include_tax: formData.get('prices_include_tax') === 'true',
+        show_tax_on_checkout: formData.get('show_tax_on_checkout') === 'on',
+        tax_number: formData.get('tax_number')
+      };
+      
+      const response = await fetch('/api/admin/settings/taxes', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(settings)
+      });
+      
+      const result = await response.json();
+      
+      if (!response.ok) throw new Error(result.error);
+      
+      showToast('Configuración de impuestos guardada correctamente');
+    } catch (error: any) {
+      showToast(error.message || 'Error al guardar', true);
+    } finally {
+      submitBtn.textContent = originalText;
+      submitBtn.disabled = false;
+    }
+  });
+</script>

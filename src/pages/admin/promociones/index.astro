@@ -1,0 +1,403 @@
+---
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * FASHIONMARKET - Admin Promociones
+ * Gestión de códigos promocionales y descuentos
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
+
+export const prerender = false;
+
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { supabase, isSupabaseConfigured } from '../../../lib/supabase/client';
+
+// Obtener códigos de descuento
+let discountCodes: any[] = [];
+
+if (isSupabaseConfigured() && supabase) {
+  const { data } = await supabase
+    .from('discount_codes')
+    .select('*')
+    .order('created_at', { ascending: false });
+  
+  if (data) discountCodes = data;
+}
+---
+
+<AdminLayout title="Promociones">
+  <div class="space-y-6">
+    <!-- Header -->
+    <div class="flex items-center justify-between">
+      <div>
+        <h1 class="text-2xl font-semibold text-navy-900">Códigos Promocionales</h1>
+        <p class="text-charcoal-500 mt-1">Gestiona descuentos y ofertas especiales</p>
+      </div>
+      <button 
+        type="button"
+        id="new-promo-btn"
+        class="px-4 py-2 bg-navy-900 text-white text-sm font-medium hover:bg-navy-800 transition-colors flex items-center gap-2"
+      >
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+        </svg>
+        Nuevo Código
+      </button>
+    </div>
+
+    <!-- Stats -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div class="bg-white p-4 border border-charcoal-100">
+        <p class="text-sm text-charcoal-500">Total Códigos</p>
+        <p class="text-2xl font-semibold text-navy-900">{discountCodes.length}</p>
+      </div>
+      <div class="bg-white p-4 border border-charcoal-100">
+        <p class="text-sm text-charcoal-500">Activos</p>
+        <p class="text-2xl font-semibold text-green-600">{discountCodes.filter(c => c.active).length}</p>
+      </div>
+      <div class="bg-white p-4 border border-charcoal-100">
+        <p class="text-sm text-charcoal-500">Usos Totales</p>
+        <p class="text-2xl font-semibold text-navy-900">{discountCodes.reduce((sum, c) => sum + (c.used_count || 0), 0)}</p>
+      </div>
+      <div class="bg-white p-4 border border-charcoal-100">
+        <p class="text-sm text-charcoal-500">Expirados</p>
+        <p class="text-2xl font-semibold text-charcoal-400">{discountCodes.filter(c => c.expires_at && new Date(c.expires_at) < new Date()).length}</p>
+      </div>
+    </div>
+
+    <!-- Table -->
+    <div class="bg-white border border-charcoal-100 overflow-hidden">
+      <table class="w-full">
+        <thead class="bg-charcoal-50 border-b border-charcoal-100">
+          <tr>
+            <th class="px-6 py-3 text-left text-xs font-semibold text-charcoal-600 uppercase tracking-wider">Código</th>
+            <th class="px-6 py-3 text-left text-xs font-semibold text-charcoal-600 uppercase tracking-wider">Tipo</th>
+            <th class="px-6 py-3 text-left text-xs font-semibold text-charcoal-600 uppercase tracking-wider">Valor</th>
+            <th class="px-6 py-3 text-left text-xs font-semibold text-charcoal-600 uppercase tracking-wider">Usos</th>
+            <th class="px-6 py-3 text-left text-xs font-semibold text-charcoal-600 uppercase tracking-wider">Expira</th>
+            <th class="px-6 py-3 text-left text-xs font-semibold text-charcoal-600 uppercase tracking-wider">Estado</th>
+            <th class="px-6 py-3 text-right text-xs font-semibold text-charcoal-600 uppercase tracking-wider">Acciones</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-charcoal-100">
+          {discountCodes.length === 0 ? (
+            <tr>
+              <td colspan="7" class="px-6 py-12 text-center text-charcoal-500">
+                No hay códigos promocionales. ¡Crea el primero!
+              </td>
+            </tr>
+          ) : (
+            discountCodes.map((code) => {
+              const isExpired = code.expires_at && new Date(code.expires_at) < new Date();
+              const usesLeft = code.max_uses ? code.max_uses - (code.used_count || 0) : null;
+              
+              return (
+                <tr class="hover:bg-charcoal-50 transition-colors">
+                  <td class="px-6 py-4">
+                    <span class="font-mono font-semibold text-navy-900 bg-charcoal-100 px-2 py-1 rounded">
+                      {code.code}
+                    </span>
+                  </td>
+                  <td class="px-6 py-4 text-sm text-charcoal-600">
+                    {code.type === 'percentage' ? 'Porcentaje' : 'Cantidad fija'}
+                  </td>
+                  <td class="px-6 py-4 text-sm font-medium text-navy-900">
+                    {code.type === 'percentage' 
+                      ? `${code.value}%` 
+                      : `${(code.value / 100).toFixed(2)}€`}
+                  </td>
+                  <td class="px-6 py-4 text-sm text-charcoal-600">
+                    {code.used_count || 0}
+                    {code.max_uses && <span class="text-charcoal-400">/{code.max_uses}</span>}
+                  </td>
+                  <td class="px-6 py-4 text-sm text-charcoal-600">
+                    {code.expires_at 
+                      ? new Date(code.expires_at).toLocaleDateString('es-ES')
+                      : <span class="text-charcoal-400">Sin límite</span>}
+                  </td>
+                  <td class="px-6 py-4">
+                    {isExpired ? (
+                      <span class="inline-flex px-2 py-1 text-xs font-medium bg-charcoal-100 text-charcoal-600 rounded-full">
+                        Expirado
+                      </span>
+                    ) : code.active ? (
+                      <span class="inline-flex px-2 py-1 text-xs font-medium bg-green-100 text-green-700 rounded-full">
+                        Activo
+                      </span>
+                    ) : (
+                      <span class="inline-flex px-2 py-1 text-xs font-medium bg-charcoal-100 text-charcoal-600 rounded-full">
+                        Inactivo
+                      </span>
+                    )}
+                  </td>
+                  <td class="px-6 py-4 text-right">
+                    <div class="flex items-center justify-end gap-2">
+                      <button 
+                        type="button"
+                        data-toggle-code={code.id}
+                        data-active={code.active ? 'true' : 'false'}
+                        class="p-2 text-charcoal-500 hover:text-navy-900 transition-colors"
+                        title={code.active ? 'Desactivar' : 'Activar'}
+                      >
+                        {code.active ? (
+                          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                          </svg>
+                        ) : (
+                          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                        )}
+                      </button>
+                      <button 
+                        type="button"
+                        data-delete-code={code.id}
+                        class="p-2 text-charcoal-500 hover:text-red-600 transition-colors"
+                        title="Eliminar"
+                      >
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })
+          )}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Modal para crear código -->
+  <div id="promo-modal" class="fixed inset-0 bg-black/50 z-50 hidden items-center justify-center">
+    <div class="bg-white w-full max-w-md mx-4 shadow-xl">
+      <div class="flex items-center justify-between px-6 py-4 border-b border-charcoal-100">
+        <h3 class="font-semibold text-navy-900">Nuevo Código Promocional</h3>
+        <button type="button" id="close-modal" class="text-charcoal-400 hover:text-charcoal-600">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+      
+      <form id="promo-form" class="p-6 space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-charcoal-700 mb-1">Código *</label>
+          <input 
+            type="text" 
+            name="code" 
+            required
+            class="input-elegant uppercase"
+            placeholder="DESCUENTO20"
+            pattern="[A-Za-z0-9]+"
+          />
+          <p class="text-xs text-charcoal-500 mt-1">Solo letras y números, sin espacios</p>
+        </div>
+        
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-charcoal-700 mb-1">Tipo *</label>
+            <select name="type" required class="select-elegant">
+              <option value="percentage">Porcentaje (%)</option>
+              <option value="fixed">Cantidad fija (€)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-charcoal-700 mb-1">Valor *</label>
+            <input 
+              type="number" 
+              name="value" 
+              required
+              min="1"
+              class="input-elegant"
+              placeholder="20"
+            />
+          </div>
+        </div>
+        
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-charcoal-700 mb-1">Pedido mínimo (€)</label>
+            <input 
+              type="number" 
+              name="min_order" 
+              min="0"
+              step="0.01"
+              class="input-elegant"
+              placeholder="50"
+            />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-charcoal-700 mb-1">Usos máximos</label>
+            <input 
+              type="number" 
+              name="max_uses" 
+              min="1"
+              class="input-elegant"
+              placeholder="Sin límite"
+            />
+          </div>
+        </div>
+        
+        <div>
+          <label class="block text-sm font-medium text-charcoal-700 mb-1">Fecha de expiración</label>
+          <input 
+            type="date" 
+            name="expires_at"
+            class="input-elegant"
+          />
+        </div>
+        
+        <div class="flex items-center gap-2">
+          <input type="checkbox" name="active" id="active" checked class="w-4 h-4 text-navy-900 rounded" />
+          <label for="active" class="text-sm text-charcoal-700">Activar inmediatamente</label>
+        </div>
+        
+        <div class="flex justify-end gap-3 pt-4">
+          <button type="button" id="cancel-modal" class="px-4 py-2 text-sm text-charcoal-600 hover:text-navy-900">
+            Cancelar
+          </button>
+          <button type="submit" class="px-4 py-2 bg-navy-900 text-white text-sm font-medium hover:bg-navy-800">
+            Crear Código
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" class="fixed bottom-4 right-4 hidden transform transition-transform duration-300 z-50">
+    <div class="bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-3">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+      </svg>
+      <span id="toast-message">Operación exitosa</span>
+    </div>
+  </div>
+</AdminLayout>
+
+<script>
+  const modal = document.getElementById('promo-modal');
+  const form = document.getElementById('promo-form') as HTMLFormElement;
+  const toast = document.getElementById('toast');
+  const toastMessage = document.getElementById('toast-message');
+  
+  function showToast(message: string, isError = false) {
+    if (toast && toastMessage) {
+      toastMessage.textContent = message;
+      toast.querySelector('div')!.className = `${isError ? 'bg-red-600' : 'bg-green-600'} text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-3`;
+      toast.classList.remove('hidden');
+      setTimeout(() => toast.classList.add('hidden'), 3000);
+    }
+  }
+  
+  // Abrir modal
+  document.getElementById('new-promo-btn')?.addEventListener('click', () => {
+    modal?.classList.remove('hidden');
+    modal?.classList.add('flex');
+  });
+  
+  // Cerrar modal
+  const closeModal = () => {
+    modal?.classList.add('hidden');
+    modal?.classList.remove('flex');
+    form?.reset();
+  };
+  
+  document.getElementById('close-modal')?.addEventListener('click', closeModal);
+  document.getElementById('cancel-modal')?.addEventListener('click', closeModal);
+  
+  // Crear código
+  form?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const formData = new FormData(form);
+    const type = formData.get('type') as string;
+    let value = parseFloat(formData.get('value') as string);
+    
+    // Si es cantidad fija, convertir a céntimos
+    if (type === 'fixed') {
+      value = Math.round(value * 100);
+    }
+    
+    const minOrder = formData.get('min_order');
+    const minOrderCents = minOrder ? Math.round(parseFloat(minOrder as string) * 100) : null;
+    
+    const data = {
+      code: (formData.get('code') as string).toUpperCase(),
+      type,
+      value,
+      min_order_amount: minOrderCents,
+      max_uses: formData.get('max_uses') ? parseInt(formData.get('max_uses') as string) : null,
+      expires_at: formData.get('expires_at') || null,
+      active: formData.get('active') === 'on'
+    };
+    
+    try {
+      const response = await fetch('/api/admin/promotions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(data)
+      });
+      
+      const result = await response.json();
+      
+      if (!response.ok) throw new Error(result.error);
+      
+      showToast('Código creado correctamente');
+      closeModal();
+      setTimeout(() => location.reload(), 1000);
+    } catch (error: any) {
+      showToast(error.message || 'Error al crear el código', true);
+    }
+  });
+  
+  // Toggle activar/desactivar
+  document.querySelectorAll('[data-toggle-code]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = (btn as HTMLElement).dataset.toggleCode;
+      const isActive = (btn as HTMLElement).dataset.active === 'true';
+      
+      try {
+        const response = await fetch(`/api/admin/promotions/${id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ active: !isActive })
+        });
+        
+        if (!response.ok) throw new Error('Error al actualizar');
+        
+        showToast(isActive ? 'Código desactivado' : 'Código activado');
+        setTimeout(() => location.reload(), 1000);
+      } catch (error) {
+        showToast('Error al actualizar el código', true);
+      }
+    });
+  });
+  
+  // Eliminar
+  document.querySelectorAll('[data-delete-code]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      if (!confirm('¿Seguro que quieres eliminar este código?')) return;
+      
+      const id = (btn as HTMLElement).dataset.deleteCode;
+      
+      try {
+        const response = await fetch(`/api/admin/promotions/${id}`, {
+          method: 'DELETE',
+          credentials: 'include'
+        });
+        
+        if (!response.ok) throw new Error('Error al eliminar');
+        
+        showToast('Código eliminado');
+        setTimeout(() => location.reload(), 1000);
+      } catch (error) {
+        showToast('Error al eliminar el código', true);
+      }
+    });
+  });
+</script>

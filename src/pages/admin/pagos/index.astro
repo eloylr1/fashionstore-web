@@ -1,0 +1,276 @@
+---
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * FASHIONMARKET - Admin Métodos de Pago
+ * Configuración de pasarelas de pago
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
+
+export const prerender = false;
+
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { supabase, isSupabaseConfigured } from '../../../lib/supabase/client';
+
+// Obtener configuración de pagos
+let paymentConfig = {
+  stripe_enabled: true,
+  paypal_enabled: false,
+  transfer_enabled: true,
+  cash_on_delivery_enabled: false,
+  currency: 'EUR',
+  currency_symbol: '€'
+};
+
+if (isSupabaseConfigured() && supabase) {
+  const { data } = await supabase
+    .from('store_settings')
+    .select('*')
+    .eq('category', 'payments')
+    .single();
+  
+  if (data?.settings) {
+    paymentConfig = { ...paymentConfig, ...data.settings };
+  }
+}
+---
+
+<AdminLayout title="Métodos de Pago">
+  <div class="space-y-6 max-w-4xl">
+    <!-- Header -->
+    <div>
+      <h1 class="text-2xl font-semibold text-navy-900">Métodos de Pago</h1>
+      <p class="text-charcoal-500 mt-1">Configura las pasarelas de pago disponibles para tus clientes</p>
+    </div>
+
+    <form id="payments-form" class="space-y-4">
+      <!-- Stripe -->
+      <div class="bg-white border border-charcoal-100 p-6 hover:border-navy-200 transition-colors">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-4">
+            <div class="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center">
+              <span class="text-indigo-600 font-bold text-lg">S</span>
+            </div>
+            <div>
+              <h3 class="font-semibold text-navy-900">Stripe</h3>
+              <p class="text-sm text-charcoal-500">Tarjetas de crédito y débito</p>
+            </div>
+          </div>
+          <label class="relative inline-flex items-center cursor-pointer">
+            <input 
+              type="checkbox" 
+              name="stripe_enabled" 
+              class="sr-only peer"
+              checked={paymentConfig.stripe_enabled}
+            />
+            <div class="w-11 h-6 bg-charcoal-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-navy-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-navy-600"></div>
+          </label>
+        </div>
+        <div class="mt-4 pl-16">
+          <div class="flex flex-wrap gap-2">
+            <span class="px-2 py-1 bg-charcoal-100 text-charcoal-600 text-xs rounded">Visa</span>
+            <span class="px-2 py-1 bg-charcoal-100 text-charcoal-600 text-xs rounded">Mastercard</span>
+            <span class="px-2 py-1 bg-charcoal-100 text-charcoal-600 text-xs rounded">American Express</span>
+            <span class="px-2 py-1 bg-charcoal-100 text-charcoal-600 text-xs rounded">Apple Pay</span>
+            <span class="px-2 py-1 bg-charcoal-100 text-charcoal-600 text-xs rounded">Google Pay</span>
+          </div>
+          <p class="text-xs text-charcoal-400 mt-2">
+            Requiere configurar STRIPE_SECRET_KEY en las variables de entorno
+          </p>
+        </div>
+      </div>
+
+      <!-- PayPal -->
+      <div class="bg-white border border-charcoal-100 p-6 hover:border-navy-200 transition-colors">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-4">
+            <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+              <span class="text-blue-600 font-bold text-lg">P</span>
+            </div>
+            <div>
+              <h3 class="font-semibold text-navy-900">PayPal</h3>
+              <p class="text-sm text-charcoal-500">Pago con cuenta PayPal</p>
+            </div>
+          </div>
+          <label class="relative inline-flex items-center cursor-pointer">
+            <input 
+              type="checkbox" 
+              name="paypal_enabled" 
+              class="sr-only peer"
+              checked={paymentConfig.paypal_enabled}
+            />
+            <div class="w-11 h-6 bg-charcoal-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-navy-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-navy-600"></div>
+          </label>
+        </div>
+        <div class="mt-4 pl-16">
+          <p class="text-xs text-charcoal-400">
+            Requiere configurar las credenciales de PayPal Business
+          </p>
+        </div>
+      </div>
+
+      <!-- Transferencia Bancaria -->
+      <div class="bg-white border border-charcoal-100 p-6 hover:border-navy-200 transition-colors">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-4">
+            <div class="w-12 h-12 bg-emerald-100 rounded-lg flex items-center justify-center">
+              <svg class="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z" />
+              </svg>
+            </div>
+            <div>
+              <h3 class="font-semibold text-navy-900">Transferencia Bancaria</h3>
+              <p class="text-sm text-charcoal-500">Pago manual mediante transferencia</p>
+            </div>
+          </div>
+          <label class="relative inline-flex items-center cursor-pointer">
+            <input 
+              type="checkbox" 
+              name="transfer_enabled" 
+              class="sr-only peer"
+              checked={paymentConfig.transfer_enabled}
+            />
+            <div class="w-11 h-6 bg-charcoal-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-navy-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-navy-600"></div>
+          </label>
+        </div>
+        <div class="mt-4 pl-16">
+          <p class="text-xs text-charcoal-400">
+            El pedido se procesará tras confirmar manualmente la recepción del pago
+          </p>
+        </div>
+      </div>
+
+      <!-- Contrareembolso -->
+      <div class="bg-white border border-charcoal-100 p-6 hover:border-navy-200 transition-colors">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-4">
+            <div class="w-12 h-12 bg-amber-100 rounded-lg flex items-center justify-center">
+              <svg class="w-6 h-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+              </svg>
+            </div>
+            <div>
+              <h3 class="font-semibold text-navy-900">Contrareembolso</h3>
+              <p class="text-sm text-charcoal-500">Pago en efectivo a la entrega</p>
+            </div>
+          </div>
+          <label class="relative inline-flex items-center cursor-pointer">
+            <input 
+              type="checkbox" 
+              name="cash_on_delivery_enabled" 
+              class="sr-only peer"
+              checked={paymentConfig.cash_on_delivery_enabled}
+            />
+            <div class="w-11 h-6 bg-charcoal-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-navy-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-navy-600"></div>
+          </label>
+        </div>
+        <div class="mt-4 pl-16">
+          <p class="text-xs text-charcoal-400">
+            Puede incluir un coste adicional para el cliente
+          </p>
+        </div>
+      </div>
+
+      <!-- Moneda -->
+      <div class="bg-white border border-charcoal-100 p-6">
+        <h3 class="font-semibold text-navy-900 mb-4">Moneda</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-charcoal-700 mb-1">Moneda</label>
+            <select name="currency" class="select-elegant">
+              <option value="EUR" selected={paymentConfig.currency === 'EUR'}>Euro (EUR)</option>
+              <option value="USD" selected={paymentConfig.currency === 'USD'}>Dólar (USD)</option>
+              <option value="GBP" selected={paymentConfig.currency === 'GBP'}>Libra (GBP)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-charcoal-700 mb-1">Símbolo</label>
+            <input 
+              type="text" 
+              name="currency_symbol" 
+              value={paymentConfig.currency_symbol}
+              class="input-elegant"
+              maxlength="3"
+            />
+          </div>
+        </div>
+      </div>
+
+      <!-- Submit -->
+      <div class="flex justify-end">
+        <button 
+          type="submit" 
+          id="submit-btn"
+          class="px-6 py-3 bg-navy-900 text-white font-medium hover:bg-navy-800 transition-colors"
+        >
+          Guardar Cambios
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" class="fixed bottom-4 right-4 hidden z-50">
+    <div id="toast-content" class="bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-3">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+      </svg>
+      <span id="toast-message">Configuración guardada</span>
+    </div>
+  </div>
+</AdminLayout>
+
+<script>
+  const form = document.getElementById('payments-form') as HTMLFormElement;
+  const submitBtn = document.getElementById('submit-btn') as HTMLButtonElement;
+  const toast = document.getElementById('toast');
+  const toastContent = document.getElementById('toast-content');
+  const toastMessage = document.getElementById('toast-message');
+  
+  function showToast(message: string, isError = false) {
+    if (toast && toastContent && toastMessage) {
+      toastMessage.textContent = message;
+      toastContent.className = `${isError ? 'bg-red-600' : 'bg-green-600'} text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-3`;
+      toast.classList.remove('hidden');
+      setTimeout(() => toast.classList.add('hidden'), 3000);
+    }
+  }
+  
+  form?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const originalText = submitBtn.textContent;
+    submitBtn.textContent = 'Guardando...';
+    submitBtn.disabled = true;
+    
+    try {
+      const formData = new FormData(form);
+      
+      const settings = {
+        stripe_enabled: formData.get('stripe_enabled') === 'on',
+        paypal_enabled: formData.get('paypal_enabled') === 'on',
+        transfer_enabled: formData.get('transfer_enabled') === 'on',
+        cash_on_delivery_enabled: formData.get('cash_on_delivery_enabled') === 'on',
+        currency: formData.get('currency'),
+        currency_symbol: formData.get('currency_symbol')
+      };
+      
+      const response = await fetch('/api/admin/settings/payments', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(settings)
+      });
+      
+      const result = await response.json();
+      
+      if (!response.ok) throw new Error(result.error);
+      
+      showToast('Configuración de pagos guardada correctamente');
+    } catch (error: any) {
+      showToast(error.message || 'Error al guardar', true);
+    } finally {
+      submitBtn.textContent = originalText;
+      submitBtn.disabled = false;
+    }
+  });
+</script>

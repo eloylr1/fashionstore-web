@@ -14,7 +14,7 @@ interface NavItem {
   badge?: string | null;
 }
 
-const navItems: NavItem[] = [
+const mainNavItems: NavItem[] = [
   { 
     href: '/admin', 
     label: 'Dashboard', 
@@ -43,7 +43,30 @@ const navItems: NavItem[] = [
   },
 ];
 
-const settingsItems = [
+const commerceNavItems: NavItem[] = [
+  {
+    href: '/admin/promociones',
+    label: 'Promociones',
+    icon: 'promo'
+  },
+  {
+    href: '/admin/envios',
+    label: 'Envíos',
+    icon: 'shipping'
+  },
+  {
+    href: '/admin/pagos',
+    label: 'Métodos de Pago',
+    icon: 'payments'
+  },
+  {
+    href: '/admin/impuestos',
+    label: 'Impuestos',
+    icon: 'tax'
+  },
+];
+
+const systemNavItems: NavItem[] = [
   {
     href: '/admin/configuracion',
     label: 'Configuración',
@@ -52,9 +75,44 @@ const settingsItems = [
 ];
 
 const currentPath = Astro.url.pathname;
+
+// Función para renderizar iconos
+const icons: Record<string, string> = {
+  dashboard: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+  </svg>`,
+  products: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+  </svg>`,
+  categories: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+  </svg>`,
+  orders: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+  </svg>`,
+  users: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+  </svg>`,
+  promo: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
+  </svg>`,
+  shipping: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+  </svg>`,
+  payments: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+  </svg>`,
+  tax: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+  </svg>`,
+  settings: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+  </svg>`,
+};
 ---
 
-<aside class="w-72 bg-gradient-to-b from-navy-900 via-navy-900 to-navy-950 text-white flex-shrink-0 hidden lg:flex lg:flex-col">
+<aside class="w-72 bg-navy-900 text-white flex-shrink-0 hidden lg:flex lg:flex-col min-h-screen">
   <!-- Logo Section -->
   <div class="px-6 py-6 border-b border-white/10">
     <a href="/admin" class="flex items-center gap-3 group">
@@ -65,7 +123,7 @@ const currentPath = Astro.url.pathname;
         <span class="font-serif text-xl font-semibold tracking-tight block group-hover:text-leather transition-colors">
           FashionMarket
         </span>
-        <span class="text-[10px] uppercase tracking-widest text-charcoal-400 font-medium">
+        <span class="text-[10px] uppercase tracking-widest text-white/50 font-medium">
           Admin Panel
         </span>
       </div>
@@ -73,13 +131,14 @@ const currentPath = Astro.url.pathname;
   </div>
   
   <!-- Main Navigation -->
-  <nav class="flex-1 px-4 py-6 overflow-y-auto">
+  <nav class="flex-1 px-4 py-6 overflow-y-auto custom-scrollbar">
+    <!-- Principal -->
     <div class="space-y-1">
-      <p class="px-3 mb-3 text-[10px] font-semibold uppercase tracking-widest text-charcoal-500">
+      <p class="px-3 mb-3 text-[10px] font-semibold uppercase tracking-widest text-white/40">
         Principal
       </p>
       
-      {navItems.map((item) => {
+      {mainNavItems.map((item) => {
         const isActive = item.exact 
           ? currentPath === item.href
           : currentPath === item.href || currentPath.startsWith(item.href + '/');
@@ -88,50 +147,21 @@ const currentPath = Astro.url.pathname;
           <a
             href={item.href}
             class={`
-              group flex items-center gap-3 px-4 py-3 text-sm font-medium transition-all duration-200 relative
+              group flex items-center gap-3 px-4 py-3 text-sm font-medium transition-all duration-200 relative rounded-lg
               ${isActive 
                 ? 'bg-white/10 text-white shadow-lg' 
-                : 'text-charcoal-300 hover:bg-white/5 hover:text-white'
+                : 'text-white/70 hover:bg-white/5 hover:text-white'
               }
             `}
           >
-            {/* Active indicator */}
             {isActive && (
               <span class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-leather rounded-r-full"></span>
             )}
             
-            {/* Icons */}
-            <span class={`flex-shrink-0 ${isActive ? 'text-leather' : 'text-charcoal-400 group-hover:text-white'}`}>
-              {item.icon === 'dashboard' && (
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-                </svg>
-              )}
-              {item.icon === 'products' && (
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                </svg>
-              )}
-              {item.icon === 'categories' && (
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-                </svg>
-              )}
-              {item.icon === 'orders' && (
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
-                </svg>
-              )}
-              {item.icon === 'users' && (
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-                </svg>
-              )}
-            </span>
+            <span class={`flex-shrink-0 ${isActive ? 'text-leather' : 'text-white/50 group-hover:text-white'}`} set:html={icons[item.icon] || icons.settings} />
             
             <span class="flex-1">{item.label}</span>
             
-            {/* Badge */}
             {item.badge && (
               <span class="px-2 py-0.5 text-xs font-semibold bg-leather text-white rounded-full">
                 {item.badge}
@@ -142,33 +172,65 @@ const currentPath = Astro.url.pathname;
       })}
     </div>
     
-    <!-- Settings Section -->
+    <!-- Comercio -->
     <div class="mt-8 pt-6 border-t border-white/10">
-      <p class="px-3 mb-3 text-[10px] font-semibold uppercase tracking-widest text-charcoal-500">
+      <p class="px-3 mb-3 text-[10px] font-semibold uppercase tracking-widest text-white/40">
+        Comercio
+      </p>
+      
+      {commerceNavItems.map((item) => {
+        const isActive = currentPath === item.href || currentPath.startsWith(item.href + '/');
+        
+        return (
+          <a
+            href={item.href}
+            class={`
+              group flex items-center gap-3 px-4 py-3 text-sm font-medium transition-all duration-200 relative rounded-lg
+              ${isActive 
+                ? 'bg-white/10 text-white shadow-lg' 
+                : 'text-white/70 hover:bg-white/5 hover:text-white'
+              }
+            `}
+          >
+            {isActive && (
+              <span class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-leather rounded-r-full"></span>
+            )}
+            
+            <span class={`flex-shrink-0 ${isActive ? 'text-leather' : 'text-white/50 group-hover:text-white'}`} set:html={icons[item.icon] || icons.settings} />
+            
+            <span class="flex-1">{item.label}</span>
+          </a>
+        );
+      })}
+    </div>
+    
+    <!-- Sistema -->
+    <div class="mt-8 pt-6 border-t border-white/10">
+      <p class="px-3 mb-3 text-[10px] font-semibold uppercase tracking-widest text-white/40">
         Sistema
       </p>
       
-      {settingsItems.map((item) => {
+      {systemNavItems.map((item) => {
         const isActive = currentPath.startsWith(item.href);
         
         return (
           <a
             href={item.href}
             class={`
-              group flex items-center gap-3 px-4 py-3 text-sm font-medium transition-all duration-200
+              group flex items-center gap-3 px-4 py-3 text-sm font-medium transition-all duration-200 relative rounded-lg
               ${isActive 
-                ? 'bg-white/10 text-white' 
-                : 'text-charcoal-300 hover:bg-white/5 hover:text-white'
+                ? 'bg-white/10 text-white shadow-lg' 
+                : 'text-white/70 hover:bg-white/5 hover:text-white'
               }
             `}
           >
-            <span class={`${isActive ? 'text-leather' : 'text-charcoal-400 group-hover:text-white'}`}>
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
-            </span>
-            <span>{item.label}</span>
+            {isActive && (
+              <span class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-leather rounded-r-full"></span>
+            )}
+            
+            <span class={`flex-shrink-0 ${isActive ? 'text-leather' : 'text-white/50 group-hover:text-white'}`} set:html={icons[item.icon] || icons.settings} />
+            
+            <span class="flex-1">{item.label}</span>
           </a>
         );
       })}
@@ -176,29 +238,28 @@ const currentPath = Astro.url.pathname;
   </nav>
   
   <!-- Footer Actions -->
-  <div class="px-4 py-4 border-t border-white/10 bg-navy-950/50">
-    <!-- Ver Tienda - Abre en nueva pestaña sin afectar sesión -->
+  <div class="px-4 py-4 border-t border-white/10 bg-navy-950">
+    <!-- Ver Tienda -->
     <a 
       href="/" 
       target="_blank"
       rel="noopener noreferrer"
-      class="flex items-center gap-3 px-4 py-3 text-sm text-charcoal-300 hover:text-white hover:bg-white/5 transition-all duration-200 group"
-      onclick="event.stopPropagation();"
+      class="flex items-center gap-3 px-4 py-3 text-sm text-white/70 hover:text-white hover:bg-white/5 transition-all duration-200 group rounded-lg"
     >
-      <svg class="w-5 h-5 text-charcoal-400 group-hover:text-leather transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg class="w-5 h-5 text-white/50 group-hover:text-leather transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
       </svg>
       <span>Ver Tienda</span>
-      <span class="ml-auto text-xs text-charcoal-500 group-hover:text-charcoal-300">Nueva pestaña ↗</span>
+      <span class="ml-auto text-xs text-white/40 group-hover:text-white/60">Nueva pestaña ↗</span>
     </a>
     
     <!-- Cerrar Sesión -->
     <button 
       type="button"
       id="sidebar-logout-btn"
-      class="w-full flex items-center gap-3 px-4 py-3 text-sm text-charcoal-300 hover:text-red-400 hover:bg-red-500/10 transition-all duration-200 group"
+      class="w-full flex items-center gap-3 px-4 py-3 text-sm text-white/70 hover:text-red-400 hover:bg-red-500/10 transition-all duration-200 group rounded-lg"
     >
-      <svg class="w-5 h-5 text-charcoal-400 group-hover:text-red-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg class="w-5 h-5 text-white/50 group-hover:text-red-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
       </svg>
       <span>Cerrar Sesión</span>
@@ -206,8 +267,23 @@ const currentPath = Astro.url.pathname;
   </div>
 </aside>
 
+<style>
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 4px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 2px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.3);
+  }
+</style>
+
 <script>
-  // Logout button - usando navegación GET para evitar problemas de CORS
   const sidebarLogoutBtn = document.getElementById('sidebar-logout-btn');
   if (sidebarLogoutBtn) {
     sidebarLogoutBtn.addEventListener('click', () => {

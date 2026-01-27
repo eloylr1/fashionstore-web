@@ -1,8 +1,8 @@
 ---
 /**
  * ═══════════════════════════════════════════════════════════════════════════
- * FASHIONMARKET - Admin Settings (Rediseñado)
- * Configuración completa del sistema con diseño moderno
+ * FASHIONMARKET - Admin Settings
+ * Configuración general de la tienda
  * ═══════════════════════════════════════════════════════════════════════════
  */
 
@@ -10,91 +10,47 @@ export const prerender = false;
 
 import AdminLayout from '../../../layouts/AdminLayout.astro';
 import SettingsPanel from '../../../components/admin/SettingsPanel.tsx';
-import StoreSettingsPanel from '../../../components/admin/StoreSettingsPanel.tsx';
 
 // Verificar autenticación
 const accessToken = Astro.cookies.get('sb-access-token')?.value;
-const userRole = Astro.cookies.get('user-role')?.value;
+const userRole = Astro.cookies.get('user-role')?.value?.toLowerCase();
 
 if (!accessToken || userRole !== 'admin') {
   return Astro.redirect('/admin/acceso-seguro');
 }
-
-// Tab activa por defecto
-const activeTab = Astro.url.searchParams.get('tab') || 'empresa';
 ---
 
 <AdminLayout title="Configuración">
   <div class="space-y-6">
-    <!-- Header con Tabs -->
-    <div class="bg-white border border-gray-100 shadow-sm rounded-xl overflow-hidden">
-      <div class="px-6 py-5 border-b border-gray-100">
-        <h1 class="text-xl font-bold text-gray-900">Configuración</h1>
-        <p class="text-sm text-gray-500 mt-1">Gestiona todos los aspectos de tu tienda</p>
-      </div>
-      
-      <!-- Navigation Tabs -->
-      <div class="flex border-b border-gray-200">
-        <a 
-          href="/admin/configuracion?tab=empresa"
-          class:list={[
-            "flex items-center gap-2 px-6 py-4 text-sm font-medium border-b-2 transition-all",
-            activeTab === 'empresa' 
-              ? 'border-blue-600 text-blue-600 bg-blue-50/50' 
-              : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-          ]}
-        >
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-          </svg>
-          Datos de Empresa
-        </a>
-        <a 
-          href="/admin/configuracion?tab=tienda"
-          class:list={[
-            "flex items-center gap-2 px-6 py-4 text-sm font-medium border-b-2 transition-all",
-            activeTab === 'tienda' 
-              ? 'border-blue-600 text-blue-600 bg-blue-50/50' 
-              : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-          ]}
-        >
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-          </svg>
-          Envíos y Pagos
-        </a>
-      </div>
+    <!-- Header -->
+    <div class="bg-white border border-charcoal-100 p-6">
+      <h1 class="text-xl font-semibold text-navy-900">Configuración de la Tienda</h1>
+      <p class="text-sm text-charcoal-500 mt-1">Datos generales de tu negocio</p>
     </div>
 
-    <!-- Content based on active tab -->
-    {activeTab === 'empresa' && (
-      <SettingsPanel client:load />
-    )}
-    
-    {activeTab === 'tienda' && (
-      <StoreSettingsPanel client:load />
-    )}
+    <!-- Settings Panel -->
+    <SettingsPanel client:load />
 
     <!-- Quick Links Section -->
-    <div class="pt-8 border-t border-gray-200">
-      <h3 class="text-sm font-semibold text-gray-700 mb-4">Enlaces rápidos a paneles externos</h3>
+    <div class="bg-white border border-charcoal-100 p-6">
+      <h3 class="text-sm font-semibold text-navy-900 mb-4">Enlaces a paneles externos</h3>
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <a 
           href="https://supabase.com/dashboard" 
           target="_blank"
           rel="noopener noreferrer"
-          class="flex items-center gap-3 p-4 bg-white border border-gray-200 rounded-xl hover:border-emerald-300 hover:shadow-md transition-all group"
+          class="flex items-center gap-3 p-4 bg-charcoal-50 border border-charcoal-100 hover:border-navy-200 hover:shadow-md transition-all group"
         >
-          <div class="w-10 h-10 bg-emerald-100 text-emerald-600 rounded-xl flex items-center justify-center group-hover:bg-emerald-200 transition-colors">
+          <div class="w-10 h-10 bg-emerald-100 text-emerald-600 flex items-center justify-center group-hover:bg-emerald-200 transition-colors">
             <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
               <path d="M21.362 9.354H12V.396a.396.396 0 0 0-.716-.233L2.203 12.424l-.401.562a1.04 1.04 0 0 0 .836 1.659H12v8.959a.396.396 0 0 0 .716.233l9.081-12.261.401-.562a1.04 1.04 0 0 0-.836-1.66z"/>
             </svg>
           </div>
           <div class="flex-1">
-            <span class="font-medium text-gray-900 group-hover:text-emerald-700">Supabase</span>
-            <p class="text-xs text-gray-500">Base de datos</p>
+            <span class="font-medium text-navy-900 group-hover:text-emerald-700">Supabase</span>
+            <p class="text-xs text-charcoal-500">Base de datos</p>
           </div>
-          <svg class="w-4 h-4 text-gray-400 group-hover:text-emerald-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg class="w-4 h-4 text-charcoal-400 group-hover:text-emerald-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
           </svg>
         </a>
@@ -103,18 +59,18 @@ const activeTab = Astro.url.searchParams.get('tab') || 'empresa';
           href="https://cloudinary.com/console" 
           target="_blank"
           rel="noopener noreferrer"
-          class="flex items-center gap-3 p-4 bg-white border border-gray-200 rounded-xl hover:border-blue-300 hover:shadow-md transition-all group"
+          class="flex items-center gap-3 p-4 bg-charcoal-50 border border-charcoal-100 hover:border-navy-200 hover:shadow-md transition-all group"
         >
-          <div class="w-10 h-10 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center group-hover:bg-blue-200 transition-colors">
+          <div class="w-10 h-10 bg-blue-100 text-blue-600 flex items-center justify-center group-hover:bg-blue-200 transition-colors">
             <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
               <path d="M18.84 10.636a5.23 5.23 0 00-2.264-3.381 5.24 5.24 0 00-3.996-.784 5.73 5.73 0 00-10.16 4.86A4.04 4.04 0 000 15.116a4.04 4.04 0 004.04 4.04h13.678a4.04 4.04 0 001.122-7.92v-.6z"/>
             </svg>
           </div>
           <div class="flex-1">
-            <span class="font-medium text-gray-900 group-hover:text-blue-700">Cloudinary</span>
-            <p class="text-xs text-gray-500">Imágenes</p>
+            <span class="font-medium text-navy-900 group-hover:text-blue-700">Cloudinary</span>
+            <p class="text-xs text-charcoal-500">Imágenes</p>
           </div>
-          <svg class="w-4 h-4 text-gray-400 group-hover:text-blue-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg class="w-4 h-4 text-charcoal-400 group-hover:text-blue-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
           </svg>
         </a>
@@ -123,16 +79,16 @@ const activeTab = Astro.url.searchParams.get('tab') || 'empresa';
           href="https://dashboard.stripe.com" 
           target="_blank"
           rel="noopener noreferrer"
-          class="flex items-center gap-3 p-4 bg-white border border-gray-200 rounded-xl hover:border-indigo-300 hover:shadow-md transition-all group"
+          class="flex items-center gap-3 p-4 bg-charcoal-50 border border-charcoal-100 hover:border-navy-200 hover:shadow-md transition-all group"
         >
-          <div class="w-10 h-10 bg-indigo-100 text-indigo-600 rounded-xl flex items-center justify-center group-hover:bg-indigo-200 transition-colors">
+          <div class="w-10 h-10 bg-indigo-100 text-indigo-600 flex items-center justify-center group-hover:bg-indigo-200 transition-colors">
             <span class="text-lg font-bold">S</span>
           </div>
           <div class="flex-1">
-            <span class="font-medium text-gray-900 group-hover:text-indigo-700">Stripe</span>
-            <p class="text-xs text-gray-500">Pagos</p>
+            <span class="font-medium text-navy-900 group-hover:text-indigo-700">Stripe</span>
+            <p class="text-xs text-charcoal-500">Pagos</p>
           </div>
-          <svg class="w-4 h-4 text-gray-400 group-hover:text-indigo-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg class="w-4 h-4 text-charcoal-400 group-hover:text-indigo-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
           </svg>
         </a>

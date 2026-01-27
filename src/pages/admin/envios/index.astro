@@ -1,0 +1,275 @@
+---
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * FASHIONMARKET - Admin Envíos
+ * Configuración de envíos y opciones de entrega
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
+
+export const prerender = false;
+
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { supabase, isSupabaseConfigured } from '../../../lib/supabase/client';
+
+// Obtener configuración de envíos
+let shippingConfig = {
+  free_shipping_threshold: 10000, // 100€ en céntimos
+  standard_shipping_cost: 499, // 4.99€
+  express_shipping_cost: 999, // 9.99€
+  express_shipping_enabled: true,
+  return_days: 30,
+  estimated_delivery_days: 3,
+  express_delivery_days: 1
+};
+
+if (isSupabaseConfigured() && supabase) {
+  const { data } = await supabase
+    .from('store_settings')
+    .select('*')
+    .eq('category', 'shipping')
+    .single();
+  
+  if (data?.settings) {
+    shippingConfig = { ...shippingConfig, ...data.settings };
+  }
+}
+---
+
+<AdminLayout title="Envíos">
+  <div class="space-y-6 max-w-4xl">
+    <!-- Header -->
+    <div>
+      <h1 class="text-2xl font-semibold text-navy-900">Configuración de Envíos</h1>
+      <p class="text-charcoal-500 mt-1">Gestiona los costes y opciones de envío de tu tienda</p>
+    </div>
+
+    <form id="shipping-form" class="space-y-6">
+      <!-- Envío Estándar -->
+      <div class="bg-white border border-charcoal-100 p-6">
+        <div class="flex items-start gap-4">
+          <div class="w-12 h-12 bg-navy-100 rounded-lg flex items-center justify-center flex-shrink-0">
+            <svg class="w-6 h-6 text-navy-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+            </svg>
+          </div>
+          <div class="flex-1">
+            <h2 class="font-semibold text-navy-900">Envío Estándar</h2>
+            <p class="text-sm text-charcoal-500 mt-1">Configuración del envío regular</p>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+              <div>
+                <label class="block text-sm font-medium text-charcoal-700 mb-1">Coste de envío (€)</label>
+                <input 
+                  type="number" 
+                  name="standard_shipping_cost" 
+                  step="0.01"
+                  min="0"
+                  value={(shippingConfig.standard_shipping_cost / 100).toFixed(2)}
+                  class="input-elegant"
+                />
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-charcoal-700 mb-1">Días de entrega estimados</label>
+                <input 
+                  type="number" 
+                  name="estimated_delivery_days" 
+                  min="1"
+                  max="30"
+                  value={shippingConfig.estimated_delivery_days}
+                  class="input-elegant"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Envío Gratis -->
+      <div class="bg-white border border-charcoal-100 p-6">
+        <div class="flex items-start gap-4">
+          <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
+            <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <div class="flex-1">
+            <h2 class="font-semibold text-navy-900">Envío Gratis</h2>
+            <p class="text-sm text-charcoal-500 mt-1">Ofrece envío gratuito a partir de cierto importe</p>
+            
+            <div class="mt-4">
+              <label class="block text-sm font-medium text-charcoal-700 mb-1">Envío gratis a partir de (€)</label>
+              <input 
+                type="number" 
+                name="free_shipping_threshold" 
+                step="0.01"
+                min="0"
+                value={(shippingConfig.free_shipping_threshold / 100).toFixed(2)}
+                class="input-elegant max-w-xs"
+              />
+              <p class="text-xs text-charcoal-500 mt-1">Los pedidos que superen este importe tendrán envío gratuito</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Envío Express -->
+      <div class="bg-white border border-charcoal-100 p-6">
+        <div class="flex items-start gap-4">
+          <div class="w-12 h-12 bg-amber-100 rounded-lg flex items-center justify-center flex-shrink-0">
+            <svg class="w-6 h-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+          </div>
+          <div class="flex-1">
+            <div class="flex items-center justify-between">
+              <div>
+                <h2 class="font-semibold text-navy-900">Envío Express (24-48h)</h2>
+                <p class="text-sm text-charcoal-500 mt-1">Opción de entrega rápida para clientes</p>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input 
+                  type="checkbox" 
+                  name="express_shipping_enabled" 
+                  class="sr-only peer"
+                  checked={shippingConfig.express_shipping_enabled}
+                />
+                <div class="w-11 h-6 bg-charcoal-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-navy-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-navy-600"></div>
+              </label>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+              <div>
+                <label class="block text-sm font-medium text-charcoal-700 mb-1">Coste envío express (€)</label>
+                <input 
+                  type="number" 
+                  name="express_shipping_cost" 
+                  step="0.01"
+                  min="0"
+                  value={(shippingConfig.express_shipping_cost / 100).toFixed(2)}
+                  class="input-elegant"
+                />
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-charcoal-700 mb-1">Días de entrega express</label>
+                <input 
+                  type="number" 
+                  name="express_delivery_days" 
+                  min="1"
+                  max="5"
+                  value={shippingConfig.express_delivery_days}
+                  class="input-elegant"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Devoluciones -->
+      <div class="bg-white border border-charcoal-100 p-6">
+        <div class="flex items-start gap-4">
+          <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
+            <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+          </div>
+          <div class="flex-1">
+            <h2 class="font-semibold text-navy-900">Política de Devoluciones</h2>
+            <p class="text-sm text-charcoal-500 mt-1">Días permitidos para devoluciones</p>
+            
+            <div class="mt-4">
+              <label class="block text-sm font-medium text-charcoal-700 mb-1">Días para devoluciones</label>
+              <input 
+                type="number" 
+                name="return_days" 
+                min="7"
+                max="90"
+                value={shippingConfig.return_days}
+                class="input-elegant max-w-xs"
+              />
+              <p class="text-xs text-charcoal-500 mt-1">Plazo que tienen los clientes para solicitar una devolución</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Submit -->
+      <div class="flex justify-end">
+        <button 
+          type="submit" 
+          id="submit-btn"
+          class="px-6 py-3 bg-navy-900 text-white font-medium hover:bg-navy-800 transition-colors"
+        >
+          Guardar Cambios
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" class="fixed bottom-4 right-4 hidden z-50">
+    <div id="toast-content" class="bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-3">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+      </svg>
+      <span id="toast-message">Configuración guardada</span>
+    </div>
+  </div>
+</AdminLayout>
+
+<script>
+  const form = document.getElementById('shipping-form') as HTMLFormElement;
+  const submitBtn = document.getElementById('submit-btn') as HTMLButtonElement;
+  const toast = document.getElementById('toast');
+  const toastContent = document.getElementById('toast-content');
+  const toastMessage = document.getElementById('toast-message');
+  
+  function showToast(message: string, isError = false) {
+    if (toast && toastContent && toastMessage) {
+      toastMessage.textContent = message;
+      toastContent.className = `${isError ? 'bg-red-600' : 'bg-green-600'} text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-3`;
+      toast.classList.remove('hidden');
+      setTimeout(() => toast.classList.add('hidden'), 3000);
+    }
+  }
+  
+  form?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const originalText = submitBtn.textContent;
+    submitBtn.textContent = 'Guardando...';
+    submitBtn.disabled = true;
+    
+    try {
+      const formData = new FormData(form);
+      
+      const settings = {
+        standard_shipping_cost: Math.round(parseFloat(formData.get('standard_shipping_cost') as string) * 100),
+        estimated_delivery_days: parseInt(formData.get('estimated_delivery_days') as string),
+        free_shipping_threshold: Math.round(parseFloat(formData.get('free_shipping_threshold') as string) * 100),
+        express_shipping_enabled: formData.get('express_shipping_enabled') === 'on',
+        express_shipping_cost: Math.round(parseFloat(formData.get('express_shipping_cost') as string) * 100),
+        express_delivery_days: parseInt(formData.get('express_delivery_days') as string),
+        return_days: parseInt(formData.get('return_days') as string)
+      };
+      
+      const response = await fetch('/api/admin/settings/shipping', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(settings)
+      });
+      
+      const result = await response.json();
+      
+      if (!response.ok) throw new Error(result.error);
+      
+      showToast('Configuración de envíos guardada correctamente');
+    } catch (error: any) {
+      showToast(error.message || 'Error al guardar', true);
+    } finally {
+      submitBtn.textContent = originalText;
+      submitBtn.disabled = false;
+    }
+  });
+</script>
