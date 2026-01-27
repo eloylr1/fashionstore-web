@@ -49,7 +49,7 @@ if (isSupabaseConfigured() && supabase) {
       .single();
     
     order = orderData;
-    customer = orderData?.profiles;
+    customer = (orderData as any)?.profiles;
 
     // Obtener items del pedido
     if (order) {

@@ -88,7 +88,7 @@ if (isSupabaseConfigured() && supabase) {
       .in('status', ['paid', 'delivered', 'shipped', 'processing']);
     
     if (completedOrders) {
-      stats.revenue = completedOrders.reduce((sum, order) => sum + (order.total || 0), 0);
+      stats.revenue = completedOrders.reduce((sum, order: { total: number | null }) => sum + (order.total || 0), 0);
     }
 
     // Pedidos recientes

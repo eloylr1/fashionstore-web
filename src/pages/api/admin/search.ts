@@ -7,7 +7,7 @@
  */
 
 import type { APIRoute } from 'astro';
-import { supabase } from '../../../lib/supabase';
+import { getSupabaseClient } from '../../../lib/supabase';
 
 interface ProductResult {
   id: string;
@@ -40,7 +40,7 @@ interface CustomerResult {
 type SearchResult = ProductResult | OrderResult | CustomerResult;
 
 // Palabras clave especiales para búsquedas rápidas
-const SPECIAL_KEYWORDS = {
+const SPECIAL_KEYWORDS: Record<string, { type: string; threshold?: number; status?: string }> = {
   // Stock bajo
   'stock bajo': { type: 'low_stock', threshold: 10 },
   'poco stock': { type: 'low_stock', threshold: 10 },
@@ -77,8 +77,42 @@ const SPECIAL_KEYWORDS = {
   'nuevos pedidos': { type: 'recent_orders' },
 };
 
+// Tipos para los resultados de Supabase
+interface ProductRow {
+  id: string;
+  name: string;
+  price: number;
+  stock: number;
+}
+
+interface ProfileRow {
+  id: string;
+  full_name: string | null;
+  email: string;
+  role?: string;
+}
+
+interface OrderRow {
+  id: string;
+  order_number: string;
+  total: number;
+  status: string;
+  created_at: string;
+  profiles?: { full_name: string | null; email: string } | null;
+}
+
 export const GET: APIRoute = async ({ url, cookies }) => {
   try {
+    // Obtener cliente de Supabase
+    const supabase = getSupabaseClient();
+    
+    if (!supabase) {
+      return new Response(
+        JSON.stringify({ error: 'Supabase no configurado' }),
+        { status: 500, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Verificar autenticación admin
     const accessToken = cookies.get('sb-access-token')?.value;
     const refreshToken = cookies.get('sb-refresh-token')?.value;
@@ -109,7 +143,7 @@ export const GET: APIRoute = async ({ url, cookies }) => {
       .eq('id', user.id)
       .single();
 
-    if (profile?.role !== 'admin') {
+    if ((profile as { role?: string } | null)?.role !== 'admin') {
       return new Response(
         JSON.stringify({ error: 'Acceso denegado' }),
         { status: 403, headers: { 'Content-Type': 'application/json' } }
@@ -143,13 +177,13 @@ export const GET: APIRoute = async ({ url, cookies }) => {
           const { data: products } = await supabase
             .from('products')
             .select('id, name, price, stock')
-            .lt('stock', config.threshold)
+            .lt('stock', config.threshold || 10)
             .gt('stock', 0)
             .order('stock', { ascending: true })
             .limit(limit);
 
           if (products) {
-            products.forEach(p => {
+            (products as ProductRow[]).forEach((p) => {
               results.push({
                 id: p.id,
                 type: 'product',
@@ -174,7 +208,7 @@ export const GET: APIRoute = async ({ url, cookies }) => {
             .limit(limit);
 
           if (products) {
-            products.forEach(p => {
+            (products as ProductRow[]).forEach((p) => {
               results.push({
                 id: p.id,
                 type: 'product',
@@ -210,12 +244,12 @@ export const GET: APIRoute = async ({ url, cookies }) => {
               created_at,
               profiles:user_id (full_name, email)
             `)
-            .eq('status', config.status)
+            .eq('status', config.status || 'pending')
             .order('created_at', { ascending: false })
             .limit(limit);
 
           if (orders) {
-            orders.forEach((o: any) => {
+            (orders as unknown as OrderRow[]).forEach((o) => {
               const customerName = o.profiles?.full_name || o.profiles?.email || 'Cliente';
               results.push({
                 id: o.id,
@@ -240,7 +274,7 @@ export const GET: APIRoute = async ({ url, cookies }) => {
             .limit(limit);
 
           if (products) {
-            products.forEach(p => {
+            (products as ProductRow[]).forEach((p) => {
               results.push({
                 id: p.id,
                 type: 'product',
@@ -265,7 +299,7 @@ export const GET: APIRoute = async ({ url, cookies }) => {
             .limit(limit);
 
           if (customers) {
-            for (const c of customers) {
+            for (const c of (customers as ProfileRow[])) {
               // Contar pedidos de cada cliente
               const { count } = await supabase
                 .from('orders')
@@ -310,7 +344,7 @@ export const GET: APIRoute = async ({ url, cookies }) => {
             .limit(limit);
 
           if (orders) {
-            orders.forEach((o: any) => {
+            (orders as unknown as OrderRow[]).forEach((o) => {
               const customerName = o.profiles?.full_name || o.profiles?.email || 'Cliente';
               const date = new Date(o.created_at).toLocaleDateString('es-ES');
               results.push({
@@ -338,7 +372,7 @@ export const GET: APIRoute = async ({ url, cookies }) => {
         .limit(Math.ceil(limit / 2));
 
       if (products) {
-        products.forEach(p => {
+        (products as ProductRow[]).forEach((p) => {
           const stockWarning = p.stock < 10 ? 'Stock bajo - ' : '';
           results.push({
             id: p.id,
@@ -380,7 +414,7 @@ export const GET: APIRoute = async ({ url, cookies }) => {
           .limit(Math.ceil(limit / 3));
 
         if (orders) {
-          orders.forEach((o: any) => {
+          (orders as unknown as OrderRow[]).forEach((o) => {
             const customerName = o.profiles?.full_name || o.profiles?.email || 'Cliente';
             results.push({
               id: o.id,
@@ -404,7 +438,7 @@ export const GET: APIRoute = async ({ url, cookies }) => {
         .limit(Math.ceil(limit / 3));
 
       if (customers) {
-        for (const c of customers) {
+        for (const c of (customers as ProfileRow[])) {
           const { count } = await supabase
             .from('orders')
             .select('*', { count: 'exact', head: true })
