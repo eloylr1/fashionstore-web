@@ -17,9 +17,10 @@ interface Props {
 const { title } = Astro.props;
 
 // Obtener datos del usuario desde Supabase
-let userName = 'Admin';
+let userName = 'Administrador';
 let userEmail = '';
 let userInitial = 'A';
+let sessionValid = true;
 
 const accessToken = Astro.cookies.get('sb-access-token')?.value;
 if (accessToken) {
@@ -29,7 +30,12 @@ if (accessToken) {
     
     if (supabaseUrl && supabaseServiceKey) {
       const supabase = createClient(supabaseUrl, supabaseServiceKey);
-      const { data: { user } } = await supabase.auth.getUser(accessToken);
+      const { data: { user }, error } = await supabase.auth.getUser(accessToken);
+      
+      if (error) {
+        console.error('[AdminHeader] Error getting user:', error.message);
+        sessionValid = false;
+      }
       
       if (user) {
         userEmail = user.email || '';
@@ -42,7 +48,7 @@ if (accessToken) {
           .single();
         
         // Buscar nombre en: 1) perfil, 2) user_metadata, 3) email
-        if (profile?.full_name && profile.full_name !== 'Admin') {
+        if (profile?.full_name && profile.full_name !== 'Admin' && profile.full_name.trim() !== '') {
           userName = profile.full_name;
           userInitial = profile.full_name.charAt(0).toUpperCase();
         } else if (user.user_metadata?.full_name) {
@@ -54,14 +60,18 @@ if (accessToken) {
         } else if (user.email) {
           // Usar parte del email antes del @, capitalizado
           const emailName = user.email.split('@')[0];
+          // Capitalizar primera letra
           userName = emailName.charAt(0).toUpperCase() + emailName.slice(1);
           userInitial = userName.charAt(0).toUpperCase();
         }
       }
     }
   } catch (error) {
-    console.error('Error getting user data:', error);
+    console.error('[AdminHeader] Error getting user data:', error);
+    sessionValid = false;
   }
+} else {
+  sessionValid = false;
 }
 
 // Obtener hora para mostrar
