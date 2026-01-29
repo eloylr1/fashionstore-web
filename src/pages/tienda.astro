@@ -94,7 +94,8 @@ if (isSupabaseConfigured() && supabase) {
       query = query.eq('featured', true).order('created_at', { ascending: false });
       break;
     case 'nuevos':
-      query = query.order('created_at', { ascending: false });
+      // Los 10 productos más recientes
+      query = query.order('created_at', { ascending: false }).limit(10);
       break;
     case 'todos':
     default:
