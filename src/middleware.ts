@@ -68,8 +68,16 @@ export const onRequest = defineMiddleware(async (context, next) => {
     const refreshToken = context.cookies.get('sb-refresh-token')?.value;
     const userRole = context.cookies.get('user-role')?.value;
     
+    // Debug: mostrar todas las cookies recibidas
+    const allCookies = context.request.headers.get('cookie');
+    console.log('[MIDDLEWARE] Cookies recibidas:', allCookies);
+    console.log('[MIDDLEWARE] accessToken:', accessToken ? 'presente' : 'ausente');
+    console.log('[MIDDLEWARE] refreshToken:', refreshToken ? 'presente' : 'ausente');
+    console.log('[MIDDLEWARE] userRole:', userRole);
+    
     // Si no hay token o no es admin, redirigir al login
     if (!accessToken || userRole !== 'admin') {
+      console.log('[MIDDLEWARE] Redirigiendo a login - accessToken:', !!accessToken, 'userRole:', userRole);
       return context.redirect(`${LOGIN_ROUTE}?redirect=${encodeURIComponent(pathname)}`);
     }
     
