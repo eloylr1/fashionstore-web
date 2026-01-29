@@ -16,7 +16,7 @@ import { supabase, isSupabaseConfigured } from '../lib/supabase/client';
 const url = new URL(Astro.request.url);
 const categoryFilter = url.searchParams.get('categoria') || '';
 const priceFilter = url.searchParams.get('precio') || '';
-const sortFilter = url.searchParams.get('orden') || 'nuevos';
+const sortFilter = url.searchParams.get('orden') || 'todos';
 
 // Datos de demostración
 const demoProducts = [
@@ -94,28 +94,18 @@ if (isSupabaseConfigured() && supabase) {
       query = query.eq('featured', true).order('created_at', { ascending: false });
       break;
     case 'nuevos':
-    default:
       query = query.order('created_at', { ascending: false });
+      break;
+    case 'todos':
+    default:
+      // Sin filtro especial, mostrar todos ordenados por nombre
+      query = query.order('name', { ascending: true });
       break;
   }
 
   let { data: realProducts } = await query as { data: any[] | null };
 
-  // Para "Novedades": mostrar SOLO un producto de cada categoría
-  if (sortFilter === 'nuevos' && !categoryFilter && realProducts?.length && realCategories?.length) {
-    const onePerCategory: any[] = [];
-    const usedCategories = new Set<string>();
-    
-    // Obtener solo un producto de cada categoría (el más reciente)
-    for (const product of realProducts) {
-      if (product.category_id && !usedCategories.has(product.category_id)) {
-        onePerCategory.push(product);
-        usedCategories.add(product.category_id);
-      }
-    }
-    
-    realProducts = onePerCategory;
-  }
+  // Mostrar todos los productos (ya no limitamos a uno por categoría)
   
   if (realProducts?.length) {
     products = realProducts;
@@ -149,6 +139,7 @@ const priceRanges = [
 
 // Opciones de ordenación
 const sortOptions = [
+  { value: 'todos', label: 'Todos' },
   { value: 'nuevos', label: 'Novedades' },
   { value: 'precio-asc', label: 'Precio: Menor a mayor' },
   { value: 'precio-desc', label: 'Precio: Mayor a menor' },
