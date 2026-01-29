@@ -146,6 +146,24 @@ export default function ImageUploader({
     updateHiddenInput(newImages);
   };
 
+  // Mover imagen hacia arriba (índice menor)
+  const moveImageUp = (index: number) => {
+    if (index === 0) return;
+    const newImages = [...images];
+    [newImages[index - 1], newImages[index]] = [newImages[index], newImages[index - 1]];
+    setImages(newImages);
+    updateHiddenInput(newImages);
+  };
+
+  // Mover imagen hacia abajo (índice mayor)
+  const moveImageDown = (index: number) => {
+    if (index === images.length - 1) return;
+    const newImages = [...images];
+    [newImages[index], newImages[index + 1]] = [newImages[index + 1], newImages[index]];
+    setImages(newImages);
+    updateHiddenInput(newImages);
+  };
+
   return (
     <div className="space-y-4">
       <label className="block text-sm font-medium" style={{ color: '#404040' }}>
@@ -241,7 +259,11 @@ export default function ImageUploader({
 
       {/* Vista previa de imágenes */}
       {images.length > 0 && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+        <div>
+          <p style={{ color: '#404040', fontSize: '12px', marginBottom: '8px' }}>
+            💡 Tip: El orden de las imágenes debe coincidir con el orden de los colores del producto
+          </p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
           {images.map((url, index) => (
             <div 
               key={index} 
@@ -255,25 +277,82 @@ export default function ImageUploader({
               />
               
               {/* Badge de posición */}
-              {index === 0 && (
-                <span 
+              <span 
+                style={{
+                  position: 'absolute',
+                  top: '8px',
+                  left: '8px',
+                  padding: '4px 8px',
+                  backgroundColor: index === 0 ? '#b8a067' : '#6b7280',
+                  color: index === 0 ? '#0a1628' : '#ffffff',
+                  fontSize: '10px',
+                  fontWeight: '600',
+                  textTransform: 'uppercase'
+                }}
+              >
+                {index === 0 ? 'Principal' : `#${index + 1}`}
+              </span>
+              
+              {/* Botones de reordenar */}
+              <div style={{
+                position: 'absolute',
+                bottom: '8px',
+                left: '8px',
+                display: 'flex',
+                gap: '4px'
+              }}>
+                {/* Mover arriba (izquierda) */}
+                <button
+                  type="button"
+                  onClick={() => moveImageUp(index)}
+                  disabled={index === 0}
+                  title="Mover a la izquierda"
                   style={{
-                    position: 'absolute',
-                    top: '8px',
-                    left: '8px',
-                    padding: '4px 8px',
-                    backgroundColor: '#b8a067',
-                    color: '#0a1628',
-                    fontSize: '10px',
-                    fontWeight: '600',
-                    textTransform: 'uppercase'
+                    width: '28px',
+                    height: '28px',
+                    borderRadius: '4px',
+                    backgroundColor: index === 0 ? '#9ca3af' : '#0a1628',
+                    color: '#ffffff',
+                    border: 'none',
+                    cursor: index === 0 ? 'not-allowed' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    opacity: index === 0 ? 0.5 : 1
                   }}
                 >
-                  Principal
-                </span>
-              )}
+                  <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
+                  </svg>
+                </button>
+                
+                {/* Mover abajo (derecha) */}
+                <button
+                  type="button"
+                  onClick={() => moveImageDown(index)}
+                  disabled={index === images.length - 1}
+                  title="Mover a la derecha"
+                  style={{
+                    width: '28px',
+                    height: '28px',
+                    borderRadius: '4px',
+                    backgroundColor: index === images.length - 1 ? '#9ca3af' : '#0a1628',
+                    color: '#ffffff',
+                    border: 'none',
+                    cursor: index === images.length - 1 ? 'not-allowed' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    opacity: index === images.length - 1 ? 0.5 : 1
+                  }}
+                >
+                  <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+              </div>
               
-              {/* Botón eliminar - siempre visible */}
+              {/* Botón eliminar */}
               <button
                 type="button"
                 onClick={() => removeImage(index)}
@@ -282,8 +361,8 @@ export default function ImageUploader({
                   position: 'absolute',
                   top: '8px',
                   right: '8px',
-                  width: '32px',
-                  height: '32px',
+                  width: '28px',
+                  height: '28px',
                   borderRadius: '50%',
                   backgroundColor: '#dc2626',
                   color: '#ffffff',
@@ -292,24 +371,16 @@ export default function ImageUploader({
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  boxShadow: '0 2px 4px rgba(0,0,0,0.3)',
-                  transition: 'transform 0.15s ease, background-color 0.15s ease'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = '#b91c1c';
-                  e.currentTarget.style.transform = 'scale(1.1)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = '#dc2626';
-                  e.currentTarget.style.transform = 'scale(1)';
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
                 }}
               >
-                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
             </div>
           ))}
+          </div>
         </div>
       )}
 
