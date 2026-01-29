@@ -252,14 +252,28 @@ export default function CheckoutForm({
   // Cargar Stripe
   useEffect(() => {
     const initializeStripe = async () => {
-      const stripeKey = import.meta.env.PUBLIC_STRIPE_PUBLISHABLE_KEY;
-      if (!stripeKey) {
-        setError('Configuración de Stripe no encontrada');
-        return;
-      }
+      try {
+        const stripeKey = import.meta.env.PUBLIC_STRIPE_PUBLISHABLE_KEY;
+        console.log('Stripe key exists:', !!stripeKey);
+        
+        if (!stripeKey) {
+          setError('Configuración de Stripe no encontrada. Por favor, contacta con el administrador.');
+          return;
+        }
 
-      const stripeInstance = await loadStripe(stripeKey);
-      setStripe(stripeInstance);
+        const stripeInstance = await loadStripe(stripeKey);
+        console.log('Stripe loaded:', !!stripeInstance);
+        
+        if (!stripeInstance) {
+          setError('No se pudo inicializar Stripe. Por favor, recarga la página.');
+          return;
+        }
+        
+        setStripe(stripeInstance);
+      } catch (err) {
+        console.error('Error initializing Stripe:', err);
+        setError('Error al conectar con el servicio de pagos. Por favor, intenta de nuevo.');
+      }
     };
 
     initializeStripe();
@@ -594,29 +608,36 @@ export default function CheckoutForm({
     );
   }
 
-  // Si el carrito está vacío o el monto es 0 después de montar
-  if (mounted && (!cartData.items || cartData.items.length === 0 || amount <= 0)) {
-    return (
-      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center">
-        <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
-          <svg className="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-          </svg>
+  // Debug: mostrar estado del carrito si está vacío
+  if (mounted && (!cartData.items || cartData.items.length === 0)) {
+    // Intentar recargar del localStorage una vez más
+    const freshCart = getCartFromStorage();
+    if (freshCart.items.length > 0) {
+      // Si hay datos frescos, actualizar estado
+      setCartData(freshCart);
+    } else {
+      return (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center">
+          <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg className="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+            </svg>
+          </div>
+          <h3 className="text-lg font-semibold text-yellow-900 mb-2">Carrito vacío</h3>
+          <p className="text-yellow-700 mb-4">Añade productos a tu carrito para continuar</p>
+          <a
+            href="/tienda"
+            className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition text-sm font-medium"
+          >
+            Ir a la tienda
+          </a>
         </div>
-        <h3 className="text-lg font-semibold text-yellow-900 mb-2">Carrito vacío</h3>
-        <p className="text-yellow-700 mb-4">Añade productos a tu carrito para continuar</p>
-        <a
-          href="/tienda"
-          className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition text-sm font-medium"
-        >
-          Ir a la tienda
-        </a>
-      </div>
-    );
+      );
+    }
   }
 
-  // Loading inicial para Stripe
-  if (!stripe && selectedPaymentMethod === 'stripe' && !error) {
+  // Loading inicial para Stripe - mostrar siempre que stripe no esté listo
+  if (!stripe && !error) {
     return (
       <div className="flex flex-col items-center justify-center p-8 space-y-3">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-navy-900"></div>
@@ -627,7 +648,7 @@ export default function CheckoutForm({
   }
   
   // Error de carga de Stripe
-  if (!stripe && error) {
+  if (error) {
     return (
       <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
         <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
