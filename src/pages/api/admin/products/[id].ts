@@ -250,3 +250,71 @@ export const DELETE: APIRoute = async ({ params, cookies }) => {
     });
   }
 };
+
+// PATCH - Actualizar parcialmente un producto (ej: solo stock)
+export const PATCH: APIRoute = async ({ params, request, cookies }) => {
+  const userRole = cookies.get('user-role')?.value?.toLowerCase();
+  if (userRole !== 'admin') {
+    return new Response(JSON.stringify({ error: 'No autorizado' }), {
+      status: 401,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+
+  const supabase = getSupabase();
+  if (!supabase) {
+    return new Response(JSON.stringify({ error: 'Supabase no configurado' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+
+  try {
+    const { id } = params;
+    if (!id) {
+      return new Response(JSON.stringify({ error: 'ID requerido' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    const body = await request.json();
+    
+    // Solo permitir actualizar ciertos campos via PATCH
+    const allowedFields = ['stock', 'price', 'featured', 'is_active'];
+    const updates: Record<string, any> = {};
+    
+    for (const field of allowedFields) {
+      if (body[field] !== undefined) {
+        updates[field] = body[field];
+      }
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return new Response(JSON.stringify({ error: 'No hay campos válidos para actualizar' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    const { data, error } = await supabase
+      .from('products')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    return new Response(JSON.stringify(data), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  } catch (error) {
+    console.error('Error patching product:', error);
+    return new Response(JSON.stringify({ error: 'Error al actualizar el producto' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+};

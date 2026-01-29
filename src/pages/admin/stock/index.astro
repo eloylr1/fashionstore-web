@@ -1,17 +1,17 @@
 ---
 /**
  * ═══════════════════════════════════════════════════════════════════════════
- * FASHIONMARKET - Admin Envíos
- * Configuración de métodos de envío dinámicos
+ * FASHIONMARKET - Admin Stock
+ * Gestión de inventario de productos
  * ═══════════════════════════════════════════════════════════════════════════
  */
 
 export const prerender = false;
 
 import AdminLayout from '../../../layouts/AdminLayout.astro';
-import ShippingMethodsManager from '../../../components/admin/ShippingMethodsManager';
+import StockManager from '../../../components/admin/StockManager';
 ---
 
-<AdminLayout title="Envíos">
-  <ShippingMethodsManager client:load />
+<AdminLayout title="Stock">
+  <StockManager client:load />
 </AdminLayout>
