@@ -5,18 +5,43 @@
  * ═══════════════════════════════════════════════════════════════════════════
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 interface ProductGalleryProps {
   images: string[];
   productName: string;
+  selectedColorIndex?: number; // Índice del color seleccionado para cambiar imagen
 }
 
-export default function ProductGallery({ images, productName }: ProductGalleryProps) {
+export default function ProductGallery({ images, productName, selectedColorIndex }: ProductGalleryProps) {
   const [selectedIndex, setSelectedIndex] = useState(0);
   
   // Fallback si no hay imágenes
   const galleryImages = images.length > 0 ? images : ['/placeholder-product.svg'];
+  
+  // Escuchar evento de cambio de color desde AddToCartButton
+  useEffect(() => {
+    const handleColorChange = (event: CustomEvent<{ colorIndex: number }>) => {
+      const { colorIndex } = event.detail;
+      // Solo cambiar si hay una imagen para ese índice
+      if (colorIndex >= 0 && colorIndex < galleryImages.length) {
+        setSelectedIndex(colorIndex);
+      }
+    };
+
+    window.addEventListener('colorChanged', handleColorChange as EventListener);
+    
+    return () => {
+      window.removeEventListener('colorChanged', handleColorChange as EventListener);
+    };
+  }, [galleryImages.length]);
+
+  // También reaccionar a prop selectedColorIndex si se pasa directamente
+  useEffect(() => {
+    if (selectedColorIndex !== undefined && selectedColorIndex >= 0 && selectedColorIndex < galleryImages.length) {
+      setSelectedIndex(selectedColorIndex);
+    }
+  }, [selectedColorIndex, galleryImages.length]);
   
   return (
     <div className="space-y-4">

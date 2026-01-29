@@ -70,6 +70,19 @@ export default function AddToCartButton({ product }: AddToCartButtonProps) {
     setError(null);
   };
 
+  // Handler para seleccionar color y emitir evento para cambiar la imagen
+  const handleColorSelect = (color: string, index: number) => {
+    setSelectedColor(color);
+    setError(null);
+    
+    // Emitir evento para que ProductGallery cambie la imagen
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('colorChanged', { 
+        detail: { colorIndex: index } 
+      }));
+    }
+  };
+
   const isOutOfStock = product.stock < 1;
 
   return (
@@ -89,14 +102,11 @@ export default function AddToCartButton({ product }: AddToCartButtonProps) {
             Color
           </label>
           <div className="flex flex-wrap gap-2">
-            {product.colors.map((color) => (
+            {product.colors.map((color, index) => (
               <button
                 key={color}
                 type="button"
-                onClick={() => {
-                  setSelectedColor(color);
-                  setError(null);
-                }}
+                onClick={() => handleColorSelect(color, index)}
                 className={`
                   px-4 py-2.5 text-sm font-medium border transition-all duration-200
                   ${selectedColor === color
