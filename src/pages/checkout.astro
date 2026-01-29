@@ -45,7 +45,7 @@ const isGuest = !user;
 ---
 
 <BaseLayout title="Checkout | FashionMarket">
-  <main class="min-h-screen bg-cream py-8 lg:py-12">
+  <main class="min-h-screen bg-cream py-6 lg:py-10">
     <div class="container-custom max-w-6xl">
       <!-- Breadcrumb -->
       <nav class="mb-6">
@@ -53,6 +53,8 @@ const isGuest = !user;
           <li><a href="/" class="hover:text-navy-900 transition-colors">Inicio</a></li>
           <li>/</li>
           <li><a href="/tienda" class="hover:text-navy-900 transition-colors">Tienda</a></li>
+          <li>/</li>
+          <li><a href="/carrito" class="hover:text-navy-900 transition-colors">Carrito</a></li>
           <li>/</li>
           <li class="text-navy-900 font-medium">Checkout</li>
         </ol>
@@ -62,327 +64,429 @@ const isGuest = !user;
       <div class="mb-8">
         <div class="flex items-center justify-center gap-4">
           <div class="flex items-center gap-2">
-            <div id="step-1-indicator" class="w-8 h-8 rounded-full bg-navy-900 text-white flex items-center justify-center text-sm font-medium">1</div>
-            <span class="text-sm font-medium text-navy-900 hidden sm:inline">Datos de envío</span>
+            <div id="step-1-indicator" class="w-8 h-8 rounded-full bg-navy-900 text-white flex items-center justify-center text-sm font-medium transition-all duration-300">1</div>
+            <span id="step-1-label" class="text-sm font-medium text-navy-900 hidden sm:inline transition-colors duration-300">Datos de envío</span>
           </div>
-          <div class="w-12 h-px bg-charcoal-300"></div>
+          <div id="step-line-1" class="w-12 h-0.5 bg-charcoal-200 transition-colors duration-300"></div>
           <div class="flex items-center gap-2">
-            <div id="step-2-indicator" class="w-8 h-8 rounded-full bg-charcoal-200 text-charcoal-500 flex items-center justify-center text-sm font-medium">2</div>
-            <span class="text-sm text-charcoal-500 hidden sm:inline">Pago</span>
+            <div id="step-2-indicator" class="w-8 h-8 rounded-full bg-charcoal-200 text-charcoal-500 flex items-center justify-center text-sm font-medium transition-all duration-300">2</div>
+            <span id="step-2-label" class="text-sm text-charcoal-500 hidden sm:inline transition-colors duration-300">Pago</span>
           </div>
-          <div class="w-12 h-px bg-charcoal-300"></div>
+          <div id="step-line-2" class="w-12 h-0.5 bg-charcoal-200 transition-colors duration-300"></div>
           <div class="flex items-center gap-2">
-            <div id="step-3-indicator" class="w-8 h-8 rounded-full bg-charcoal-200 text-charcoal-500 flex items-center justify-center text-sm font-medium">3</div>
-            <span class="text-sm text-charcoal-500 hidden sm:inline">Confirmación</span>
+            <div id="step-3-indicator" class="w-8 h-8 rounded-full bg-charcoal-200 text-charcoal-500 flex items-center justify-center text-sm font-medium transition-all duration-300">3</div>
+            <span id="step-3-label" class="text-sm text-charcoal-500 hidden sm:inline transition-colors duration-300">Confirmación</span>
           </div>
         </div>
       </div>
 
       <div class="grid lg:grid-cols-5 gap-8">
-        <!-- Formulario principal -->
-        <div class="lg:col-span-3">
+        <!-- Columna Principal - Formularios -->
+        <div class="lg:col-span-3 space-y-6">
           <!-- Paso 1: Datos de envío -->
-          <div id="step-1" class="bg-white rounded-lg shadow-sm p-6">
-            <h2 class="text-xl font-serif text-navy-900 mb-6">Datos de envío</h2>
+          <div id="step-1" class="bg-white rounded-xl shadow-sm border border-charcoal-100 overflow-hidden">
+            <div class="bg-gradient-to-r from-navy-900 to-navy-800 px-6 py-4">
+              <h2 class="text-lg font-semibold text-white flex items-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                Dirección de envío
+              </h2>
+            </div>
             
-            {isGuest && (
-              <div class="bg-blue-50 border border-blue-100 rounded-lg p-4 mb-6">
-                <p class="text-sm text-blue-800">
-                  <span class="font-medium">¿Ya tienes cuenta?</span>{' '}
-                  <a href="/login?redirect=/checkout" class="underline hover:no-underline">Inicia sesión</a> para un checkout más rápido.
-                </p>
-              </div>
-            )}
+            <div class="p-6">
+              {isGuest && (
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 flex items-start gap-3">
+                  <svg class="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <p class="text-sm text-blue-800">
+                    <span class="font-medium">¿Ya tienes cuenta?</span>{' '}
+                    <a href="/login?redirect=/checkout" class="text-blue-600 hover:text-blue-800 underline font-medium">Inicia sesión</a> para un checkout más rápido.
+                  </p>
+                </div>
+              )}
 
-            <form id="shipping-form" class="space-y-4">
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <form id="shipping-form" class="space-y-5">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label for="first_name" class="block text-sm font-medium text-navy-900 mb-1.5">Nombre <span class="text-red-500">*</span></label>
+                    <input 
+                      type="text" 
+                      id="first_name" 
+                      name="first_name"
+                      value={userProfile?.first_name || ''}
+                      required
+                      class="w-full px-4 py-3 border border-charcoal-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-navy-900/20 focus:border-navy-900 transition-all"
+                      placeholder="Tu nombre"
+                    />
+                  </div>
+                  <div>
+                    <label for="last_name" class="block text-sm font-medium text-navy-900 mb-1.5">Apellidos <span class="text-red-500">*</span></label>
+                    <input 
+                      type="text" 
+                      id="last_name" 
+                      name="last_name"
+                      value={userProfile?.last_name || ''}
+                      required
+                      class="w-full px-4 py-3 border border-charcoal-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-navy-900/20 focus:border-navy-900 transition-all"
+                      placeholder="Tus apellidos"
+                    />
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label for="email" class="block text-sm font-medium text-navy-900 mb-1.5">Email <span class="text-red-500">*</span></label>
+                    <input 
+                      type="email" 
+                      id="email" 
+                      name="email"
+                      value={user?.email || ''}
+                      required
+                      readonly={!!user}
+                      class={`w-full px-4 py-3 border border-charcoal-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-navy-900/20 focus:border-navy-900 transition-all ${user ? 'bg-charcoal-50 cursor-not-allowed' : ''}`}
+                      placeholder="tu@email.com"
+                    />
+                  </div>
+                  <div>
+                    <label for="phone" class="block text-sm font-medium text-navy-900 mb-1.5">Teléfono <span class="text-red-500">*</span></label>
+                    <input 
+                      type="tel" 
+                      id="phone" 
+                      name="phone"
+                      value={userProfile?.phone || ''}
+                      required
+                      class="w-full px-4 py-3 border border-charcoal-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-navy-900/20 focus:border-navy-900 transition-all"
+                      placeholder="+34 600 000 000"
+                    />
+                  </div>
+                </div>
+
                 <div>
-                  <label for="first_name" class="block text-sm font-medium text-navy-900 mb-1.5">Nombre *</label>
+                  <label for="address" class="block text-sm font-medium text-navy-900 mb-1.5">Dirección <span class="text-red-500">*</span></label>
                   <input 
                     type="text" 
-                    id="first_name" 
-                    name="first_name"
-                    value={userProfile?.first_name || ''}
+                    id="address" 
+                    name="address"
+                    value={userProfile?.address || ''}
                     required
-                    class="w-full px-4 py-2.5 border border-charcoal-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gold-matte focus:border-transparent"
-                    placeholder="Tu nombre"
+                    class="w-full px-4 py-3 border border-charcoal-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-navy-900/20 focus:border-navy-900 transition-all"
+                    placeholder="Calle, número, piso, puerta..."
                   />
                 </div>
-                <div>
-                  <label for="last_name" class="block text-sm font-medium text-navy-900 mb-1.5">Apellidos *</label>
-                  <input 
-                    type="text" 
-                    id="last_name" 
-                    name="last_name"
-                    value={userProfile?.last_name || ''}
-                    required
-                    class="w-full px-4 py-2.5 border border-charcoal-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gold-matte focus:border-transparent"
-                    placeholder="Tus apellidos"
-                  />
-                </div>
-              </div>
 
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label for="email" class="block text-sm font-medium text-navy-900 mb-1.5">Email *</label>
-                  <input 
-                    type="email" 
-                    id="email" 
-                    name="email"
-                    value={user?.email || ''}
-                    required
-                    readonly={!!user}
-                    class={`w-full px-4 py-2.5 border border-charcoal-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gold-matte focus:border-transparent ${user ? 'bg-charcoal-50' : ''}`}
-                    placeholder="tu@email.com"
-                  />
+                <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  <div>
+                    <label for="postal_code" class="block text-sm font-medium text-navy-900 mb-1.5">C. Postal <span class="text-red-500">*</span></label>
+                    <input 
+                      type="text" 
+                      id="postal_code" 
+                      name="postal_code"
+                      value={userProfile?.postal_code || ''}
+                      required
+                      class="w-full px-4 py-3 border border-charcoal-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-navy-900/20 focus:border-navy-900 transition-all"
+                      placeholder="28001"
+                    />
+                  </div>
+                  <div class="col-span-1 md:col-span-2">
+                    <label for="city" class="block text-sm font-medium text-navy-900 mb-1.5">Ciudad <span class="text-red-500">*</span></label>
+                    <input 
+                      type="text" 
+                      id="city" 
+                      name="city"
+                      value={userProfile?.city || ''}
+                      required
+                      class="w-full px-4 py-3 border border-charcoal-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-navy-900/20 focus:border-navy-900 transition-all"
+                      placeholder="Madrid"
+                    />
+                  </div>
                 </div>
-                <div>
-                  <label for="phone" class="block text-sm font-medium text-navy-900 mb-1.5">Teléfono *</label>
-                  <input 
-                    type="tel" 
-                    id="phone" 
-                    name="phone"
-                    value={userProfile?.phone || ''}
-                    required
-                    class="w-full px-4 py-2.5 border border-charcoal-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gold-matte focus:border-transparent"
-                    placeholder="+34 600 000 000"
-                  />
-                </div>
-              </div>
 
-              <div>
-                <label for="address" class="block text-sm font-medium text-navy-900 mb-1.5">Dirección *</label>
-                <input 
-                  type="text" 
-                  id="address" 
-                  name="address"
-                  value={userProfile?.address || ''}
-                  required
-                  class="w-full px-4 py-2.5 border border-charcoal-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gold-matte focus:border-transparent"
-                  placeholder="Calle, número, piso..."
-                />
-              </div>
-
-              <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
                 <div>
-                  <label for="postal_code" class="block text-sm font-medium text-navy-900 mb-1.5">Código Postal *</label>
-                  <input 
-                    type="text" 
-                    id="postal_code" 
-                    name="postal_code"
-                    value={userProfile?.postal_code || ''}
+                  <label for="country" class="block text-sm font-medium text-navy-900 mb-1.5">País <span class="text-red-500">*</span></label>
+                  <select 
+                    id="country" 
+                    name="country"
                     required
-                    class="w-full px-4 py-2.5 border border-charcoal-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gold-matte focus:border-transparent"
-                    placeholder="28001"
-                  />
+                    class="w-full px-4 py-3 border border-charcoal-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-navy-900/20 focus:border-navy-900 transition-all bg-white"
+                  >
+                    <option value="ES" selected>España</option>
+                    <option value="PT">Portugal</option>
+                    <option value="FR">Francia</option>
+                    <option value="DE">Alemania</option>
+                    <option value="IT">Italia</option>
+                  </select>
                 </div>
-                <div class="col-span-1 md:col-span-2">
-                  <label for="city" class="block text-sm font-medium text-navy-900 mb-1.5">Ciudad *</label>
-                  <input 
-                    type="text" 
-                    id="city" 
-                    name="city"
-                    value={userProfile?.city || ''}
-                    required
-                    class="w-full px-4 py-2.5 border border-charcoal-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gold-matte focus:border-transparent"
-                    placeholder="Madrid"
-                  />
-                </div>
-              </div>
 
-              <div>
-                <label for="country" class="block text-sm font-medium text-navy-900 mb-1.5">País *</label>
-                <select 
-                  id="country" 
-                  name="country"
-                  required
-                  class="w-full px-4 py-2.5 border border-charcoal-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gold-matte focus:border-transparent"
+                <div>
+                  <label for="notes" class="block text-sm font-medium text-navy-900 mb-1.5">Notas del pedido <span class="text-charcoal-400">(opcional)</span></label>
+                  <textarea 
+                    id="notes" 
+                    name="notes"
+                    rows="2"
+                    class="w-full px-4 py-3 border border-charcoal-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-navy-900/20 focus:border-navy-900 transition-all resize-none"
+                    placeholder="Instrucciones especiales para la entrega..."
+                  ></textarea>
+                </div>
+
+                <div id="shipping-form-error" class="hidden bg-red-50 border border-red-200 rounded-lg p-4 text-sm text-red-700 flex items-start gap-2">
+                  <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span></span>
+                </div>
+
+                <button 
+                  type="submit" 
+                  class="w-full bg-navy-900 text-white py-4 rounded-lg font-semibold hover:bg-navy-800 transition-all duration-300 flex items-center justify-center gap-2 group"
                 >
-                  <option value="ES" selected>España</option>
-                  <option value="PT">Portugal</option>
-                  <option value="FR">Francia</option>
-                  <option value="DE">Alemania</option>
-                  <option value="IT">Italia</option>
-                </select>
-              </div>
-
-              <div>
-                <label for="notes" class="block text-sm font-medium text-navy-900 mb-1.5">Notas del pedido (opcional)</label>
-                <textarea 
-                  id="notes" 
-                  name="notes"
-                  rows="2"
-                  class="w-full px-4 py-2.5 border border-charcoal-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gold-matte focus:border-transparent resize-none"
-                  placeholder="Instrucciones especiales para la entrega..."
-                ></textarea>
-              </div>
-
-              <div id="shipping-form-error" class="hidden bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700"></div>
-
-              <button 
-                type="submit" 
-                class="w-full bg-navy-900 text-white py-3 rounded-lg font-medium hover:bg-navy-800 transition-colors"
-              >
-                Continuar al pago
-              </button>
-            </form>
+                  <span>Continuar al pago</span>
+                  <svg class="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                  </svg>
+                </button>
+              </form>
+            </div>
           </div>
 
           <!-- Paso 2: Pago -->
-          <div id="step-2" class="hidden bg-white rounded-lg shadow-sm p-6">
-            <div class="flex items-center justify-between mb-6">
-              <h2 class="text-xl font-serif text-navy-900">Método de pago</h2>
-              <button id="back-to-shipping" class="text-sm text-navy-700 hover:text-navy-900 flex items-center gap-1">
+          <div id="step-2" class="hidden bg-white rounded-xl shadow-sm border border-charcoal-100 overflow-hidden">
+            <div class="bg-gradient-to-r from-navy-900 to-navy-800 px-6 py-4 flex items-center justify-between">
+              <h2 class="text-lg font-semibold text-white flex items-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                </svg>
+                Método de pago
+              </h2>
+              <button id="back-to-shipping" class="text-white/80 hover:text-white text-sm flex items-center gap-1 transition-colors">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
                 </svg>
-                Editar datos
+                Modificar envío
               </button>
             </div>
 
-            <!-- Resumen de dirección -->
-            <div class="bg-charcoal-50 rounded-lg p-4 mb-6">
-              <p class="text-sm font-medium text-navy-900 mb-1">Enviar a:</p>
-              <p id="shipping-summary" class="text-sm text-charcoal-600"></p>
-            </div>
-
-            <!-- Formulario de Stripe -->
-            <CheckoutForm client:load />
-          </div>
-
-          <!-- Paso 3: Confirmación (se muestra después del pago exitoso) -->
-          <div id="step-3" class="hidden bg-white rounded-lg shadow-sm p-6 text-center">
-            <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-              </svg>
-            </div>
-            <h2 class="text-2xl font-serif text-navy-900 mb-2">Pedido confirmado</h2>
-            <p class="text-charcoal-600 mb-6">Gracias por tu compra. Recibirás un email de confirmación en breve.</p>
-            <div class="flex flex-col sm:flex-row gap-3 justify-center">
-              <a href="/cuenta/pedidos" class="px-6 py-2.5 bg-navy-900 text-white rounded-lg font-medium hover:bg-navy-800 transition-colors">
-                Ver mis pedidos
-              </a>
-              <a href="/tienda" class="px-6 py-2.5 border border-navy-900 text-navy-900 rounded-lg font-medium hover:bg-navy-50 transition-colors">
-                Seguir comprando
-              </a>
-            </div>
-          </div>
-        </div>
-
-        <!-- Resumen del pedido -->
-        <div class="lg:col-span-2">
-          <div class="bg-white rounded-lg shadow-sm p-6 sticky top-24">
-            <h2 class="text-lg font-semibold text-navy-900 mb-4">Resumen del pedido</h2>
-
-            <!-- Items del carrito -->
-            <div class="space-y-4 mb-6 pb-6 border-b border-charcoal-100" id="cart-items">
-              <div class="flex items-center justify-center py-4">
-                <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-navy-900"></div>
-              </div>
-            </div>
-
-            <!-- Código de descuento -->
-            <div class="mb-6 pb-6 border-b border-charcoal-100" id="discount-section">
-              <label class="block text-sm font-medium text-navy-900 mb-2">
-                Código de descuento
-              </label>
-              <div class="flex gap-2">
-                <input
-                  type="text"
-                  id="discount-code"
-                  placeholder="Ej: WELCOME10"
-                  class="flex-1 px-4 py-2.5 border border-charcoal-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gold-matte focus:border-transparent uppercase"
-                />
-                <button
-                  type="button"
-                  id="apply-discount"
-                  class="px-4 py-2.5 bg-navy-900 text-white text-sm font-medium rounded-lg hover:bg-navy-800 transition-colors"
-                >
-                  Aplicar
-                </button>
-              </div>
-              <div id="discount-message" class="mt-2 text-sm hidden"></div>
-              <div id="discount-applied" class="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg hidden">
-                <div class="flex items-center justify-between">
-                  <div class="flex items-center gap-2">
+            <div class="p-6">
+              <!-- Resumen de dirección de envío -->
+              <div class="bg-charcoal-50 rounded-lg p-4 mb-6 border border-charcoal-100">
+                <div class="flex items-start gap-3">
+                  <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
                     <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                     </svg>
-                    <span id="discount-code-display" class="font-medium text-green-800"></span>
                   </div>
-                  <button type="button" id="remove-discount" class="text-green-700 hover:text-green-900">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
+                  <div>
+                    <p class="text-sm font-medium text-navy-900 mb-1">Enviar a:</p>
+                    <p id="shipping-summary" class="text-sm text-charcoal-600"></p>
+                    <p id="shipping-email" class="text-xs text-charcoal-500 mt-1"></p>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Componente de pago Stripe -->
+              <CheckoutForm client:load />
+            </div>
+          </div>
+
+          <!-- Paso 3: Confirmación -->
+          <div id="step-3" class="hidden bg-white rounded-xl shadow-sm border border-charcoal-100 overflow-hidden">
+            <div class="p-8 text-center">
+              <div class="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6 animate-bounce-once">
+                <svg class="w-10 h-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <h2 class="text-2xl font-serif text-navy-900 mb-3">¡Pedido confirmado!</h2>
+              <p class="text-charcoal-600 mb-2">Gracias por tu compra en FashionMarket.</p>
+              <p class="text-sm text-charcoal-500 mb-8">Recibirás un email de confirmación con los detalles de tu pedido.</p>
+              
+              <div class="flex flex-col sm:flex-row gap-3 justify-center">
+                <a href="/cuenta/pedidos" class="inline-flex items-center justify-center gap-2 px-6 py-3 bg-navy-900 text-white rounded-lg font-medium hover:bg-navy-800 transition-colors">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                  </svg>
+                  Ver mis pedidos
+                </a>
+                <a href="/tienda" class="inline-flex items-center justify-center gap-2 px-6 py-3 border-2 border-navy-900 text-navy-900 rounded-lg font-medium hover:bg-navy-50 transition-colors">
+                  Seguir comprando
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Columna Derecha - Resumen del Pedido -->
+        <div class="lg:col-span-2">
+          <div class="bg-white rounded-xl shadow-sm border border-charcoal-100 overflow-hidden sticky top-6">
+            <div class="bg-charcoal-50 px-6 py-4 border-b border-charcoal-100">
+              <h2 class="text-lg font-semibold text-navy-900 flex items-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                </svg>
+                Resumen del pedido
+              </h2>
+            </div>
+
+            <div class="p-6">
+              <!-- Items del carrito -->
+              <div class="space-y-4 mb-6 max-h-64 overflow-y-auto" id="cart-items">
+                <div class="flex items-center justify-center py-8">
+                  <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-navy-900"></div>
+                </div>
+              </div>
+
+              <!-- Código de descuento -->
+              <div class="pb-6 border-b border-charcoal-100">
+                <label class="block text-sm font-medium text-navy-900 mb-2">
+                  ¿Tienes un código de descuento?
+                </label>
+                <div id="discount-input-wrapper" class="flex gap-2">
+                  <input
+                    type="text"
+                    id="discount-code"
+                    placeholder="Ej: WELCOME10"
+                    class="flex-1 px-4 py-2.5 border border-charcoal-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-navy-900/20 focus:border-navy-900 uppercase transition-all"
+                  />
+                  <button
+                    type="button"
+                    id="apply-discount"
+                    class="px-4 py-2.5 bg-navy-900 text-white text-sm font-medium rounded-lg hover:bg-navy-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Aplicar
                   </button>
                 </div>
-                <p class="text-sm text-green-600 mt-1">Ahorro: <span id="discount-amount-display">-0,00 EUR</span></p>
-              </div>
-            </div>
-
-            <!-- Totales -->
-            <div class="space-y-3 mb-6">
-              <div class="flex justify-between text-sm">
-                <span class="text-charcoal-600">Subtotal</span>
-                <span id="subtotal-display" class="text-navy-900 font-medium">0,00 EUR</span>
-              </div>
-              <div id="discount-row" class="flex justify-between text-sm hidden">
-                <span class="text-green-600">Descuento</span>
-                <span id="discount-total" class="text-green-600 font-medium">-0,00 EUR</span>
-              </div>
-              <div class="flex justify-between text-sm">
-                <span class="text-charcoal-600">Envío</span>
-                <span id="shipping-display" class="text-navy-900 font-medium">Calculando...</span>
-              </div>
-              <div class="flex justify-between text-base font-semibold pt-3 border-t border-charcoal-100">
-                <span class="text-navy-900">Total</span>
-                <span id="total-display" class="text-navy-900">0,00 EUR</span>
-              </div>
-            </div>
-
-            <!-- Método de envío -->
-            <div class="mb-6 pb-6 border-b border-charcoal-100" id="shipping-method-section">
-              <label class="block text-sm font-medium text-navy-900 mb-3">
-                Método de envío
-              </label>
-              <div class="space-y-2" id="shipping-options">
-                <label class="flex items-center justify-between p-3 border border-charcoal-200 rounded-lg cursor-pointer hover:border-gold-matte transition-colors has-[:checked]:border-gold-matte has-[:checked]:bg-gold-matte/5">
-                  <div class="flex items-center gap-3">
-                    <input type="radio" name="shipping-method" value="standard" checked class="w-4 h-4 text-gold-matte focus:ring-gold-matte" />
-                    <div>
-                      <span class="font-medium text-navy-900">Envío Estándar</span>
-                      <p class="text-xs text-charcoal-500" id="standard-delivery-time">3-5 días laborables</p>
+                <div id="discount-message" class="mt-2 text-sm hidden"></div>
+                
+                <!-- Descuento aplicado -->
+                <div id="discount-applied" class="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg hidden">
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                      <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                      </svg>
+                      <span id="discount-code-display" class="font-medium text-green-800"></span>
                     </div>
+                    <button type="button" id="remove-discount" class="text-green-700 hover:text-green-900 p-1 rounded transition-colors">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
                   </div>
-                  <span id="standard-price" class="font-medium text-navy-900">4,99 EUR</span>
-                </label>
-                <label id="express-option" class="flex items-center justify-between p-3 border border-charcoal-200 rounded-lg cursor-pointer hover:border-gold-matte transition-colors has-[:checked]:border-gold-matte has-[:checked]:bg-gold-matte/5 hidden">
-                  <div class="flex items-center gap-3">
-                    <input type="radio" name="shipping-method" value="express" class="w-4 h-4 text-gold-matte focus:ring-gold-matte" />
-                    <div>
-                      <span class="font-medium text-navy-900">Envío Express</span>
-                      <p class="text-xs text-charcoal-500" id="express-delivery-time">24-48 horas</p>
-                    </div>
-                  </div>
-                  <span id="express-price" class="font-medium text-navy-900">9,99 EUR</span>
-                </label>
+                  <p class="text-sm text-green-600 mt-1">
+                    Ahorras: <span id="discount-amount-display" class="font-semibold">-0,00 €</span>
+                  </p>
+                </div>
               </div>
-            </div>
 
-            <!-- Garantías -->
-            <div class="space-y-3 pt-4 border-t border-charcoal-100">
-              <div class="flex items-center gap-2 text-xs text-charcoal-600">
-                <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                </svg>
-                <span>Pago seguro con encriptación SSL</span>
+              <!-- Método de envío -->
+              <div class="py-6 border-b border-charcoal-100">
+                <label class="block text-sm font-medium text-navy-900 mb-3">
+                  Método de envío
+                </label>
+                <div class="space-y-2" id="shipping-options">
+                  <label id="standard-shipping-label" class="flex items-center justify-between p-3 border-2 border-navy-900 bg-navy-50 rounded-lg cursor-pointer transition-all">
+                    <div class="flex items-center gap-3">
+                      <input type="radio" name="shipping-method" value="standard" checked class="w-4 h-4 text-navy-900 focus:ring-navy-900" />
+                      <div>
+                        <span class="font-medium text-navy-900">📦 Envío Estándar</span>
+                        <p class="text-xs text-charcoal-500">3-5 días laborables</p>
+                      </div>
+                    </div>
+                    <span id="standard-price" class="font-semibold text-navy-900">4,99 €</span>
+                  </label>
+                  
+                  <label id="express-shipping-label" class="hidden items-center justify-between p-3 border-2 border-charcoal-200 rounded-lg cursor-pointer hover:border-charcoal-300 transition-all">
+                    <div class="flex items-center gap-3">
+                      <input type="radio" name="shipping-method" value="express" class="w-4 h-4 text-navy-900 focus:ring-navy-900" />
+                      <div>
+                        <span class="font-medium text-navy-900">🚀 Envío Express</span>
+                        <p class="text-xs text-charcoal-500">24-48 horas</p>
+                      </div>
+                    </div>
+                    <span id="express-price" class="font-semibold text-navy-900">9,99 €</span>
+                  </label>
+                </div>
               </div>
-              <div class="flex items-center gap-2 text-xs text-charcoal-600">
-                <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
-                </svg>
-                <span>Devolución gratuita en 30 días</span>
+
+              <!-- Totales -->
+              <div class="py-6 space-y-3">
+                <div class="flex justify-between text-sm">
+                  <span class="text-charcoal-600">Subtotal</span>
+                  <span id="subtotal-display" class="text-navy-900 font-medium">0,00 €</span>
+                </div>
+                
+                <div id="discount-row" class="flex justify-between text-sm hidden">
+                  <span class="text-green-600">Descuento</span>
+                  <span id="discount-total" class="text-green-600 font-medium">-0,00 €</span>
+                </div>
+                
+                <div class="flex justify-between text-sm">
+                  <span class="text-charcoal-600">Envío</span>
+                  <span id="shipping-display" class="text-navy-900 font-medium">4,99 €</span>
+                </div>
+                
+                <div class="flex justify-between text-lg font-bold pt-4 border-t border-charcoal-200">
+                  <span class="text-navy-900">Total</span>
+                  <span id="total-display" class="text-navy-900">0,00 €</span>
+                </div>
+              </div>
+
+              <!-- Garantías -->
+              <div class="pt-6 border-t border-charcoal-100 space-y-3">
+                <div class="flex items-center gap-3 text-sm text-charcoal-600">
+                  <div class="w-8 h-8 bg-green-50 rounded-full flex items-center justify-center flex-shrink-0">
+                    <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                    </svg>
+                  </div>
+                  <span>Pago 100% seguro con encriptación SSL</span>
+                </div>
+                <div class="flex items-center gap-3 text-sm text-charcoal-600">
+                  <div class="w-8 h-8 bg-blue-50 rounded-full flex items-center justify-center flex-shrink-0">
+                    <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                    </svg>
+                  </div>
+                  <span>Devolución gratuita en 30 días</span>
+                </div>
+                <div class="flex items-center gap-3 text-sm text-charcoal-600">
+                  <div class="w-8 h-8 bg-purple-50 rounded-full flex items-center justify-center flex-shrink-0">
+                    <svg class="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                    </svg>
+                  </div>
+                  <span>Envío asegurado y con seguimiento</span>
+                </div>
+              </div>
+
+              <!-- Métodos de pago aceptados -->
+              <div class="mt-6 pt-6 border-t border-charcoal-100">
+                <p class="text-xs text-charcoal-500 mb-3 text-center">Métodos de pago aceptados</p>
+                <div class="flex items-center justify-center gap-3">
+                  <div class="px-3 py-1.5 bg-charcoal-50 rounded-md">
+                    <svg class="h-6" viewBox="0 0 50 35" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <rect width="50" height="35" rx="4" fill="#1A1F71"/>
+                      <path d="M21.5 23.5L23.5 11.5H27L25 23.5H21.5Z" fill="white"/>
+                      <path d="M34.5 11.7C33.7 11.4 32.5 11 31 11C27.5 11 25 12.9 25 15.5C25 17.5 26.8 18.5 28.2 19.2C29.6 19.9 30.1 20.3 30.1 20.9C30.1 21.8 29 22.2 28 22.2C26.5 22.2 25.7 22 24.5 21.5L24 21.3L23.5 24.3C24.5 24.7 26.2 25 28 25C31.7 25 34.1 23.1 34.1 20.3C34.1 18.7 33.1 17.5 31.1 16.5C29.8 15.8 29 15.4 29 14.7C29 14.1 29.7 13.5 31.2 13.5C32.5 13.5 33.4 13.8 34.1 14.1L34.5 14.3L35 11.7H34.5Z" fill="white"/>
+                    </svg>
+                  </div>
+                  <div class="px-3 py-1.5 bg-charcoal-50 rounded-md">
+                    <svg class="h-6" viewBox="0 0 50 35" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <rect width="50" height="35" rx="4" fill="#F5F5F5"/>
+                      <circle cx="19" cy="17.5" r="10" fill="#EB001B"/>
+                      <circle cx="31" cy="17.5" r="10" fill="#F79E1B"/>
+                      <path d="M25 10.5C27.4 12.3 29 15.2 29 18.5C29 21.8 27.4 24.7 25 26.5C22.6 24.7 21 21.8 21 18.5C21 15.2 22.6 12.3 25 10.5Z" fill="#FF5F00"/>
+                    </svg>
+                  </div>
+                  <div class="px-3 py-1.5 bg-charcoal-50 rounded-md text-xs font-medium text-charcoal-600">
+                    G Pay
+                  </div>
+                  <div class="px-3 py-1.5 bg-charcoal-50 rounded-md text-xs font-medium text-charcoal-600">
+                    Apple Pay
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -390,164 +494,21 @@ const isGuest = !user;
       </div>
     </div>
   </main>
-                    <span id="discount-code-display" class="font-medium text-green-800"></span>
-                  </div>
-                  <button type="button" id="remove-discount" class="text-green-700 hover:text-green-900">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                </div>
-                <p class="text-sm text-green-600 mt-1">Ahorro: <span id="discount-amount-display">-0,00€</span></p>
-              </div>
-            </div>
 
-            <!-- Totales -->
-            <div class="space-y-3 mb-6">
-              <div class="flex justify-between text-sm">
-                <span class="text-charcoal-600">Subtotal</span>
-                <span id="subtotal-display" class="text-navy-900 font-medium">0,00€</span>
-              </div>
-              <div id="discount-row" class="flex justify-between text-sm hidden">
-                <span class="text-green-600">Descuento</span>
-                <span id="discount-total" class="text-green-600 font-medium">-0,00€</span>
-              </div>
-              <div class="flex justify-between text-sm">
-                <span class="text-charcoal-600">Envío</span>
-                <span id="shipping-display" class="text-navy-900 font-medium">Calculando...</span>
-              </div>
-              <div id="cod-row" class="flex justify-between text-sm hidden">
-                <span class="text-charcoal-600">Cargo contrareembolso</span>
-                <span id="cod-display" class="text-navy-900 font-medium">0,00€</span>
-              </div>
-              <div class="flex justify-between text-base font-semibold pt-3 border-t border-charcoal-100">
-                <span class="text-navy-900">Total</span>
-                <span id="total-display" class="text-navy-900">0,00€</span>
-              </div>
-            </div>
-
-            <!-- Selección de método de envío -->
-            <div class="mb-6 pb-6 border-b border-charcoal-100" id="shipping-method-section">
-              <label class="block text-sm font-medium text-navy-900 mb-3">
-                Método de envío
-              </label>
-              <div class="space-y-2" id="shipping-options">
-                <label class="flex items-center justify-between p-3 border border-charcoal-200 rounded-lg cursor-pointer hover:border-gold-matte transition-colors has-[:checked]:border-gold-matte has-[:checked]:bg-gold-matte/5">
-                  <div class="flex items-center gap-3">
-                    <input type="radio" name="shipping-method" value="standard" checked class="w-4 h-4 text-gold-matte focus:ring-gold-matte" />
-                    <div>
-                      <span class="font-medium text-navy-900">Envío Estándar</span>
-                      <p class="text-xs text-charcoal-500" id="standard-delivery-time">3-5 días laborables</p>
-                    </div>
-                  </div>
-                  <span id="standard-price" class="font-medium text-navy-900">4,99€</span>
-                </label>
-                <label id="express-option" class="flex items-center justify-between p-3 border border-charcoal-200 rounded-lg cursor-pointer hover:border-gold-matte transition-colors has-[:checked]:border-gold-matte has-[:checked]:bg-gold-matte/5 hidden">
-                  <div class="flex items-center gap-3">
-                    <input type="radio" name="shipping-method" value="express" class="w-4 h-4 text-gold-matte focus:ring-gold-matte" />
-                    <div>
-                      <span class="font-medium text-navy-900">🚀 Envío Express</span>
-                      <p class="text-xs text-charcoal-500" id="express-delivery-time">24-48 horas</p>
-                    </div>
-                  </div>
-                  <span id="express-price" class="font-medium text-navy-900">9,99€</span>
-                </label>
-              </div>
-            </div>
-
-            <!-- Selección de método de pago -->
-            <div class="mb-6" id="payment-method-section">
-              <label class="block text-sm font-medium text-navy-900 mb-3">
-                Método de pago
-              </label>
-              <div class="space-y-2" id="payment-options">
-                <label id="card-option" class="flex items-center justify-between p-3 border border-charcoal-200 rounded-lg cursor-pointer hover:border-gold-matte transition-colors has-[:checked]:border-gold-matte has-[:checked]:bg-gold-matte/5">
-                  <div class="flex items-center gap-3">
-                    <input type="radio" name="payment-method" value="card" checked class="w-4 h-4 text-gold-matte focus:ring-gold-matte" />
-                    <div>
-                      <span class="font-medium text-navy-900">💳 Tarjeta de crédito/débito</span>
-                      <p class="text-xs text-charcoal-500">Visa, Mastercard, American Express</p>
-                    </div>
-                  </div>
-                </label>
-                <label id="transfer-option" class="hidden flex items-center justify-between p-3 border border-charcoal-200 rounded-lg cursor-pointer hover:border-gold-matte transition-colors has-[:checked]:border-gold-matte has-[:checked]:bg-gold-matte/5">
-                  <div class="flex items-center gap-3">
-                    <input type="radio" name="payment-method" value="transfer" class="w-4 h-4 text-gold-matte focus:ring-gold-matte" />
-                    <div>
-                      <span class="font-medium text-navy-900">🏦 Transferencia bancaria</span>
-                      <p class="text-xs text-charcoal-500">Procesamos tu pedido al recibir el pago</p>
-                    </div>
-                  </div>
-                </label>
-                <label id="cod-option" class="hidden flex items-center justify-between p-3 border border-charcoal-200 rounded-lg cursor-pointer hover:border-gold-matte transition-colors has-[:checked]:border-gold-matte has-[:checked]:bg-gold-matte/5">
-                  <div class="flex items-center gap-3">
-                    <input type="radio" name="payment-method" value="cash_on_delivery" class="w-4 h-4 text-gold-matte focus:ring-gold-matte" />
-                    <div>
-                      <span class="font-medium text-navy-900">💵 Contrareembolso</span>
-                      <p class="text-xs text-charcoal-500" id="cod-extra-text">Paga al recibir tu pedido</p>
-                    </div>
-                  </div>
-                  <span id="cod-price" class="font-medium text-charcoal-500 hidden">+0,00€</span>
-                </label>
-              </div>
-            </div>
-
-            <!-- Métodos de pago aceptados -->
-            <div class="border-t border-charcoal-100 pt-4">
-              <p class="text-xs text-charcoal-500 mb-2">Pago 100% seguro</p>
-              <div class="flex items-center gap-2 flex-wrap">
-                <div class="px-2 py-1 bg-charcoal-50 rounded text-xs text-charcoal-600">🔒 SSL</div>
-                <div class="px-2 py-1 bg-charcoal-50 rounded text-xs text-charcoal-600">Visa</div>
-                <div class="px-2 py-1 bg-charcoal-50 rounded text-xs text-charcoal-600">Mastercard</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Garantías -->
-      <div class="grid sm:grid-cols-3 gap-6 mt-12">
-        <div class="flex items-center gap-3 p-4 bg-white rounded-lg">
-          <div class="w-10 h-10 bg-green-50 rounded-full flex items-center justify-center flex-shrink-0">
-            <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-            </svg>
-          </div>
-          <div>
-            <p class="font-medium text-navy-900 text-sm">Pago seguro</p>
-            <p class="text-xs text-charcoal-500">Encriptación SSL</p>
-          </div>
-        </div>
-
-        <div class="flex items-center gap-3 p-4 bg-white rounded-lg">
-          <div class="w-10 h-10 bg-blue-50 rounded-full flex items-center justify-center flex-shrink-0">
-            <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-            </svg>
-          </div>
-          <div>
-            <p class="font-medium text-navy-900 text-sm">Sin comisiones</p>
-            <p class="text-xs text-charcoal-500">Precio final</p>
-          </div>
-        </div>
-
-        <div class="flex items-center gap-3 p-4 bg-white rounded-lg">
-          <div class="w-10 h-10 bg-purple-50 rounded-full flex items-center justify-center flex-shrink-0">
-            <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
-            </svg>
-          </div>
-          <div>
-            <p class="font-medium text-navy-900 text-sm">Devoluciones</p>
-            <p class="text-xs text-charcoal-500">30 días gratis</p>
-          </div>
-        </div>
-      </div>
-    </div>
-  </main>
+  <style>
+    @keyframes bounce-once {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+    }
+    .animate-bounce-once {
+      animation: bounce-once 0.5s ease-in-out;
+    }
+  </style>
 
   <script>
-    // Estado del checkout
+    // ==========================================
+    // ESTADO DEL CHECKOUT
+    // ==========================================
     let currentStep = 1;
     let shippingData: any = null;
     let appliedDiscount: {
@@ -555,23 +516,29 @@ const isGuest = !user;
       code: string;
       discount_amount: number;
     } | null = null;
-    
     let selectedShippingMethod = 'standard';
     
-    // Configuración de la tienda
+    // Configuración por defecto
     let storeSettings = {
       shipping: {
-        free_shipping_threshold: 10000,
-        standard_shipping_cost: 499,
-        express_shipping_cost: 999,
+        free_shipping_threshold: 10000, // 100€ en centavos
+        standard_shipping_cost: 499,    // 4.99€
+        express_shipping_cost: 999,     // 9.99€
         express_shipping_enabled: true,
-        estimated_delivery_days: 3,
-        express_delivery_days: 1,
       },
     };
 
-    // Obtener carrito
-    const getCart = () => {
+    // ==========================================
+    // UTILIDADES
+    // ==========================================
+    const formatPrice = (cents: number): string => {
+      return new Intl.NumberFormat('es-ES', {
+        style: 'currency',
+        currency: 'EUR',
+      }).format(cents / 100);
+    };
+
+    const getCart = (): any[] => {
       try {
         const saved = localStorage.getItem('fashionmarket-cart');
         return saved ? JSON.parse(saved) : [];
@@ -580,56 +547,231 @@ const isGuest = !user;
       }
     };
 
-    const cartItems = getCart();
-    const subtotal = cartItems.reduce((sum: number, item: any) => sum + item.price * item.quantity, 0);
+    // ==========================================
+    // RENDERIZADO
+    // ==========================================
+    const renderCartItems = () => {
+      const container = document.getElementById('cart-items');
+      if (!container) return;
 
-    // Formatear precio
-    const formatPrice = (cents: number) => {
-      return new Intl.NumberFormat('es-ES', {
-        style: 'currency',
-        currency: 'EUR',
-      }).format(cents / 100);
+      const cartItems = getCart();
+
+      if (cartItems.length === 0) {
+        container.innerHTML = `
+          <div class="text-center py-8">
+            <div class="w-16 h-16 bg-charcoal-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg class="w-8 h-8 text-charcoal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+              </svg>
+            </div>
+            <p class="text-charcoal-500 text-sm mb-2">Tu carrito está vacío</p>
+            <a href="/tienda" class="text-sm text-navy-900 font-medium underline hover:no-underline">Ir a la tienda</a>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = cartItems.map((item: any) => `
+        <div class="flex gap-4 p-3 bg-charcoal-50 rounded-lg">
+          <div class="w-16 h-20 bg-white rounded overflow-hidden flex-shrink-0 border border-charcoal-100">
+            ${item.image 
+              ? `<img src="${item.image}" alt="${item.name}" class="w-full h-full object-cover" />` 
+              : `<div class="w-full h-full flex items-center justify-center text-charcoal-300">
+                  <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                </div>`
+            }
+          </div>
+          <div class="flex-1 min-w-0">
+            <h3 class="font-medium text-navy-900 text-sm truncate">${item.name}</h3>
+            <p class="text-xs text-charcoal-500 mt-0.5">
+              ${item.size ? `Talla: ${item.size}` : ''}
+              ${item.color ? ` • Color: ${item.color}` : ''}
+            </p>
+            <p class="text-xs text-charcoal-500">Cantidad: ${item.quantity}</p>
+            <p class="text-sm text-navy-900 font-semibold mt-1">${formatPrice(item.price * item.quantity)}</p>
+          </div>
+        </div>
+      `).join('');
     };
 
-    // Actualizar indicadores de paso
-    const updateStepIndicators = () => {
-      const indicators = [
-        { el: document.getElementById('step-1-indicator'), step: 1 },
-        { el: document.getElementById('step-2-indicator'), step: 2 },
-        { el: document.getElementById('step-3-indicator'), step: 3 },
-      ];
+    // ==========================================
+    // CÁLCULOS
+    // ==========================================
+    const calculateSubtotal = (): number => {
+      const cartItems = getCart();
+      return cartItems.reduce((sum: number, item: any) => sum + item.price * item.quantity, 0);
+    };
 
-      indicators.forEach(({ el, step }) => {
-        if (!el) return;
-        if (step < currentStep) {
-          el.className = 'w-8 h-8 rounded-full bg-green-500 text-white flex items-center justify-center text-sm font-medium';
-          el.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>';
-        } else if (step === currentStep) {
-          el.className = 'w-8 h-8 rounded-full bg-navy-900 text-white flex items-center justify-center text-sm font-medium';
-          el.textContent = step.toString();
+    const calculateShippingCost = (): number => {
+      const subtotal = calculateSubtotal();
+      
+      // Envío gratis si supera el umbral
+      if (subtotal >= storeSettings.shipping.free_shipping_threshold) {
+        return selectedShippingMethod === 'express' 
+          ? storeSettings.shipping.express_shipping_cost 
+          : 0;
+      }
+      
+      return selectedShippingMethod === 'express'
+        ? storeSettings.shipping.express_shipping_cost
+        : storeSettings.shipping.standard_shipping_cost;
+    };
+
+    const calculateTotal = (): number => {
+      const subtotal = calculateSubtotal();
+      const discount = appliedDiscount?.discount_amount || 0;
+      const shipping = calculateShippingCost();
+      return Math.max(0, subtotal - discount + shipping);
+    };
+
+    // ==========================================
+    // ACTUALIZACIÓN DE UI
+    // ==========================================
+    const updateTotals = () => {
+      const subtotal = calculateSubtotal();
+      const discount = appliedDiscount?.discount_amount || 0;
+      const shipping = calculateShippingCost();
+      const total = calculateTotal();
+
+      // Actualizar displays
+      const subtotalDisplay = document.getElementById('subtotal-display');
+      const discountRow = document.getElementById('discount-row');
+      const discountTotal = document.getElementById('discount-total');
+      const shippingDisplay = document.getElementById('shipping-display');
+      const totalDisplay = document.getElementById('total-display');
+
+      if (subtotalDisplay) subtotalDisplay.textContent = formatPrice(subtotal);
+      
+      if (discountRow && discountTotal) {
+        if (discount > 0) {
+          discountRow.classList.remove('hidden');
+          discountTotal.textContent = `-${formatPrice(discount)}`;
         } else {
-          el.className = 'w-8 h-8 rounded-full bg-charcoal-200 text-charcoal-500 flex items-center justify-center text-sm font-medium';
-          el.textContent = step.toString();
+          discountRow.classList.add('hidden');
         }
-      });
+      }
+
+      if (shippingDisplay) {
+        if (shipping === 0) {
+          shippingDisplay.innerHTML = `
+            <span class="text-green-600 font-semibold flex items-center gap-1">
+              <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+              </svg>
+              GRATIS
+            </span>
+          `;
+        } else {
+          shippingDisplay.textContent = formatPrice(shipping);
+        }
+      }
+
+      if (totalDisplay) totalDisplay.textContent = formatPrice(total);
+
+      // Guardar opciones para CheckoutForm
+      localStorage.setItem('fashionmarket-checkout-options', JSON.stringify({
+        shippingMethod: selectedShippingMethod,
+        paymentMethod: 'card',
+        shippingCost: shipping,
+        codCost: 0,
+      }));
     };
 
-    // Mostrar paso
+    const updateShippingOptions = () => {
+      const subtotal = calculateSubtotal();
+      const standardLabel = document.getElementById('standard-shipping-label');
+      const expressLabel = document.getElementById('express-shipping-label');
+      const standardPrice = document.getElementById('standard-price');
+      const expressPrice = document.getElementById('express-price');
+
+      // Actualizar precio estándar
+      if (standardPrice) {
+        if (subtotal >= storeSettings.shipping.free_shipping_threshold) {
+          standardPrice.innerHTML = `
+            <span class="text-green-600 font-semibold flex items-center gap-1">
+              <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+              </svg>
+              GRATIS
+            </span>
+          `;
+        } else {
+          standardPrice.textContent = formatPrice(storeSettings.shipping.standard_shipping_cost);
+        }
+      }
+
+      // Mostrar/ocultar express
+      if (expressLabel && storeSettings.shipping.express_shipping_enabled) {
+        expressLabel.classList.remove('hidden');
+        expressLabel.classList.add('flex');
+        if (expressPrice) {
+          expressPrice.textContent = formatPrice(storeSettings.shipping.express_shipping_cost);
+        }
+      }
+    };
+
+    const updateStepIndicators = () => {
+      for (let step = 1; step <= 3; step++) {
+        const indicator = document.getElementById(`step-${step}-indicator`);
+        const label = document.getElementById(`step-${step}-label`);
+        const line = step < 3 ? document.getElementById(`step-line-${step}`) : null;
+
+        if (!indicator) continue;
+
+        if (step < currentStep) {
+          // Paso completado
+          indicator.className = 'w-8 h-8 rounded-full bg-green-500 text-white flex items-center justify-center text-sm font-medium transition-all duration-300';
+          indicator.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>';
+          if (label) {
+            label.className = 'text-sm font-medium text-green-600 hidden sm:inline transition-colors duration-300';
+          }
+          if (line) {
+            line.className = 'w-12 h-0.5 bg-green-500 transition-colors duration-300';
+          }
+        } else if (step === currentStep) {
+          // Paso actual
+          indicator.className = 'w-8 h-8 rounded-full bg-navy-900 text-white flex items-center justify-center text-sm font-medium transition-all duration-300';
+          indicator.textContent = step.toString();
+          if (label) {
+            label.className = 'text-sm font-medium text-navy-900 hidden sm:inline transition-colors duration-300';
+          }
+        } else {
+          // Paso pendiente
+          indicator.className = 'w-8 h-8 rounded-full bg-charcoal-200 text-charcoal-500 flex items-center justify-center text-sm font-medium transition-all duration-300';
+          indicator.textContent = step.toString();
+          if (label) {
+            label.className = 'text-sm text-charcoal-500 hidden sm:inline transition-colors duration-300';
+          }
+          if (line) {
+            line.className = 'w-12 h-0.5 bg-charcoal-200 transition-colors duration-300';
+          }
+        }
+      }
+    };
+
     const showStep = (step: number) => {
       currentStep = step;
+      
       document.getElementById('step-1')?.classList.toggle('hidden', step !== 1);
       document.getElementById('step-2')?.classList.toggle('hidden', step !== 2);
       document.getElementById('step-3')?.classList.toggle('hidden', step !== 3);
+      
       updateStepIndicators();
     };
 
-    // Cargar configuración
+    // ==========================================
+    // CARGAR CONFIGURACIÓN
+    // ==========================================
     const loadStoreSettings = async () => {
       try {
         const response = await fetch('/api/store/settings');
         if (response.ok) {
           const data = await response.json();
-          storeSettings = { ...storeSettings, ...data };
+          if (data.shipping) {
+            storeSettings.shipping = { ...storeSettings.shipping, ...data.shipping };
+          }
           updateShippingOptions();
           updateTotals();
         }
@@ -638,268 +780,284 @@ const isGuest = !user;
       }
     };
 
-    // Actualizar opciones de envío
-    const updateShippingOptions = () => {
-      const standardPrice = document.getElementById('standard-price');
-      const expressOption = document.getElementById('express-option');
-      const expressPrice = document.getElementById('express-price');
-      
-      if (standardPrice) {
-        if (subtotal >= storeSettings.shipping.free_shipping_threshold) {
-          standardPrice.innerHTML = '<span class="text-green-600 flex items-center gap-1"><svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg> GRATIS</span>';
-        } else {
-          standardPrice.textContent = formatPrice(storeSettings.shipping.standard_shipping_cost);
-        }
-      }
-      
-      if (expressOption && storeSettings.shipping.express_shipping_enabled) {
-        expressOption.classList.remove('hidden');
-        if (expressPrice) {
-          expressPrice.textContent = formatPrice(storeSettings.shipping.express_shipping_cost);
-        }
-      }
-    };
-
-    // Calcular envío
-    const calculateShippingCost = () => {
-      if (subtotal >= storeSettings.shipping.free_shipping_threshold) {
-        return selectedShippingMethod === 'express' 
-          ? storeSettings.shipping.express_shipping_cost 
-          : 0;
-      }
-      return selectedShippingMethod === 'express'
-        ? storeSettings.shipping.express_shipping_cost
-        : storeSettings.shipping.standard_shipping_cost;
-    };
-
-    // Renderizar items
-    const renderCartItems = () => {
-      const container = document.getElementById('cart-items');
-      if (!container) return;
-
-      if (cartItems.length === 0) {
-        container.innerHTML = `
-          <div class="text-center py-4">
-            <p class="text-charcoal-500 text-sm">Tu carrito está vacío</p>
-            <a href="/tienda" class="text-sm text-navy-900 underline mt-2 inline-block">Ir a la tienda</a>
-          </div>
-        `;
-        return;
-      }
-
-      container.innerHTML = cartItems.map((item: any) => `
-        <div class="flex gap-4">
-          <div class="w-16 h-16 bg-charcoal-100 rounded flex-shrink-0 overflow-hidden">
-            ${item.image ? `<img src="${item.image}" alt="${item.name}" class="w-full h-full object-cover" />` : ''}
-          </div>
-          <div class="flex-1 min-w-0">
-            <h3 class="font-medium text-navy-900 text-sm truncate">${item.name}</h3>
-            <p class="text-xs text-charcoal-500">Talla: ${item.size} | Cantidad: ${item.quantity}</p>
-            <p class="text-sm text-navy-900 font-medium mt-1">${formatPrice(item.price * item.quantity)}</p>
-          </div>
-        </div>
-      `).join('');
-    };
-
-    // Actualizar totales
-    const updateTotals = () => {
-      const discount = appliedDiscount?.discount_amount || 0;
-      const shippingCost = calculateShippingCost();
-      const total = subtotal - discount + shippingCost;
-      
-      const subtotalDisplay = document.getElementById('subtotal-display');
-      const totalDisplay = document.getElementById('total-display');
-      const discountRow = document.getElementById('discount-row');
-      const discountTotal = document.getElementById('discount-total');
-      const shippingDisplay = document.getElementById('shipping-display');
-      
-      if (subtotalDisplay) subtotalDisplay.textContent = formatPrice(subtotal);
-      if (totalDisplay) totalDisplay.textContent = formatPrice(total);
-      
-      if (shippingDisplay) {
-        if (shippingCost === 0) {
-          shippingDisplay.innerHTML = '<span class="text-green-600 flex items-center gap-1"><svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg> GRATIS</span>';
-        } else {
-          shippingDisplay.textContent = formatPrice(shippingCost);
-        }
-      }
-      
-      if (discount > 0 && discountRow && discountTotal) {
-        discountRow.classList.remove('hidden');
-        discountTotal.textContent = `-${formatPrice(discount)}`;
-      } else if (discountRow) {
-        discountRow.classList.add('hidden');
-      }
-      
-      // Guardar para CheckoutForm
-      localStorage.setItem('fashionmarket-checkout-options', JSON.stringify({
-        shippingMethod: selectedShippingMethod,
-        paymentMethod: 'card',
-        shippingCost,
-        codCost: 0,
-      }));
-    };
-
-    // Formulario de envío
-    const shippingForm = document.getElementById('shipping-form') as HTMLFormElement;
-    const shippingFormError = document.getElementById('shipping-form-error');
-
-    shippingForm?.addEventListener('submit', (e) => {
-      e.preventDefault();
-      
-      const formData = new FormData(shippingForm);
-      shippingData = {
-        name: `${formData.get('first_name')} ${formData.get('last_name')}`,
-        email: formData.get('email'),
-        phone: formData.get('phone'),
-        address_line1: formData.get('address'),
-        city: formData.get('city'),
-        postal_code: formData.get('postal_code'),
-        country: formData.get('country'),
-        notes: formData.get('notes'),
-      };
-
-      // Validar campos requeridos
-      const required = ['first_name', 'last_name', 'email', 'phone', 'address', 'city', 'postal_code'];
-      const missing = required.filter(field => !formData.get(field));
-      
-      if (missing.length > 0) {
-        if (shippingFormError) {
-          shippingFormError.textContent = 'Por favor, completa todos los campos obligatorios.';
-          shippingFormError.classList.remove('hidden');
-        }
-        return;
-      }
-
-      // Guardar datos de envío en localStorage
-      localStorage.setItem('fashionmarket-shipping-address', JSON.stringify(shippingData));
-      
-      // Mostrar resumen
-      const shippingSummary = document.getElementById('shipping-summary');
-      if (shippingSummary) {
-        shippingSummary.textContent = `${shippingData.name}, ${shippingData.address_line1}, ${shippingData.postal_code} ${shippingData.city}`;
-      }
-
-      showStep(2);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    });
-
-    // Botón volver
-    document.getElementById('back-to-shipping')?.addEventListener('click', () => {
-      showStep(1);
-    });
-
-    // Cambio de método de envío
-    document.querySelectorAll('input[name="shipping-method"]').forEach(radio => {
-      radio.addEventListener('change', (e) => {
-        selectedShippingMethod = (e.target as HTMLInputElement).value;
-        updateTotals();
-      });
-    });
-
-    // Código de descuento
-    const discountCodeInput = document.getElementById('discount-code') as HTMLInputElement;
-    const applyBtn = document.getElementById('apply-discount') as HTMLButtonElement;
-    const removeBtn = document.getElementById('remove-discount') as HTMLButtonElement;
-    const discountMessage = document.getElementById('discount-message') as HTMLDivElement;
-    const discountApplied = document.getElementById('discount-applied') as HTMLDivElement;
-    const discountCodeDisplay = document.getElementById('discount-code-display') as HTMLSpanElement;
-    const discountAmountDisplay = document.getElementById('discount-amount-display') as HTMLSpanElement;
-
-    const showMessage = (message: string, isError: boolean) => {
-      if (!discountMessage) return;
-      discountMessage.textContent = message;
-      discountMessage.classList.remove('hidden', 'text-green-600', 'text-red-600');
-      discountMessage.classList.add(isError ? 'text-red-600' : 'text-green-600');
-    };
-
-    applyBtn?.addEventListener('click', async () => {
-      const code = discountCodeInput.value.trim();
-      if (!code) {
-        showMessage('Introduce un código', true);
-        return;
-      }
-
-      applyBtn.disabled = true;
-      applyBtn.textContent = 'Validando...';
-      discountMessage?.classList.add('hidden');
-
+    // Cargar descuento guardado
+    const loadSavedDiscount = () => {
       try {
-        const response = await fetch('/api/discount/validate', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ code, subtotal }),
-        });
+        const saved = localStorage.getItem('fashionmarket-applied-discount');
+        if (saved) {
+          appliedDiscount = JSON.parse(saved);
+          
+          const discountInputWrapper = document.getElementById('discount-input-wrapper');
+          const discountApplied = document.getElementById('discount-applied');
+          const discountCodeDisplay = document.getElementById('discount-code-display');
+          const discountAmountDisplay = document.getElementById('discount-amount-display');
 
-        const data = await response.json();
+          if (discountInputWrapper) discountInputWrapper.classList.add('hidden');
+          if (discountApplied) discountApplied.classList.remove('hidden');
+          if (discountCodeDisplay && appliedDiscount) discountCodeDisplay.textContent = appliedDiscount.code;
+          if (discountAmountDisplay && appliedDiscount) discountAmountDisplay.textContent = `-${formatPrice(appliedDiscount.discount_amount)}`;
+        }
+      } catch (error) {
+        console.error('Error loading saved discount:', error);
+      }
+    };
 
-        if (!data.valid) {
-          showMessage(data.reason || 'Código no válido', true);
+    // ==========================================
+    // EVENT HANDLERS
+    // ==========================================
+    
+    // Formulario de envío
+    const setupShippingForm = () => {
+      const form = document.getElementById('shipping-form') as HTMLFormElement;
+      const errorDiv = document.getElementById('shipping-form-error');
+
+      form?.addEventListener('submit', (e) => {
+        e.preventDefault();
+        
+        const formData = new FormData(form);
+        const required = ['first_name', 'last_name', 'email', 'phone', 'address', 'city', 'postal_code'];
+        const missing = required.filter(field => !formData.get(field)?.toString().trim());
+
+        if (missing.length > 0) {
+          if (errorDiv) {
+            const errorSpan = errorDiv.querySelector('span');
+            if (errorSpan) errorSpan.textContent = 'Por favor, completa todos los campos obligatorios.';
+            errorDiv.classList.remove('hidden');
+          }
           return;
         }
 
-        appliedDiscount = {
-          discount_code_id: data.discount_code_id,
-          code: data.code,
-          discount_amount: data.discount_amount,
+        // Ocultar error si lo había
+        errorDiv?.classList.add('hidden');
+
+        // Guardar datos
+        shippingData = {
+          name: `${formData.get('first_name')} ${formData.get('last_name')}`,
+          email: formData.get('email'),
+          phone: formData.get('phone'),
+          address_line1: formData.get('address'),
+          city: formData.get('city'),
+          postal_code: formData.get('postal_code'),
+          country: formData.get('country'),
+          notes: formData.get('notes'),
         };
-        
-        localStorage.setItem('fashionmarket-applied-discount', JSON.stringify(appliedDiscount));
 
-        discountCodeInput.parentElement?.classList.add('hidden');
-        discountApplied?.classList.remove('hidden');
-        discountCodeDisplay!.textContent = data.code;
-        discountAmountDisplay!.textContent = `-${formatPrice(data.discount_amount)}`;
-        discountMessage?.classList.add('hidden');
+        localStorage.setItem('fashionmarket-shipping-address', JSON.stringify(shippingData));
+
+        // Actualizar resumen en paso 2
+        const shippingSummary = document.getElementById('shipping-summary');
+        const shippingEmail = document.getElementById('shipping-email');
         
+        if (shippingSummary) {
+          shippingSummary.textContent = `${shippingData.name}, ${shippingData.address_line1}, ${shippingData.postal_code} ${shippingData.city}`;
+        }
+        if (shippingEmail) {
+          shippingEmail.textContent = `📧 ${shippingData.email} • 📱 ${shippingData.phone}`;
+        }
+
+        // Ir al paso 2
+        showStep(2);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+    };
+
+    // Botón volver a envío
+    const setupBackButton = () => {
+      document.getElementById('back-to-shipping')?.addEventListener('click', () => {
+        showStep(1);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+    };
+
+    // Cambio de método de envío
+    const setupShippingMethodChange = () => {
+      const standardLabel = document.getElementById('standard-shipping-label');
+      const expressLabel = document.getElementById('express-shipping-label');
+
+      document.querySelectorAll('input[name="shipping-method"]').forEach(radio => {
+        radio.addEventListener('change', (e) => {
+          selectedShippingMethod = (e.target as HTMLInputElement).value;
+          
+          // Actualizar estilos
+          if (selectedShippingMethod === 'standard') {
+            standardLabel?.classList.remove('border-charcoal-200');
+            standardLabel?.classList.add('border-navy-900', 'bg-navy-50');
+            expressLabel?.classList.remove('border-navy-900', 'bg-navy-50');
+            expressLabel?.classList.add('border-charcoal-200');
+          } else {
+            expressLabel?.classList.remove('border-charcoal-200');
+            expressLabel?.classList.add('border-navy-900', 'bg-navy-50');
+            standardLabel?.classList.remove('border-navy-900', 'bg-navy-50');
+            standardLabel?.classList.add('border-charcoal-200');
+          }
+          
+          updateTotals();
+        });
+      });
+    };
+
+    // Código de descuento
+    const setupDiscountCode = () => {
+      const input = document.getElementById('discount-code') as HTMLInputElement;
+      const applyBtn = document.getElementById('apply-discount') as HTMLButtonElement;
+      const removeBtn = document.getElementById('remove-discount') as HTMLButtonElement;
+      const message = document.getElementById('discount-message');
+      const inputWrapper = document.getElementById('discount-input-wrapper');
+      const appliedDiv = document.getElementById('discount-applied');
+      const codeDisplay = document.getElementById('discount-code-display');
+      const amountDisplay = document.getElementById('discount-amount-display');
+
+      const showMessage = (text: string, isError: boolean) => {
+        if (!message) return;
+        message.textContent = text;
+        message.classList.remove('hidden', 'text-green-600', 'text-red-600');
+        message.classList.add(isError ? 'text-red-600' : 'text-green-600');
+      };
+
+      applyBtn?.addEventListener('click', async () => {
+        const code = input.value.trim();
+        if (!code) {
+          showMessage('Introduce un código de descuento', true);
+          return;
+        }
+
+        applyBtn.disabled = true;
+        applyBtn.textContent = 'Validando...';
+        message?.classList.add('hidden');
+
+        try {
+          const subtotal = calculateSubtotal();
+          const response = await fetch('/api/discount/validate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ code, subtotal }),
+          });
+
+          const data = await response.json();
+
+          if (!data.valid) {
+            showMessage(data.reason || 'Código no válido', true);
+            return;
+          }
+
+          // Aplicar descuento
+          appliedDiscount = {
+            discount_code_id: data.discount_code_id,
+            code: data.code,
+            discount_amount: data.discount_amount,
+          };
+
+          localStorage.setItem('fashionmarket-applied-discount', JSON.stringify(appliedDiscount));
+
+          // Actualizar UI
+          inputWrapper?.classList.add('hidden');
+          appliedDiv?.classList.remove('hidden');
+          if (codeDisplay) codeDisplay.textContent = data.code;
+          if (amountDisplay) amountDisplay.textContent = `-${formatPrice(data.discount_amount)}`;
+          message?.classList.add('hidden');
+
+          updateTotals();
+        } catch (error) {
+          showMessage('Error al validar el código. Inténtalo de nuevo.', true);
+        } finally {
+          applyBtn.disabled = false;
+          applyBtn.textContent = 'Aplicar';
+        }
+      });
+
+      removeBtn?.addEventListener('click', () => {
+        appliedDiscount = null;
+        input.value = '';
+        inputWrapper?.classList.remove('hidden');
+        appliedDiv?.classList.add('hidden');
+        localStorage.removeItem('fashionmarket-applied-discount');
         updateTotals();
-      } catch (error) {
-        showMessage('Error al validar. Inténtalo de nuevo.', true);
-      } finally {
-        applyBtn.disabled = false;
-        applyBtn.textContent = 'Aplicar';
-      }
-    });
+      });
 
-    removeBtn?.addEventListener('click', () => {
-      appliedDiscount = null;
-      discountCodeInput.value = '';
-      discountCodeInput.parentElement?.classList.remove('hidden');
-      discountApplied?.classList.add('hidden');
-      localStorage.removeItem('fashionmarket-applied-discount');
-      updateTotals();
-    });
+      input?.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          applyBtn?.click();
+        }
+      });
 
-    discountCodeInput?.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        applyBtn.click();
-      }
-    });
-
-    discountCodeInput?.addEventListener('input', () => {
-      discountCodeInput.value = discountCodeInput.value.toUpperCase();
-    });
+      input?.addEventListener('input', () => {
+        input.value = input.value.toUpperCase();
+      });
+    };
 
     // Escuchar pago exitoso
-    window.addEventListener('payment-success', () => {
-      showStep(3);
-      localStorage.removeItem('fashionmarket-cart');
-      localStorage.removeItem('fashionmarket-shipping-address');
-      localStorage.removeItem('fashionmarket-applied-discount');
-      localStorage.removeItem('fashionmarket-checkout-options');
-    });
+    const setupPaymentSuccessListener = () => {
+      window.addEventListener('payment-success', () => {
+        showStep(3);
+        
+        // Limpiar localStorage
+        localStorage.removeItem('fashionmarket-cart');
+        localStorage.removeItem('fashionmarket-shipping-address');
+        localStorage.removeItem('fashionmarket-applied-discount');
+        localStorage.removeItem('fashionmarket-checkout-options');
+        
+        // Disparar evento para actualizar icono del carrito
+        window.dispatchEvent(new CustomEvent('cart-updated', { detail: { items: [] } }));
+      });
+    };
 
-    // Inicializar
-    renderCartItems();
-    loadStoreSettings();
-    updateTotals();
+    // ==========================================
+    // INICIALIZACIÓN
+    // ==========================================
+    const init = () => {
+      const cartItems = getCart();
 
-    // Si el carrito está vacío, redirigir
-    if (cartItems.length === 0) {
-      setTimeout(() => {
-        window.location.href = '/tienda';
-      }, 2000);
+      // Si el carrito está vacío, redirigir
+      if (cartItems.length === 0) {
+        const container = document.getElementById('cart-items');
+        const subtotalDisplay = document.getElementById('subtotal-display');
+        const shippingDisplay = document.getElementById('shipping-display');
+        const totalDisplay = document.getElementById('total-display');
+        
+        // Mostrar valores en cero explícitamente
+        if (subtotalDisplay) subtotalDisplay.textContent = formatPrice(0);
+        if (shippingDisplay) shippingDisplay.textContent = formatPrice(0);
+        if (totalDisplay) totalDisplay.textContent = formatPrice(0);
+        
+        if (container) {
+          container.innerHTML = `
+            <div class="text-center py-8">
+              <div class="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg class="w-8 h-8 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                </svg>
+              </div>
+              <p class="text-charcoal-600 text-sm mb-2">Tu carrito está vacío</p>
+              <p class="text-xs text-charcoal-500 mb-4">Redirigiendo a la tienda...</p>
+            </div>
+          `;
+        }
+        setTimeout(() => {
+          window.location.href = '/tienda';
+        }, 2000);
+        return;
+      }
+
+      // Inicializar componentes - PRIMERO actualizar totales para mostrar datos correctos
+      updateTotals();
+      renderCartItems();
+      loadSavedDiscount();
+      loadStoreSettings();
+      updateShippingOptions();
+      
+      setupShippingForm();
+      setupBackButton();
+      setupShippingMethodChange();
+      setupDiscountCode();
+      setupPaymentSuccessListener();
+    };
+
+    // Ejecutar cuando el DOM esté listo
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', init);
+    } else {
+      init();
     }
   </script>
 </BaseLayout>

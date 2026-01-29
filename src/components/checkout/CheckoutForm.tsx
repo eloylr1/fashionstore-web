@@ -51,10 +51,15 @@ const getCartFromStorage = (): { items: CartItem[]; total: number } => {
   
   try {
     const saved = localStorage.getItem('fashionmarket-cart');
-    const items: CartItem[] = saved ? JSON.parse(saved) : [];
-    const total = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+    if (!saved) return { items: [], total: 0 };
+    
+    const items: CartItem[] = JSON.parse(saved);
+    if (!Array.isArray(items) || items.length === 0) return { items: [], total: 0 };
+    
+    const total = items.reduce((sum, item) => sum + (item.price || 0) * (item.quantity || 0), 0);
     return { items, total };
-  } catch {
+  } catch (e) {
+    console.error('Error parsing cart:', e);
     return { items: [], total: 0 };
   }
 };
@@ -134,17 +139,33 @@ export default function CheckoutForm({
   const paymentElementRef = useRef<HTMLDivElement>(null);
   const elementsMounted = useRef(false);
   
-  // Estado del carrito
-  const [cartData, setCartData] = useState<{ items: CartItem[]; total: number }>({ items: [], total: 0 });
+  // Estado del carrito - inicializar con datos del localStorage si está disponible
+  const [cartData, setCartData] = useState<{ items: CartItem[]; total: number }>(() => {
+    // Intentar cargar datos inmediatamente para evitar flash de 0,00€
+    if (typeof window !== 'undefined') {
+      return getCartFromStorage();
+    }
+    return { items: [], total: 0 };
+  });
   
   // Estado del descuento
   const [discountCodeId, setDiscountCodeId] = useState<string | undefined>(propDiscountCodeId);
   
-  // Estado de las opciones de checkout
-  const [checkoutOptions, setCheckoutOptions] = useState(getCheckoutOptionsFromStorage());
+  // Estado de las opciones de checkout - inicializar con datos del localStorage
+  const [checkoutOptions, setCheckoutOptions] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return getCheckoutOptionsFromStorage();
+    }
+    return { shippingMethod: 'standard', paymentMethod: 'card', shippingCost: 499, codCost: 0 };
+  });
   
   // Estado de la dirección de envío
-  const [storedShippingAddress, setStoredShippingAddress] = useState<ShippingAddress | null>(null);
+  const [storedShippingAddress, setStoredShippingAddress] = useState<ShippingAddress | null>(() => {
+    if (typeof window !== 'undefined' && !shippingAddress) {
+      return getShippingAddressFromStorage();
+    }
+    return null;
+  });
   
   // Formatear precio
   const formatPrice = (cents: number) => {
@@ -162,8 +183,8 @@ export default function CheckoutForm({
         if (response.ok) {
           const data = await response.json();
           setStoreSettings({
-            cod_enabled: data.cod_enabled || false,
-            cod_fee: data.cod_fee || 0,
+            cod_enabled: data.payments?.cash_on_delivery_enabled || data.cod_enabled || false,
+            cod_fee: data.payments?.cod_extra_cost || data.cod_fee || 0,
           });
         }
       } catch (error) {
@@ -174,10 +195,13 @@ export default function CheckoutForm({
     fetchStoreSettings();
   }, []);
   
-  // Obtener datos al montar
+  // Obtener datos al montar y sincronizar con localStorage
   useEffect(() => {
+    // Re-sincronizar datos del carrito en caso de que hayan cambiado
     const data = getCartFromStorage();
-    setCartData(data);
+    if (data.total !== cartData.total || data.items.length !== cartData.items.length) {
+      setCartData(data);
+    }
     
     if (!propDiscountCodeId) {
       const appliedDiscount = getAppliedDiscountFromStorage();
@@ -186,7 +210,9 @@ export default function CheckoutForm({
       }
     }
     
-    setCheckoutOptions(getCheckoutOptionsFromStorage());
+    // Sincronizar opciones de checkout
+    const options = getCheckoutOptionsFromStorage();
+    setCheckoutOptions(options);
     
     if (!shippingAddress) {
       const stored = getShippingAddressFromStorage();
@@ -194,6 +220,8 @@ export default function CheckoutForm({
     }
     
     const handleStorageChange = () => {
+      const newCart = getCartFromStorage();
+      setCartData(newCart);
       setCheckoutOptions(getCheckoutOptionsFromStorage());
       if (!shippingAddress) {
         setStoredShippingAddress(getShippingAddressFromStorage());
@@ -202,15 +230,17 @@ export default function CheckoutForm({
     
     window.addEventListener('storage', handleStorageChange);
     
+    // Actualizar opciones periódicamente para mantener sincronización
     const interval = setInterval(() => {
-      setCheckoutOptions(getCheckoutOptionsFromStorage());
+      const newOptions = getCheckoutOptionsFromStorage();
+      setCheckoutOptions(newOptions);
     }, 500);
     
     return () => {
       window.removeEventListener('storage', handleStorageChange);
       clearInterval(interval);
     };
-  }, [propDiscountCodeId, shippingAddress]);
+  }, [propDiscountCodeId, shippingAddress, cartData.total, cartData.items.length]);
   
   const amount = propAmount && propAmount > 0 ? propAmount : cartData.total;
   const items = propItems || cartData.items;
@@ -559,7 +589,28 @@ export default function CheckoutForm({
     return (
       <div className="flex flex-col items-center justify-center p-8 space-y-3">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-navy-900"></div>
-        <span className="text-charcoal-600">Iniciando...</span>
+        <span className="text-charcoal-600">Cargando método de pago...</span>
+      </div>
+    );
+  }
+
+  // Si el carrito está vacío o el monto es 0 después de montar
+  if (mounted && (!cartData.items || cartData.items.length === 0 || amount <= 0)) {
+    return (
+      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center">
+        <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
+          <svg className="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+          </svg>
+        </div>
+        <h3 className="text-lg font-semibold text-yellow-900 mb-2">Carrito vacío</h3>
+        <p className="text-yellow-700 mb-4">Añade productos a tu carrito para continuar</p>
+        <a
+          href="/tienda"
+          className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition text-sm font-medium"
+        >
+          Ir a la tienda
+        </a>
       </div>
     );
   }
@@ -592,27 +643,6 @@ export default function CheckoutForm({
         >
           Reintentar
         </button>
-      </div>
-    );
-  }
-
-  // Carrito vacío
-  if (amount <= 0) {
-    return (
-      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center">
-        <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
-          <svg className="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-          </svg>
-        </div>
-        <h3 className="text-lg font-semibold text-yellow-900 mb-2">Carrito vacío</h3>
-        <p className="text-yellow-700 mb-4">Añade productos a tu carrito para continuar</p>
-        <a
-          href="/tienda"
-          className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition text-sm font-medium"
-        >
-          Ir a la tienda
-        </a>
       </div>
     );
   }
