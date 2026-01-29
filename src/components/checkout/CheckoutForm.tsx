@@ -336,6 +336,11 @@ export default function CheckoutForm({
   useEffect(() => {
     if (!stripe || !clientSecret || !paymentElementRef.current || elementsMounted.current || selectedPaymentMethod !== 'stripe') return;
 
+    // Limpiar el contenedor antes de montar
+    if (paymentElementRef.current) {
+      paymentElementRef.current.innerHTML = '';
+    }
+
     const elementsInstance = stripe.elements({
       clientSecret,
       appearance: {
@@ -389,22 +394,30 @@ export default function CheckoutForm({
         type: 'tabs',
         defaultCollapsed: false,
       },
-      paymentMethodOrder: ['card', 'google_pay', 'apple_pay'],
+      paymentMethodOrder: ['card'],
       wallets: {
-        googlePay: 'auto',
-        applePay: 'auto',
+        googlePay: 'never',
+        applePay: 'never',
       },
     });
 
-    paymentElement.mount(paymentElementRef.current);
+    // Guardar referencia para cleanup
+    let isMounted = true;
+    const containerRef = paymentElementRef.current;
+
+    paymentElement.mount(containerRef);
     paymentElement.on('ready', () => {
-      setPaymentElementReady(true);
+      if (isMounted) {
+        setPaymentElementReady(true);
+      }
     });
     paymentElement.on('change', (event: any) => {
-      if (event.error) {
-        setError(event.error.message);
-      } else {
-        setError('');
+      if (isMounted) {
+        if (event.error) {
+          setError(event.error.message);
+        } else {
+          setError('');
+        }
       }
     });
 
@@ -412,9 +425,19 @@ export default function CheckoutForm({
     setElements(elementsInstance);
 
     return () => {
-      paymentElement.unmount();
+      isMounted = false;
+      try {
+        paymentElement.unmount();
+      } catch (e) {
+        // Ignorar errores de unmount si el elemento ya no existe
+        console.warn('Payment element unmount warning:', e);
+      }
       elementsMounted.current = false;
       setPaymentElementReady(false);
+      // Limpiar el contenedor de forma segura
+      if (containerRef) {
+        containerRef.innerHTML = '';
+      }
     };
   }, [stripe, clientSecret, selectedPaymentMethod]);
 
