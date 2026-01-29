@@ -280,15 +280,13 @@ export default function AdminNotifications() {
           {/* Footer */}
           {notifications.length > 0 && (
             <div className="border-t border-gray-100 p-3 bg-gray-50">
-              <button
-                onClick={() => {
-                  markAllAsRead();
-                  setIsOpen(false);
-                }}
+              <a
+                href="/admin/notificaciones"
+                onClick={() => setIsOpen(false)}
                 className="block w-full text-center text-sm text-blue-600 hover:text-blue-800 font-medium transition-colors"
               >
                 Ver todas las notificaciones
-              </button>
+              </a>
             </div>
           )}
         </div>
