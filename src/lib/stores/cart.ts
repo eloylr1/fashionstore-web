@@ -21,6 +21,7 @@ export interface CartItem {
   price: number; // En céntimos
   quantity: number;
   size: string;
+  color?: string; // Color seleccionado (opcional para compatibilidad)
   image: string;
   maxStock: number;
 }
@@ -90,12 +91,12 @@ export const cartSubtotalFormatted = computed(cartSubtotal, (subtotal) =>
 /**
  * Añadir producto al carrito
  */
-export function addToCart(product: Product, size: string, quantity: number = 1): void {
+export function addToCart(product: Product, size: string, quantity: number = 1, color?: string): void {
   const currentItems = cartItems.get();
   
-  // Buscar si ya existe este producto con esta talla
+  // Buscar si ya existe este producto con esta talla y color
   const existingIndex = currentItems.findIndex(
-    (item) => item.productId === product.id && item.size === size
+    (item) => item.productId === product.id && item.size === size && item.color === color
   );
   
   let newItems: CartItem[];
@@ -118,6 +119,7 @@ export function addToCart(product: Product, size: string, quantity: number = 1):
       price: product.price,
       quantity: Math.min(quantity, product.stock),
       size,
+      color,
       image: product.images[0] || '/placeholder.jpg',
       maxStock: product.stock,
     };
@@ -135,9 +137,9 @@ export function addToCart(product: Product, size: string, quantity: number = 1):
 /**
  * Eliminar item del carrito
  */
-export function removeFromCart(productId: string, size: string): void {
+export function removeFromCart(productId: string, size: string, color?: string): void {
   const newItems = cartItems.get().filter(
-    (item) => !(item.productId === productId && item.size === size)
+    (item) => !(item.productId === productId && item.size === size && item.color === color)
   );
   
   cartItems.set(newItems);
@@ -148,14 +150,14 @@ export function removeFromCart(productId: string, size: string): void {
 /**
  * Actualizar cantidad de un item
  */
-export function updateQuantity(productId: string, size: string, quantity: number): void {
+export function updateQuantity(productId: string, size: string, quantity: number, color?: string): void {
   if (quantity < 1) {
-    removeFromCart(productId, size);
+    removeFromCart(productId, size, color);
     return;
   }
   
   const newItems = cartItems.get().map((item) => {
-    if (item.productId === productId && item.size === size) {
+    if (item.productId === productId && item.size === size && item.color === color) {
       return { ...item, quantity: Math.min(quantity, item.maxStock) };
     }
     return item;

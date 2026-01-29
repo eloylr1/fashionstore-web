@@ -16,14 +16,22 @@ interface AddToCartButtonProps {
 
 export default function AddToCartButton({ product }: AddToCartButtonProps) {
   const [selectedSize, setSelectedSize] = useState<string>('');
+  const [selectedColor, setSelectedColor] = useState<string>('');
   const [quantity, setQuantity] = useState(1);
   const [isAdding, setIsAdding] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const hasColors = product.colors && product.colors.length > 0;
 
   const handleAddToCart = () => {
     // Validaciones
     if (!selectedSize) {
       setError('Por favor, selecciona una talla');
+      return;
+    }
+
+    if (hasColors && !selectedColor) {
+      setError('Por favor, selecciona un color');
       return;
     }
 
@@ -37,7 +45,7 @@ export default function AddToCartButton({ product }: AddToCartButtonProps) {
 
     // Simular pequeño delay para feedback visual
     setTimeout(() => {
-      addToCart(product, selectedSize, quantity);
+      addToCart(product, selectedSize, quantity, selectedColor || undefined);
       setIsAdding(false);
       // Reset después de añadir
       setQuantity(1);
@@ -73,6 +81,36 @@ export default function AddToCartButton({ product }: AddToCartButtonProps) {
         </span>
         <span className="text-sm text-charcoal-500">IVA incluido</span>
       </div>
+
+      {/* Selector de Color */}
+      {hasColors && (
+        <div>
+          <label className="block text-sm font-medium text-charcoal-700 mb-3">
+            Color
+          </label>
+          <div className="flex flex-wrap gap-2">
+            {product.colors.map((color) => (
+              <button
+                key={color}
+                type="button"
+                onClick={() => {
+                  setSelectedColor(color);
+                  setError(null);
+                }}
+                className={`
+                  px-4 py-2.5 text-sm font-medium border transition-all duration-200
+                  ${selectedColor === color
+                    ? 'border-navy-900 bg-navy-900 text-white'
+                    : 'border-charcoal-200 text-charcoal-700 hover:border-charcoal-400'
+                  }
+                `}
+              >
+                {color}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Selector de Talla */}
       <div>

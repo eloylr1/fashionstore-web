@@ -74,7 +74,7 @@ export default function CartSlideOver() {
               <ul className="space-y-4">
                 {items.map((item) => (
                   <li 
-                    key={`${item.productId}-${item.size}`}
+                    key={`${item.productId}-${item.size}-${item.color || ''}`}
                     className="flex gap-4 py-4 border-b border-charcoal-100 last:border-0"
                   >
                     {/* Product Image */}
@@ -96,7 +96,7 @@ export default function CartSlideOver() {
                             </a>
                           </h3>
                           <p className="text-sm text-charcoal-500 mt-0.5">
-                            Talla: {item.size}
+                            Talla: {item.size}{item.color && ` · ${item.color}`}
                           </p>
                         </div>
                         <p className="text-sm font-medium text-navy-900 ml-4">
@@ -109,7 +109,7 @@ export default function CartSlideOver() {
                         <div className="flex items-center border border-charcoal-200">
                           <button
                             type="button"
-                            onClick={() => updateQuantity(item.productId, item.size, item.quantity - 1)}
+                            onClick={() => updateQuantity(item.productId, item.size, item.quantity - 1, item.color)}
                             className="w-8 h-8 flex items-center justify-center text-charcoal-600 hover:bg-charcoal-50 transition-colors"
                             aria-label="Disminuir cantidad"
                           >
@@ -124,7 +124,7 @@ export default function CartSlideOver() {
                           
                           <button
                             type="button"
-                            onClick={() => updateQuantity(item.productId, item.size, item.quantity + 1)}
+                            onClick={() => updateQuantity(item.productId, item.size, item.quantity + 1, item.color)}
                             disabled={item.quantity >= item.maxStock}
                             className="w-8 h-8 flex items-center justify-center text-charcoal-600 hover:bg-charcoal-50 disabled:opacity-50 transition-colors"
                             aria-label="Aumentar cantidad"
@@ -137,7 +137,7 @@ export default function CartSlideOver() {
                         
                         <button
                           type="button"
-                          onClick={() => removeFromCart(item.productId, item.size)}
+                          onClick={() => removeFromCart(item.productId, item.size, item.color)}
                           className="text-sm text-charcoal-500 hover:text-error transition-colors"
                         >
                           Eliminar

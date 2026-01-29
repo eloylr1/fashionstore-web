@@ -151,11 +151,8 @@ if (!product) {
           {product.name}
         </h1>
         
-        <!-- Colors & Material -->
+        <!-- Material -->
         <div class="flex items-center gap-4 text-sm text-charcoal-500 mb-6">
-          {product.colors && product.colors.length > 0 && (
-            <span>Colores: <span class="text-charcoal-800">{product.colors.join(', ')}</span></span>
-          )}
           {product.material && (
             <span>Material: <span class="text-charcoal-800">{product.material}</span></span>
           )}
