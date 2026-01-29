@@ -54,24 +54,24 @@ const { title } = Astro.props;
   </head>
   
   <body class="min-h-screen bg-gradient-to-br from-charcoal-50 to-cream antialiased">
-    <div class="flex h-screen overflow-hidden">
+    <div class="flex h-screen">
       <!-- Sidebar -->
       <AdminSidebar />
       
       <!-- Main Content Area -->
-      <div class="flex-1 flex flex-col overflow-hidden">
+      <div class="flex-1 flex flex-col min-h-screen overflow-x-hidden">
         <!-- Admin Header -->
         <AdminHeader title={title} />
         
         <!-- Page Content -->
-        <main class="flex-1 overflow-y-auto">
-          <div class="p-6 lg:p-8 max-w-[1800px] mx-auto">
+        <main class="flex-1 overflow-y-auto pb-4">
+          <div class="p-6 lg:p-8 max-w-[1800px] mx-auto min-h-full">
             <slot />
           </div>
         </main>
         
         <!-- Footer -->
-        <footer class="border-t border-charcoal-100 bg-white px-6 py-3">
+        <footer class="border-t border-charcoal-100 bg-white px-6 py-3 flex-shrink-0">
           <div class="flex items-center justify-between text-xs text-charcoal-400">
             <p>© 2026 FashionMarket. Panel de Administración.</p>
             <p>v1.0.0</p>
