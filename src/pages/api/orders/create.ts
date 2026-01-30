@@ -437,6 +437,12 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     return new Response(
       JSON.stringify({
         success: true,
+        order: {
+          id: order.id,
+          order_number: order.order_number || orderNumber,
+          status: orderStatus,
+          total: order.total,
+        },
         order_id: order.id,
         order_number: order.order_number || orderNumber,
         status: orderStatus,
