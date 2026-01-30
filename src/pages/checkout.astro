@@ -327,18 +327,71 @@ const isGuest = !user;
                 </div>
 
                 <!-- Formulario de tarjeta Stripe -->
-                <div id="card-form-container" class="border-t border-charcoal-200 pt-6">
-                  <label class="block text-sm font-medium text-navy-900 mb-3">
-                    Datos de la tarjeta
-                  </label>
+                <div id="card-form-container" class="border-t border-charcoal-200 pt-6 space-y-4">
+                  <!-- Nombre del titular -->
+                  <div>
+                    <label for="cardholder-name" class="block text-sm font-medium text-navy-900 mb-2">
+                      Nombre del titular <span class="text-red-500">*</span>
+                    </label>
+                    <input 
+                      type="text" 
+                      id="cardholder-name" 
+                      placeholder="Como aparece en la tarjeta"
+                      class="w-full px-4 py-3 border border-charcoal-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-navy-900/20 focus:border-navy-900 transition-all"
+                      required
+                    />
+                  </div>
                   
-                  <!-- Contenedor del elemento de Stripe -->
-                  <div id="card-element" class="p-4 border border-charcoal-200 rounded-lg bg-white min-h-[50px]">
-                    <!-- Stripe Card Element se montará aquí -->
+                  <!-- Número de tarjeta -->
+                  <div>
+                    <label class="block text-sm font-medium text-navy-900 mb-2">
+                      Número de tarjeta <span class="text-red-500">*</span>
+                    </label>
+                    <div id="card-number-element" class="px-4 py-3 border border-charcoal-200 rounded-lg bg-white min-h-[48px] flex items-center">
+                      <span class="text-charcoal-400 text-sm">Cargando...</span>
+                    </div>
+                  </div>
+                  
+                  <!-- Fecha y CVV -->
+                  <div class="grid grid-cols-2 gap-4">
+                    <div>
+                      <label class="block text-sm font-medium text-navy-900 mb-2">
+                        Fecha de expiración <span class="text-red-500">*</span>
+                      </label>
+                      <div id="card-expiry-element" class="px-4 py-3 border border-charcoal-200 rounded-lg bg-white min-h-[48px] flex items-center">
+                        <span class="text-charcoal-400 text-sm">MM/AA</span>
+                      </div>
+                    </div>
+                    <div>
+                      <label class="block text-sm font-medium text-navy-900 mb-2">
+                        CVV <span class="text-red-500">*</span>
+                      </label>
+                      <div id="card-cvc-element" class="px-4 py-3 border border-charcoal-200 rounded-lg bg-white min-h-[48px] flex items-center">
+                        <span class="text-charcoal-400 text-sm">123</span>
+                      </div>
+                    </div>
                   </div>
                   
                   <!-- Errores de la tarjeta -->
-                  <div id="card-errors" class="mt-2 text-sm text-red-600 hidden"></div>
+                  <div id="card-errors" class="text-sm text-red-600 hidden bg-red-50 border border-red-200 rounded-lg p-3"></div>
+                  
+                  <!-- Logos de tarjetas -->
+                  <div class="flex items-center justify-center gap-3 pt-2">
+                    <div class="flex gap-2">
+                      <div class="w-10 h-6 bg-[#1A1F71] rounded flex items-center justify-center">
+                        <span class="text-white text-[7px] font-bold">VISA</span>
+                      </div>
+                      <div class="w-10 h-6 bg-gradient-to-r from-red-500 to-yellow-400 rounded flex items-center justify-center">
+                        <div class="flex -space-x-1">
+                          <div class="w-3 h-3 bg-red-600 rounded-full"></div>
+                          <div class="w-3 h-3 bg-yellow-500 rounded-full"></div>
+                        </div>
+                      </div>
+                      <div class="w-10 h-6 bg-[#006FCF] rounded flex items-center justify-center">
+                        <span class="text-white text-[6px] font-bold">AMEX</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
                 <!-- Info Contrareembolso (oculto por defecto) -->
@@ -1150,71 +1203,127 @@ const isGuest = !user;
     // STRIPE PAYMENT
     // ==========================================
     let stripe: any = null;
-    let cardElement: any = null;
+    let cardNumberElement: any = null;
+    let cardExpiryElement: any = null;
+    let cardCvcElement: any = null;
     let clientSecret: string | null = null;
+    let stripeInitialized = false;
     
     const STRIPE_PUBLIC_KEY = import.meta.env.PUBLIC_STRIPE_PUBLISHABLE_KEY;
     
-    const initStripe = async () => {
-      // Cargar Stripe JS si no está cargado
-      if (!(window as any).Stripe) {
-        const script = document.createElement('script');
-        script.src = 'https://js.stripe.com/v3/';
-        script.async = true;
-        document.head.appendChild(script);
-        
-        await new Promise<void>((resolve) => {
-          script.onload = () => resolve();
-        });
-      }
-      
-      stripe = (window as any).Stripe(STRIPE_PUBLIC_KEY);
-      
-      // Crear elementos de Stripe
-      const elements = stripe.elements({
-        locale: 'es'
-      });
-      
-      // Crear elemento de tarjeta
-      cardElement = elements.create('card', {
-        style: {
-          base: {
-            fontSize: '16px',
-            color: '#1a2332',
-            fontFamily: '"Inter", system-ui, sans-serif',
-            '::placeholder': {
-              color: '#6b7280'
-            },
-            iconColor: '#1a2332'
-          },
-          invalid: {
-            color: '#dc2626',
-            iconColor: '#dc2626'
-          }
+    const elementStyle = {
+      base: {
+        fontSize: '16px',
+        color: '#1a2332',
+        fontFamily: '"Inter", system-ui, -apple-system, sans-serif',
+        '::placeholder': {
+          color: '#9ca3af'
         },
-        hidePostalCode: true
-      });
-      
-      // Montar el elemento
-      const cardContainer = document.getElementById('card-element');
-      if (cardContainer) {
-        cardContainer.innerHTML = ''; // Limpiar contenido previo
-        cardElement.mount('#card-element');
+        iconColor: '#1a2332'
+      },
+      invalid: {
+        color: '#dc2626',
+        iconColor: '#dc2626'
+      }
+    };
+    
+    const initStripe = async () => {
+      if (stripeInitialized) {
+        console.log('Stripe ya inicializado');
+        return;
       }
       
-      // Manejar errores en tiempo real
-      cardElement.on('change', (event: any) => {
-        const errorsDiv = document.getElementById('card-errors');
-        if (event.error && errorsDiv) {
-          errorsDiv.textContent = event.error.message;
-          errorsDiv.classList.remove('hidden');
-        } else if (errorsDiv) {
-          errorsDiv.textContent = '';
-          errorsDiv.classList.add('hidden');
+      try {
+        // Verificar que tenemos la clave pública
+        if (!STRIPE_PUBLIC_KEY) {
+          throw new Error('Stripe public key no configurada');
         }
-      });
-      
-      console.log('✅ Stripe inicializado correctamente');
+        
+        // Cargar Stripe JS si no está cargado
+        if (!(window as any).Stripe) {
+          console.log('Cargando Stripe.js...');
+          const script = document.createElement('script');
+          script.src = 'https://js.stripe.com/v3/';
+          script.async = true;
+          document.head.appendChild(script);
+          
+          await new Promise<void>((resolve, reject) => {
+            script.onload = () => resolve();
+            script.onerror = () => reject(new Error('Error cargando Stripe.js'));
+          });
+        }
+        
+        stripe = (window as any).Stripe(STRIPE_PUBLIC_KEY);
+        
+        // Crear elementos de Stripe
+        const elements = stripe.elements({
+          locale: 'es'
+        });
+        
+        // Crear elementos individuales
+        cardNumberElement = elements.create('cardNumber', {
+          style: elementStyle,
+          placeholder: '1234 5678 9012 3456',
+          showIcon: true
+        });
+        
+        cardExpiryElement = elements.create('cardExpiry', {
+          style: elementStyle,
+          placeholder: 'MM / AA'
+        });
+        
+        cardCvcElement = elements.create('cardCvc', {
+          style: elementStyle,
+          placeholder: '123'
+        });
+        
+        // Montar los elementos
+        const numberContainer = document.getElementById('card-number-element');
+        const expiryContainer = document.getElementById('card-expiry-element');
+        const cvcContainer = document.getElementById('card-cvc-element');
+        
+        if (numberContainer) {
+          numberContainer.innerHTML = '';
+          cardNumberElement.mount('#card-number-element');
+        }
+        
+        if (expiryContainer) {
+          expiryContainer.innerHTML = '';
+          cardExpiryElement.mount('#card-expiry-element');
+        }
+        
+        if (cvcContainer) {
+          cvcContainer.innerHTML = '';
+          cardCvcElement.mount('#card-cvc-element');
+        }
+        
+        // Manejar errores en tiempo real
+        const handleCardError = (event: any) => {
+          const errorsDiv = document.getElementById('card-errors');
+          if (event.error && errorsDiv) {
+            errorsDiv.textContent = event.error.message;
+            errorsDiv.classList.remove('hidden');
+          } else if (errorsDiv) {
+            errorsDiv.textContent = '';
+            errorsDiv.classList.add('hidden');
+          }
+        };
+        
+        cardNumberElement.on('change', handleCardError);
+        cardExpiryElement.on('change', handleCardError);
+        cardCvcElement.on('change', handleCardError);
+        
+        stripeInitialized = true;
+        console.log('✅ Stripe inicializado correctamente con elementos separados');
+        
+      } catch (error) {
+        console.error('❌ Error inicializando Stripe:', error);
+        const errorsDiv = document.getElementById('card-errors');
+        if (errorsDiv) {
+          errorsDiv.textContent = 'Error al cargar el formulario de pago. Recarga la página.';
+          errorsDiv.classList.remove('hidden');
+        }
+      }
     };
     
     const createPaymentIntent = async () => {
@@ -1273,6 +1382,7 @@ const isGuest = !user;
       const payButtonText = document.getElementById('pay-button-text');
       const errorDiv = document.getElementById('payment-error');
       const errorText = document.getElementById('payment-error-text');
+      const cardholderName = (document.getElementById('cardholder-name') as HTMLInputElement)?.value;
       
       if (!payButton || !payButtonText) return;
       
@@ -1281,7 +1391,7 @@ const isGuest = !user;
       
       // Deshabilitar botón y mostrar loading
       payButton.disabled = true;
-      payButtonText.textContent = 'Procesando...';
+      payButtonText.innerHTML = '<span class="animate-spin inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full mr-2"></span>Procesando...';
       errorDiv?.classList.add('hidden');
       
       try {
@@ -1289,9 +1399,14 @@ const isGuest = !user;
           // Procesar contrareembolso
           await processCodePayment();
         } else {
+          // Validar nombre del titular
+          if (!cardholderName || cardholderName.trim() === '') {
+            throw new Error('Por favor, introduce el nombre del titular de la tarjeta');
+          }
+          
           // Procesar pago con tarjeta
-          if (!stripe || !cardElement) {
-            throw new Error('Stripe no está inicializado');
+          if (!stripe || !cardNumberElement) {
+            throw new Error('El formulario de pago no está listo. Recarga la página.');
           }
           
           if (!clientSecret) {
@@ -1306,9 +1421,9 @@ const isGuest = !user;
           
           const { error, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
             payment_method: {
-              card: cardElement,
+              card: cardNumberElement,
               billing_details: {
-                name: `${savedAddress.firstName || ''} ${savedAddress.lastName || ''}`.trim(),
+                name: cardholderName,
                 email: savedAddress.email || '',
                 phone: savedAddress.phone || '',
                 address: {
@@ -1324,7 +1439,29 @@ const isGuest = !user;
           });
           
           if (error) {
-            throw new Error(error.message);
+            // Traducir errores comunes
+            let errorMessage = error.message;
+            switch (error.code) {
+              case 'card_declined':
+                errorMessage = 'La tarjeta ha sido rechazada. Por favor, usa otra tarjeta.';
+                break;
+              case 'expired_card':
+                errorMessage = 'La tarjeta ha expirado.';
+                break;
+              case 'incorrect_cvc':
+                errorMessage = 'El código de seguridad (CVV) es incorrecto.';
+                break;
+              case 'insufficient_funds':
+                errorMessage = 'Fondos insuficientes en la tarjeta.';
+                break;
+              case 'processing_error':
+                errorMessage = 'Error al procesar. Inténtalo de nuevo.';
+                break;
+              case 'incorrect_number':
+                errorMessage = 'El número de tarjeta es incorrecto.';
+                break;
+            }
+            throw new Error(errorMessage);
           }
           
           if (paymentIntent.status === 'succeeded') {
@@ -1342,7 +1479,8 @@ const isGuest = !user;
         }
       } finally {
         payButton.disabled = false;
-        payButtonText.textContent = 'Pagar ahora';
+        const totals = calculateTotals();
+        payButtonText.textContent = `Pagar ${formatPrice(totals.total)}`;
       }
     };
     
