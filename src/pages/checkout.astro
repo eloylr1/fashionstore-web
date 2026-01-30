@@ -11,6 +11,9 @@ export const prerender = false;
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { supabase } from '../lib/supabase/client';
 
+// Obtener la clave pública de Stripe para pasarla al cliente
+const stripePublicKey = import.meta.env.PUBLIC_STRIPE_PUBLISHABLE_KEY || '';
+
 // Verificar autenticación (opcional - permite invitados)
 const accessToken = Astro.cookies.get('sb-access-token')?.value;
 const refreshToken = Astro.cookies.get('sb-refresh-token')?.value;
@@ -44,6 +47,11 @@ const isGuest = !user;
 ---
 
 <BaseLayout title="Checkout | FashionMarket">
+  <!-- Pasar la clave de Stripe al cliente -->
+  <script is:inline define:vars={{ stripePublicKey }}>
+    window.STRIPE_PUBLIC_KEY = stripePublicKey;
+  </script>
+  
   <main class="min-h-screen bg-cream py-6 lg:py-10">
     <div class="container-custom max-w-6xl">
       <!-- Breadcrumb -->
@@ -937,9 +945,37 @@ const isGuest = !user;
         const response = await fetch('/api/store/settings');
         if (response.ok) {
           const data = await response.json();
+          
+          // Configurar envío
           if (data.shipping) {
             storeSettings.shipping = { ...storeSettings.shipping, ...data.shipping };
           }
+          
+          // Configurar métodos de pago (contrareembolso)
+          if (data.payments) {
+            const codEnabled = data.payments.cash_on_delivery_enabled === true;
+            const codFee = data.payments.cod_extra_cost || 0;
+            
+            const codOption = document.getElementById('cod-option');
+            const codFeeDisplay = document.getElementById('cod-fee-display');
+            
+            if (codOption) {
+              if (codEnabled) {
+                codOption.classList.remove('hidden');
+                codOption.classList.add('flex');
+                console.log('✅ Contrareembolso habilitado');
+                
+                if (codFeeDisplay && codFee > 0) {
+                  codFeeDisplay.textContent = `+${formatPrice(codFee)}`;
+                  codFeeDisplay.classList.remove('hidden');
+                }
+              } else {
+                codOption.classList.add('hidden');
+                codOption.classList.remove('flex');
+              }
+            }
+          }
+          
           updateShippingOptions();
           updateTotals();
         }
@@ -1209,17 +1245,18 @@ const isGuest = !user;
     let clientSecret: string | null = null;
     let stripeInitialized = false;
     
-    const STRIPE_PUBLIC_KEY = import.meta.env.PUBLIC_STRIPE_PUBLISHABLE_KEY;
+    // Obtener la clave desde la variable global que se definió en el HTML
+    const STRIPE_PUBLIC_KEY = (window as any).STRIPE_PUBLIC_KEY || '';
     
     const elementStyle = {
       base: {
         fontSize: '16px',
         color: '#1a2332',
-        fontFamily: '"Inter", system-ui, -apple-system, sans-serif',
+        fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+        fontSmoothing: 'antialiased',
         '::placeholder': {
           color: '#9ca3af'
-        },
-        iconColor: '#1a2332'
+        }
       },
       invalid: {
         color: '#dc2626',
@@ -1227,102 +1264,138 @@ const isGuest = !user;
       }
     };
     
-    const initStripe = async () => {
-      if (stripeInitialized) {
-        console.log('Stripe ya inicializado');
-        return;
+    const initStripe = async (): Promise<boolean> => {
+      if (stripeInitialized && cardNumberElement) {
+        console.log('✅ Stripe ya inicializado');
+        return true;
+      }
+      
+      console.log('🔄 Iniciando Stripe...');
+      console.log('🔑 Stripe Key:', STRIPE_PUBLIC_KEY ? 'Configurada' : 'NO CONFIGURADA');
+      
+      // Verificar que tenemos la clave pública
+      if (!STRIPE_PUBLIC_KEY) {
+        console.error('❌ Stripe public key no configurada');
+        showCardError('Error de configuración. Contacta con soporte.');
+        return false;
       }
       
       try {
-        // Verificar que tenemos la clave pública
-        if (!STRIPE_PUBLIC_KEY) {
-          throw new Error('Stripe public key no configurada');
-        }
-        
         // Cargar Stripe JS si no está cargado
         if (!(window as any).Stripe) {
-          console.log('Cargando Stripe.js...');
-          const script = document.createElement('script');
-          script.src = 'https://js.stripe.com/v3/';
-          script.async = true;
-          document.head.appendChild(script);
-          
-          await new Promise<void>((resolve, reject) => {
-            script.onload = () => resolve();
-            script.onerror = () => reject(new Error('Error cargando Stripe.js'));
-          });
+          console.log('📥 Cargando Stripe.js...');
+          await loadStripeScript();
         }
         
+        // Inicializar Stripe
         stripe = (window as any).Stripe(STRIPE_PUBLIC_KEY);
+        console.log('✅ Stripe object creado');
         
         // Crear elementos de Stripe
-        const elements = stripe.elements({
-          locale: 'es'
-        });
+        const elements = stripe.elements({ locale: 'es' });
         
         // Crear elementos individuales
         cardNumberElement = elements.create('cardNumber', {
           style: elementStyle,
-          placeholder: '1234 5678 9012 3456',
           showIcon: true
         });
         
         cardExpiryElement = elements.create('cardExpiry', {
-          style: elementStyle,
-          placeholder: 'MM / AA'
+          style: elementStyle
         });
         
         cardCvcElement = elements.create('cardCvc', {
-          style: elementStyle,
-          placeholder: '123'
+          style: elementStyle
         });
         
-        // Montar los elementos
-        const numberContainer = document.getElementById('card-number-element');
-        const expiryContainer = document.getElementById('card-expiry-element');
-        const cvcContainer = document.getElementById('card-cvc-element');
+        // Montar los elementos en el DOM
+        await mountStripeElements();
         
-        if (numberContainer) {
-          numberContainer.innerHTML = '';
-          cardNumberElement.mount('#card-number-element');
-        }
-        
-        if (expiryContainer) {
-          expiryContainer.innerHTML = '';
-          cardExpiryElement.mount('#card-expiry-element');
-        }
-        
-        if (cvcContainer) {
-          cvcContainer.innerHTML = '';
-          cardCvcElement.mount('#card-cvc-element');
-        }
-        
-        // Manejar errores en tiempo real
-        const handleCardError = (event: any) => {
-          const errorsDiv = document.getElementById('card-errors');
-          if (event.error && errorsDiv) {
-            errorsDiv.textContent = event.error.message;
-            errorsDiv.classList.remove('hidden');
-          } else if (errorsDiv) {
-            errorsDiv.textContent = '';
-            errorsDiv.classList.add('hidden');
-          }
-        };
-        
-        cardNumberElement.on('change', handleCardError);
-        cardExpiryElement.on('change', handleCardError);
-        cardCvcElement.on('change', handleCardError);
+        // Configurar manejadores de errores
+        setupCardErrorHandlers();
         
         stripeInitialized = true;
-        console.log('✅ Stripe inicializado correctamente con elementos separados');
+        console.log('✅ Stripe inicializado completamente');
+        return true;
         
-      } catch (error) {
+      } catch (error: any) {
         console.error('❌ Error inicializando Stripe:', error);
-        const errorsDiv = document.getElementById('card-errors');
-        if (errorsDiv) {
-          errorsDiv.textContent = 'Error al cargar el formulario de pago. Recarga la página.';
-          errorsDiv.classList.remove('hidden');
+        showCardError('Error al cargar el formulario de pago: ' + error.message);
+        return false;
+      }
+    };
+    
+    const loadStripeScript = (): Promise<void> => {
+      return new Promise((resolve, reject) => {
+        // Verificar si ya existe
+        if ((window as any).Stripe) {
+          resolve();
+          return;
         }
+        
+        const script = document.createElement('script');
+        script.src = 'https://js.stripe.com/v3/';
+        script.async = true;
+        script.onload = () => {
+          console.log('✅ Stripe.js cargado');
+          resolve();
+        };
+        script.onerror = () => {
+          reject(new Error('No se pudo cargar Stripe.js'));
+        };
+        document.head.appendChild(script);
+      });
+    };
+    
+    const mountStripeElements = async () => {
+      const numberContainer = document.getElementById('card-number-element');
+      const expiryContainer = document.getElementById('card-expiry-element');
+      const cvcContainer = document.getElementById('card-cvc-element');
+      
+      if (!numberContainer || !expiryContainer || !cvcContainer) {
+        throw new Error('Contenedores de tarjeta no encontrados');
+      }
+      
+      // Limpiar contenedores
+      numberContainer.innerHTML = '';
+      expiryContainer.innerHTML = '';
+      cvcContainer.innerHTML = '';
+      
+      // Montar elementos
+      cardNumberElement.mount(numberContainer);
+      cardExpiryElement.mount(expiryContainer);
+      cardCvcElement.mount(cvcContainer);
+      
+      console.log('✅ Elementos de tarjeta montados');
+    };
+    
+    const setupCardErrorHandlers = () => {
+      const handleChange = (event: any) => {
+        if (event.error) {
+          showCardError(event.error.message);
+        } else {
+          hideCardError();
+        }
+      };
+      
+      cardNumberElement.on('change', handleChange);
+      cardExpiryElement.on('change', handleChange);
+      cardCvcElement.on('change', handleChange);
+    };
+    
+    const showCardError = (message: string) => {
+      const errorsDiv = document.getElementById('card-errors');
+      if (errorsDiv) {
+        errorsDiv.textContent = message;
+        errorsDiv.classList.remove('hidden');
+      }
+    };
+    
+    const hideCardError = () => {
+      const errorsDiv = document.getElementById('card-errors');
+      if (errorsDiv) {
+        errorsDiv.textContent = '';
+        errorsDiv.classList.add('hidden');
       }
     };
     
