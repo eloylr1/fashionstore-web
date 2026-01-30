@@ -47,9 +47,13 @@ const isGuest = !user;
 ---
 
 <BaseLayout title="Checkout | FashionMarket">
+  <!-- Cargar Stripe.js directamente -->
+  <script is:inline src="https://js.stripe.com/v3/"></script>
+  
   <!-- Pasar la clave de Stripe al cliente -->
   <script is:inline define:vars={{ stripePublicKey }}>
     window.STRIPE_PUBLIC_KEY = stripePublicKey;
+    console.log('🔑 Stripe Key configurada:', stripePublicKey ? 'SÍ' : 'NO');
   </script>
   
   <main class="min-h-screen bg-cream py-6 lg:py-10">
@@ -1477,8 +1481,12 @@ const isGuest = !user;
             throw new Error('Por favor, introduce el nombre del titular de la tarjeta');
           }
           
+          // Usar los elementos globales de Stripe del script inline
+          const stripeGlobal = (window as any).stripeInstance;
+          const cardNumberGlobal = (window as any).stripeCardNumber;
+          
           // Procesar pago con tarjeta
-          if (!stripe || !cardNumberElement) {
+          if (!stripeGlobal || !cardNumberGlobal) {
             throw new Error('El formulario de pago no está listo. Recarga la página.');
           }
           
@@ -1492,9 +1500,9 @@ const isGuest = !user;
           
           const savedAddress = JSON.parse(localStorage.getItem('fashionmarket-shipping-address') || '{}');
           
-          const { error, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
+          const { error, paymentIntent } = await stripeGlobal.confirmCardPayment(clientSecret, {
             payment_method: {
-              card: cardNumberElement,
+              card: cardNumberGlobal,
               billing_details: {
                 name: cardholderName,
                 email: savedAddress.email || '',
@@ -1662,13 +1670,22 @@ const isGuest = !user;
           payButtonText.textContent = `Pagar ${formatPrice(totals.total)}`;
         }
         
-        // Inicializar Stripe
-        initStripe().then(() => {
+        // Inicializar Stripe Elements usando el script inline
+        setTimeout(() => {
+          if ((window as any).initStripeElements) {
+            (window as any).initStripeElements();
+          }
+          if ((window as any).setupCODPayment) {
+            (window as any).setupCODPayment();
+          }
+          // Crear Payment Intent
           createPaymentIntent().catch(console.error);
-        });
+        }, 200);
         
-        // Setup métodos de pago
-        setupPaymentMethods();
+        // Setup botón de pago
+        const payButton = document.getElementById('pay-button');
+        payButton?.removeEventListener('click', processPayment);
+        payButton?.addEventListener('click', processPayment);
       }
     };
 
@@ -1734,5 +1751,174 @@ const isGuest = !user;
     } else {
       init();
     }
+  </script>
+  
+  <!-- Script inline para Stripe que se ejecuta directamente en el navegador -->
+  <script is:inline>
+    (function() {
+      'use strict';
+      
+      var stripe = null;
+      var elements = null;
+      var cardNumber = null;
+      var cardExpiry = null;
+      var cardCvc = null;
+      var stripeReady = false;
+      
+      function initStripeElements() {
+        if (stripeReady) {
+          console.log('✅ Stripe ya está listo');
+          return;
+        }
+        
+        var key = window.STRIPE_PUBLIC_KEY;
+        console.log('🔄 Inicializando Stripe Elements...');
+        console.log('🔑 Key:', key ? key.substring(0, 20) + '...' : 'NO CONFIGURADA');
+        
+        if (!key) {
+          console.error('❌ No hay clave de Stripe');
+          return;
+        }
+        
+        if (typeof Stripe === 'undefined') {
+          console.error('❌ Stripe.js no cargado');
+          return;
+        }
+        
+        try {
+          stripe = Stripe(key);
+          elements = stripe.elements({ locale: 'es' });
+          
+          var style = {
+            base: {
+              fontSize: '16px',
+              color: '#1a2332',
+              fontFamily: 'system-ui, sans-serif',
+              '::placeholder': { color: '#9ca3af' }
+            },
+            invalid: { color: '#dc2626' }
+          };
+          
+          // Crear elementos
+          cardNumber = elements.create('cardNumber', { style: style, showIcon: true });
+          cardExpiry = elements.create('cardExpiry', { style: style });
+          cardCvc = elements.create('cardCvc', { style: style });
+          
+          // Montar
+          var numEl = document.getElementById('card-number-element');
+          var expEl = document.getElementById('card-expiry-element');
+          var cvcEl = document.getElementById('card-cvc-element');
+          
+          if (numEl && expEl && cvcEl) {
+            numEl.innerHTML = '';
+            expEl.innerHTML = '';
+            cvcEl.innerHTML = '';
+            
+            cardNumber.mount(numEl);
+            cardExpiry.mount(expEl);
+            cardCvc.mount(cvcEl);
+            
+            // Error handlers
+            var errorsDiv = document.getElementById('card-errors');
+            function handleError(event) {
+              if (errorsDiv) {
+                if (event.error) {
+                  errorsDiv.textContent = event.error.message;
+                  errorsDiv.classList.remove('hidden');
+                } else {
+                  errorsDiv.textContent = '';
+                  errorsDiv.classList.add('hidden');
+                }
+              }
+            }
+            
+            cardNumber.on('change', handleError);
+            cardExpiry.on('change', handleError);
+            cardCvc.on('change', handleError);
+            
+            stripeReady = true;
+            window.stripeCardNumber = cardNumber;
+            window.stripeCardExpiry = cardExpiry;
+            window.stripeCardCvc = cardCvc;
+            window.stripeInstance = stripe;
+            
+            console.log('✅ Stripe Elements montados correctamente');
+          } else {
+            console.error('❌ Contenedores no encontrados');
+          }
+        } catch (err) {
+          console.error('❌ Error:', err);
+        }
+      }
+      
+      // Hacer la función global
+      window.initStripeElements = initStripeElements;
+      
+      // Setup para contrareembolso
+      function setupCOD() {
+        var cardOption = document.getElementById('card-option');
+        var codOption = document.getElementById('cod-option');
+        var cardForm = document.getElementById('card-form-container');
+        var codInfo = document.getElementById('cod-info');
+        var radios = document.querySelectorAll('input[name="payment-type"]');
+        
+        radios.forEach(function(radio) {
+          radio.addEventListener('change', function(e) {
+            var value = e.target.value;
+            console.log('💳 Método de pago:', value);
+            
+            if (value === 'card') {
+              if (cardOption) {
+                cardOption.classList.add('border-navy-900', 'bg-navy-50');
+                cardOption.classList.remove('border-charcoal-200');
+              }
+              if (codOption) {
+                codOption.classList.remove('border-navy-900', 'bg-navy-50');
+                codOption.classList.add('border-charcoal-200');
+              }
+              if (cardForm) cardForm.classList.remove('hidden');
+              if (codInfo) codInfo.classList.add('hidden');
+            } else {
+              if (codOption) {
+                codOption.classList.add('border-navy-900', 'bg-navy-50');
+                codOption.classList.remove('border-charcoal-200');
+              }
+              if (cardOption) {
+                cardOption.classList.remove('border-navy-900', 'bg-navy-50');
+                cardOption.classList.add('border-charcoal-200');
+              }
+              if (cardForm) cardForm.classList.add('hidden');
+              if (codInfo) codInfo.classList.remove('hidden');
+            }
+          });
+        });
+      }
+      
+      window.setupCODPayment = setupCOD;
+      
+      // Auto-init cuando se muestre el paso 2
+      var observer = new MutationObserver(function(mutations) {
+        var step2 = document.getElementById('step-2');
+        if (step2 && !step2.classList.contains('hidden')) {
+          if (!stripeReady) {
+            setTimeout(initStripeElements, 100);
+            setTimeout(setupCOD, 100);
+          }
+        }
+      });
+      
+      document.addEventListener('DOMContentLoaded', function() {
+        var step2 = document.getElementById('step-2');
+        if (step2) {
+          observer.observe(step2, { attributes: true, attributeFilter: ['class'] });
+        }
+        
+        // También inicializar si ya está visible
+        if (step2 && !step2.classList.contains('hidden')) {
+          setTimeout(initStripeElements, 100);
+          setTimeout(setupCOD, 100);
+        }
+      });
+    })();
   </script>
 </BaseLayout>
