@@ -2,8 +2,8 @@
  * ═══════════════════════════════════════════════════════════════════════════
  * FASHIONMARKET - Cart Store (Nano Stores) v2
  * Manejo de estado persistente del carrito con sincronización por usuario
- * - Invitados: localStorage solamente
- * - Usuarios logueados: sincronizado con base de datos
+ * - Invitados: carrito TEMPORAL (no se guarda en localStorage)
+ * - Usuarios logueados: persistido en localStorage + sincronizado con BD
  * ═══════════════════════════════════════════════════════════════════════════
  */
 
@@ -41,16 +41,11 @@ export interface CartNotification {
 // STORE PRINCIPAL
 // ─────────────────────────────────────────────────────────────────────────────
 
-// Estado inicial - intentar recuperar del localStorage
+// Estado inicial - NO cargar desde localStorage aquí
+// Solo se cargará cuando se verifique que hay sesión activa
 const getInitialState = (): CartItem[] => {
-  if (typeof window === 'undefined') return [];
-  
-  try {
-    const saved = localStorage.getItem('fashionmarket-cart');
-    return saved ? JSON.parse(saved) : [];
-  } catch {
-    return [];
-  }
+  // No cargar nada al inicio - se cargará después de verificar autenticación
+  return [];
 };
 
 // Atom para los items del carrito
@@ -317,20 +312,40 @@ function mergeCartItems(localItems: CartItem[], serverItems: CartItem[]): CartIt
 }
 
 /**
- * Limpiar carrito para invitado (al cerrar sesión)
+ * Limpiar carrito al cerrar sesión
+ * Borra el carrito tanto de memoria como de localStorage
  */
 export function clearCartForGuest(): void {
+  // Limpiar el carrito de memoria y localStorage
+  cartItems.set([]);
   currentUserId.set(null);
-  // No borramos los items, se quedan en localStorage para el invitado
+  
+  // Limpiar localStorage
+  if (typeof window !== 'undefined') {
+    try {
+      localStorage.removeItem('fashionmarket-cart');
+    } catch (error) {
+      console.error('Error clearing cart from localStorage:', error);
+    }
+  }
 }
 
 /**
- * Inicializar carrito para usuario invitado (borrar todo)
+ * Inicializar carrito para usuario invitado
+ * Carrito vacío y temporal (no se persiste)
  */
 export function initializeGuestCart(): void {
   cartItems.set([]);
-  persistCart([]);
   currentUserId.set(null);
+  
+  // Limpiar cualquier carrito guardado previamente
+  if (typeof window !== 'undefined') {
+    try {
+      localStorage.removeItem('fashionmarket-cart');
+    } catch (error) {
+      console.error('Error clearing cart from localStorage:', error);
+    }
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -339,9 +354,18 @@ export function initializeGuestCart(): void {
 
 /**
  * Persistir carrito en localStorage
+ * SOLO si el usuario está logueado
  */
 function persistCart(items: CartItem[]): void {
   if (typeof window === 'undefined') return;
+  
+  const userId = currentUserId.get();
+  
+  // Solo guardar en localStorage si hay usuario logueado
+  if (!userId) {
+    // Para invitados, no persistimos - el carrito es temporal
+    return;
+  }
   
   try {
     localStorage.setItem('fashionmarket-cart', JSON.stringify(items));
@@ -362,35 +386,62 @@ export function formatPrice(cents: number): string {
 
 /**
  * Inicializar carrito (llamar en el cliente)
+ * Solo carga desde localStorage si hay usuario logueado
  */
 export function initializeCart(): void {
   if (typeof window === 'undefined') return;
   
-  const saved = getInitialState();
-  if (saved.length > 0) {
-    cartItems.set(saved);
-  }
-  
   // Verificar si hay usuario logueado y cargar su carrito
+  // NO cargamos nada de localStorage hasta verificar la sesión
   checkAndLoadUserCart();
 }
 
 /**
+ * Cargar carrito desde localStorage (solo para usuarios logueados)
+ */
+function loadCartFromLocalStorage(): CartItem[] {
+  if (typeof window === 'undefined') return [];
+  
+  try {
+    const saved = localStorage.getItem('fashionmarket-cart');
+    return saved ? JSON.parse(saved) : [];
+  } catch {
+    return [];
+  }
+}
+
+/**
  * Verificar sesión y cargar carrito del usuario
+ * Solo carga el carrito si el usuario está logueado
  */
 async function checkAndLoadUserCart(): Promise<void> {
   try {
     const response = await fetch('/api/auth/session');
-    if (!response.ok) return;
+    if (!response.ok) {
+      // Usuario no logueado - carrito vacío (no persistente)
+      console.log('Guest user - cart is temporary and will not be saved');
+      return;
+    }
     
     const data = await response.json();
     
     if (data.user?.id) {
       currentUserId.set(data.user.id);
+      
+      // Usuario logueado - cargar desde localStorage primero
+      const savedItems = loadCartFromLocalStorage();
+      if (savedItems.length > 0) {
+        cartItems.set(savedItems);
+      }
+      
+      // Luego sincronizar con el servidor
       await loadCartFromServer();
+    } else {
+      // Usuario no logueado - carrito vacío (temporal)
+      console.log('Guest user - cart is temporary and will not be saved');
     }
   } catch (error) {
-    // Usuario no logueado, usar localStorage
-    console.log('Using guest cart (localStorage)');
+    // Usuario no logueado, carrito temporal
+    console.log('Using guest cart (temporary - not saved)');
   }
 }
