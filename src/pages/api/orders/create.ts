@@ -41,44 +41,45 @@ interface CreateOrderRequest {
   shipping_address: ShippingAddress;
   shipping_method?: 'standard' | 'express';
   payment_method?: string;
+  payment_intent_id?: string;
   discount_code_id?: string;
   discount_code?: string;
   discount_amount?: number;
+  customer_email?: string; // Para compras como invitado
   notes?: string;
 }
 
 export const POST: APIRoute = async ({ request, cookies }) => {
   try {
-    // Verificar autenticación
+    // Intentar obtener usuario autenticado (opcional)
     const accessToken = cookies.get('sb-access-token')?.value;
     const refreshToken = cookies.get('sb-refresh-token')?.value;
 
-    if (!accessToken || !refreshToken) {
-      return new Response(
-        JSON.stringify({ error: 'Debes iniciar sesión para realizar un pedido' }),
-        { status: 401, headers: { 'Content-Type': 'application/json' } }
-      );
-    }
+    let userId: string | null = null;
+    let userEmail: string | null = null;
 
-    // Crear cliente con token del usuario para obtener el user_id
-    const anonClient = createClient(
-      supabaseUrl,
-      import.meta.env.PUBLIC_SUPABASE_ANON_KEY || ''
-    );
-    
-    const { data: sessionData, error: sessionError } = await anonClient.auth.setSession({
-      access_token: accessToken,
-      refresh_token: refreshToken,
+    // Crear cliente con service role para operaciones
+    const supabase = createClient(supabaseUrl, supabaseServiceKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
     });
 
-    if (sessionError || !sessionData.user) {
-      return new Response(
-        JSON.stringify({ error: 'Sesión inválida. Por favor, inicia sesión de nuevo.' }),
-        { status: 401, headers: { 'Content-Type': 'application/json' } }
+    // Si hay tokens, intentar autenticación
+    if (accessToken && refreshToken) {
+      const anonClient = createClient(
+        supabaseUrl,
+        import.meta.env.PUBLIC_SUPABASE_ANON_KEY || ''
       );
-    }
+      
+      const { data: sessionData } = await anonClient.auth.setSession({
+        access_token: accessToken,
+        refresh_token: refreshToken,
+      });
 
-    const userId = sessionData.user.id;
+      if (sessionData?.user) {
+        userId = sessionData.user.id;
+        userEmail = sessionData.user.email || null;
+      }
+    }
 
     // Parsear body
     const body: CreateOrderRequest = await request.json();
@@ -87,11 +88,23 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       shipping_address, 
       shipping_method = 'standard',
       payment_method = 'card',
+      payment_intent_id,
       discount_code_id,
       discount_code,
       discount_amount = 0,
+      customer_email,
       notes 
     } = body;
+
+    // El email puede venir del usuario autenticado o del formulario (invitado)
+    const finalEmail = userEmail || customer_email || '';
+    
+    if (!finalEmail) {
+      return new Response(
+        JSON.stringify({ error: 'Se requiere un email para procesar el pedido' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
 
     // Validaciones
     if (!items || !Array.isArray(items) || items.length === 0) {
@@ -107,11 +120,6 @@ export const POST: APIRoute = async ({ request, cookies }) => {
         { status: 400, headers: { 'Content-Type': 'application/json' } }
       );
     }
-
-    // Crear cliente con service role para operaciones admin
-    const supabase = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: { autoRefreshToken: false, persistSession: false },
-    });
 
     // 1) Verificar stock disponible para todos los items
     const productIds = items.map(i => i.product_id);
@@ -216,7 +224,8 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     const { data: order, error: orderError } = await supabase
       .from('orders')
       .insert({
-        user_id: userId,
+        user_id: userId, // Puede ser null si es invitado
+        guest_email: userId ? null : finalEmail, // Email de invitado
         order_number: orderNumber,
         status: orderStatus,
         shipping_name: shipping_address.full_name,
@@ -236,6 +245,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
         tax,
         total,
         payment_method,
+        payment_intent_id: payment_intent_id || null,
         notes,
       })
       .select()
@@ -297,8 +307,8 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     }
 
     // 6) Si hay código de descuento, registrar uso e incrementar contador
-    if (discount_code_id && discount_amount > 0) {
-      // Registrar canje
+    if (discount_code_id && discount_amount > 0 && userId) {
+      // Registrar canje (solo para usuarios registrados)
       await supabase
         .from('discount_code_redemptions')
         .insert({
@@ -327,7 +337,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       }
     }
 
-    // 7) Generar factura
+    // 7) Generar factura (solo si hay usuario o email de invitado)
     const year = new Date().getFullYear();
     const { count } = await supabase
       .from('invoices')
@@ -342,10 +352,10 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       .from('invoices')
       .insert({
         order_id: order.id,
-        user_id: userId,
+        user_id: userId, // Puede ser null
         invoice_number: invoiceNumber,
         customer_name: shipping_address.full_name,
-        customer_email: sessionData.user.email,
+        customer_email: finalEmail,
         customer_address: shipping_address,
         subtotal,
         shipping_cost,
@@ -367,7 +377,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       .single();
 
     // 8) Enviar email de confirmación
-    const customerEmail = sessionData.user.email || '';
+    const customerEmail = finalEmail;
     const deliveryDays = shipping_method === 'express' 
       ? storeSettings.shipping.express_delivery_days 
       : storeSettings.shipping.estimated_delivery_days;
