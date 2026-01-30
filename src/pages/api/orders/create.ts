@@ -259,18 +259,15 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       );
     }
 
-    // 4) Crear order_items
+    // 4) Crear order_items - usar solo columnas que existen en la tabla
     const orderItems = items.map(item => ({
       order_id: order.id,
       product_id: item.product_id,
       product_name: item.product_name,
-      product_image: item.product_image,
-      product_slug: item.product_slug,
       quantity: item.quantity,
-      size: item.size,
-      color: item.color,
-      unit_price: item.unit_price,
-      total_price: item.unit_price * item.quantity,
+      price: item.unit_price, // La columna se llama 'price' en la tabla original
+      size: item.size || null,
+      color: item.color || null,
     }));
 
     const { error: itemsError } = await supabase
