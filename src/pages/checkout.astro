@@ -764,15 +764,30 @@ const stripePublicKey = import.meta.env.PUBLIC_STRIPE_PUBLISHABLE_KEY || '';
     // ─────────────────────────────────────────────────────────────────────
     function loadCart() {
       try {
-        // Primero intentar localStorage (usuarios logueados)
-        let saved = localStorage.getItem('fashionmarket-cart');
+        // El carrito puede estar en sessionStorage (invitados) o localStorage (logueados)
+        // Prioridad: sessionStorage primero (más reciente para invitados)
+        let guestCart = sessionStorage.getItem('fashionmarket-cart-guest');
+        let userCart = localStorage.getItem('fashionmarket-cart');
         
-        // Si no hay en localStorage, buscar en sessionStorage (invitados)
-        if (!saved) {
-          saved = sessionStorage.getItem('fashionmarket-cart-guest');
+        // Si hay carrito de invitado en sessionStorage, usarlo (más reciente)
+        if (guestCart) {
+          const parsed = JSON.parse(guestCart);
+          if (parsed && parsed.length > 0) {
+            checkoutState.cartItems = parsed;
+            return;
+          }
         }
         
-        checkoutState.cartItems = saved ? JSON.parse(saved) : [];
+        // Si no hay carrito de invitado, usar el de localStorage (usuario logueado)
+        if (userCart) {
+          const parsed = JSON.parse(userCart);
+          if (parsed && parsed.length > 0) {
+            checkoutState.cartItems = parsed;
+            return;
+          }
+        }
+        
+        checkoutState.cartItems = [];
       } catch {
         checkoutState.cartItems = [];
       }
