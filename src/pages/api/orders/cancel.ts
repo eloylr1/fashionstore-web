@@ -2,14 +2,17 @@
  * ═══════════════════════════════════════════════════════════════════════════
  * FASHIONMARKET - API: Cancelar Pedido
  * Llama a la RPC cancel_order_and_restore_stock para cancelación atómica
+ * Envía email de confirmación de cancelación
  * ═══════════════════════════════════════════════════════════════════════════
  */
 
 import type { APIRoute } from 'astro';
 import { createClient } from '@supabase/supabase-js';
+import { sendOrderCancellationEmail } from '../../../lib/email';
 
 const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL || '';
 const supabaseAnonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY || '';
+const supabaseServiceKey = import.meta.env.SUPABASE_SERVICE_ROLE_KEY || '';
 
 export const POST: APIRoute = async ({ request, cookies }) => {
   try {
@@ -76,6 +79,45 @@ export const POST: APIRoute = async ({ request, cookies }) => {
         }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
       );
+    }
+
+    // Obtener datos del pedido y usuario para enviar email
+    try {
+      const serviceClient = createClient(supabaseUrl, supabaseServiceKey);
+      
+      // Obtener datos del pedido
+      const { data: orderData } = await serviceClient
+        .from('orders')
+        .select('*, order_items(*)')
+        .eq('id', order_id)
+        .single();
+      
+      // Obtener email del usuario
+      const { data: profile } = await serviceClient
+        .from('profiles')
+        .select('email, full_name')
+        .eq('id', sessionData.user.id)
+        .single();
+
+      if (orderData && profile?.email) {
+        // Enviar email de confirmación de cancelación
+        await sendOrderCancellationEmail({
+          orderNumber: orderData.order_number || result.order_number,
+          customerName: profile.full_name || orderData.shipping_name || 'Cliente',
+          customerEmail: profile.email,
+          items: (orderData.order_items || []).map((item: any) => ({
+            name: item.product_name,
+            quantity: item.quantity,
+            price: item.price,
+            size: item.size,
+          })),
+          total: orderData.total,
+          cancellationDate: new Date().toISOString(),
+        });
+      }
+    } catch (emailError) {
+      console.error('Error sending cancellation email:', emailError);
+      // No fallar si el email no se envía
     }
 
     return new Response(

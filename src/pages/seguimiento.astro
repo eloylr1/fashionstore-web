@@ -44,14 +44,14 @@ if (orderNumber && email && isSupabaseConfigured() && supabase) {
 }
 
 // Mapeo de estados
-const statusMap: Record<string, { label: string; color: string; icon: string }> = {
-  'pending': { label: 'Pendiente', color: 'yellow', icon: '🕐' },
-  'awaiting_payment': { label: 'Esperando pago', color: 'orange', icon: '💳' },
-  'paid': { label: 'Pagado', color: 'green', icon: '✓' },
-  'processing': { label: 'Procesando', color: 'blue', icon: '📦' },
-  'shipped': { label: 'Enviado', color: 'purple', icon: '🚚' },
-  'delivered': { label: 'Entregado', color: 'green', icon: '✓' },
-  'cancelled': { label: 'Cancelado', color: 'red', icon: '✕' },
+const statusMap: Record<string, { label: string; color: string }> = {
+  'pending': { label: 'Pendiente', color: 'yellow' },
+  'awaiting_payment': { label: 'Esperando pago', color: 'orange' },
+  'paid': { label: 'Pagado', color: 'green' },
+  'processing': { label: 'En preparación', color: 'blue' },
+  'shipped': { label: 'Enviado', color: 'purple' },
+  'delivered': { label: 'Entregado', color: 'green' },
+  'cancelled': { label: 'Cancelado', color: 'red' },
 };
 
 function formatPrice(cents: number): string {
@@ -145,7 +145,7 @@ function formatDate(date: string): string {
                 statusMap[order.status]?.color === 'red' ? 'bg-red-100 text-red-700' :
                 'bg-charcoal-100 text-charcoal-700'
               }`}>
-                {statusMap[order.status]?.icon} {statusMap[order.status]?.label || order.status}
+                {statusMap[order.status]?.label || order.status}
               </div>
             </div>
             <p class="text-sm text-charcoal-400 mt-2">
@@ -208,7 +208,11 @@ function formatDate(date: string): string {
           <!-- Dirección de envío -->
           <div class="bg-white rounded-lg shadow-subtle p-6">
             <h3 class="font-medium text-navy-900 mb-3 flex items-center gap-2">
-              <span>📦</span> Dirección de envío
+              <svg class="w-5 h-5 text-navy-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+              </svg>
+              Dirección de envío
             </h3>
             <p class="text-charcoal-600 leading-relaxed">
               {order.shipping_name}<br>

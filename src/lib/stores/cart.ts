@@ -426,6 +426,12 @@ export function initializeCart(): void {
   
   // LUEGO: Verificar si hay usuario logueado y sincronizar
   checkAndLoadUserCart();
+  
+  // Escuchar evento de carrito limpiado (desde checkout)
+  window.addEventListener('cart-cleared', () => {
+    cartItems.set([]);
+    isCartOpen.set(false);
+  });
 }
 
 /**

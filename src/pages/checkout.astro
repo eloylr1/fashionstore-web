@@ -1272,6 +1272,12 @@ const stripePublicKey = import.meta.env.PUBLIC_STRIPE_PUBLISHABLE_KEY || '';
       // Limpiar carrito de ambos storages
       localStorage.removeItem('fashionmarket-cart');
       sessionStorage.removeItem('fashionmarket-cart-guest');
+      
+      // Limpiar el estado del carrito en memoria (para que se actualice el icono del carrito)
+      checkoutState.cartItems = [];
+      
+      // Disparar evento para que otros componentes actualicen
+      window.dispatchEvent(new CustomEvent('cart-cleared'));
 
       // Actualizar UI de confirmación
       document.getElementById('confirmation-email').textContent = checkoutState.shippingData.email;

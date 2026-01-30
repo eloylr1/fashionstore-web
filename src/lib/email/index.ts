@@ -430,7 +430,143 @@ export async function sendOrderStatusEmail(
 
   return sendEmail({
     to: email,
-    subject: `${info.icon} ${info.title} - Pedido ${orderNumber}`,
+    subject: `${info.title} - Pedido ${orderNumber}`,
+    html,
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// EMAIL DE CANCELACIÓN DE PEDIDO
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface CancelOrderEmailData {
+  orderNumber: string;
+  customerName: string;
+  customerEmail: string;
+  items: Array<{
+    name: string;
+    quantity: number;
+    price: number;
+    size?: string;
+  }>;
+  total: number;
+  cancellationDate: string;
+  reason?: string;
+}
+
+/**
+ * Envía email de confirmación de cancelación de pedido
+ */
+export async function sendOrderCancellationEmail(data: CancelOrderEmailData): Promise<EmailResult> {
+  const formattedDate = new Date(data.cancellationDate).toLocaleDateString('es-ES', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f9fafb;">
+  <div style="max-width: 600px; margin: 0 auto; padding: 40px 20px;">
+    
+    <!-- Header -->
+    <div style="text-align: center; margin-bottom: 32px;">
+      <h1 style="font-size: 28px; font-weight: 600; color: #1e3a5f; margin: 0;">FashionMarket</h1>
+    </div>
+
+    <!-- Main Card -->
+    <div style="background: white; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); overflow: hidden;">
+      
+      <!-- Header rojo -->
+      <div style="background: #dc2626; padding: 24px; text-align: center;">
+        <div style="width: 56px; height: 56px; background: rgba(255,255,255,0.2); border-radius: 50%; margin: 0 auto 16px; display: flex; align-items: center; justify-content: center;">
+          <span style="color: white; font-size: 28px;">✕</span>
+        </div>
+        <h2 style="color: white; font-size: 22px; margin: 0;">Pedido Cancelado</h2>
+      </div>
+
+      <!-- Contenido -->
+      <div style="padding: 32px;">
+        <p style="color: #374151; font-size: 16px; margin: 0 0 24px; line-height: 1.6;">
+          Hola <strong>${data.customerName}</strong>,
+        </p>
+        
+        <p style="color: #374151; font-size: 16px; margin: 0 0 24px; line-height: 1.6;">
+          Te confirmamos que tu pedido <strong style="color: #1e3a5f;">${data.orderNumber}</strong> ha sido cancelado correctamente.
+        </p>
+
+        <!-- Info del pedido -->
+        <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 16px; margin-bottom: 24px;">
+          <table style="width: 100%; border-collapse: collapse;">
+            <tr>
+              <td style="color: #6b7280; font-size: 14px; padding: 4px 0;">Fecha de cancelación:</td>
+              <td style="color: #374151; font-size: 14px; padding: 4px 0; text-align: right; font-weight: 500;">${formattedDate}</td>
+            </tr>
+            <tr>
+              <td style="color: #6b7280; font-size: 14px; padding: 4px 0;">Importe total:</td>
+              <td style="color: #374151; font-size: 14px; padding: 4px 0; text-align: right; font-weight: 500;">${formatPrice(data.total)}</td>
+            </tr>
+          </table>
+        </div>
+
+        <!-- Productos cancelados -->
+        <h3 style="color: #1e3a5f; font-size: 16px; margin: 0 0 16px; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px;">Artículos cancelados</h3>
+        
+        ${data.items.map(item => `
+        <div style="display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #f3f4f6;">
+          <div>
+            <p style="color: #1e3a5f; font-size: 14px; margin: 0; font-weight: 500;">${item.name}</p>
+            <p style="color: #6b7280; font-size: 13px; margin: 4px 0 0;">
+              Cantidad: ${item.quantity}${item.size ? ` · Talla: ${item.size}` : ''}
+            </p>
+          </div>
+          <p style="color: #374151; font-size: 14px; margin: 0; font-weight: 500;">${formatPrice(item.price * item.quantity)}</p>
+        </div>
+        `).join('')}
+
+        <!-- Reembolso -->
+        <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 16px; margin-top: 24px;">
+          <p style="color: #166534; font-size: 14px; margin: 0; font-weight: 500;">
+            Información sobre el reembolso
+          </p>
+          <p style="color: #15803d; font-size: 14px; margin: 8px 0 0; line-height: 1.5;">
+            Si realizaste el pago con tarjeta, el reembolso se procesará automáticamente en un plazo de 5-10 días hábiles. 
+            El tiempo exacto depende de tu entidad bancaria.
+          </p>
+        </div>
+
+        <!-- CTA -->
+        <div style="margin-top: 32px; text-align: center;">
+          <a href="https://eloyfashionstore.victoriafp.online/tienda" 
+             style="display: inline-block; background: #1e3a5f; color: white; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 500;">
+            Seguir Comprando
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div style="text-align: center; margin-top: 32px; color: #9ca3af; font-size: 14px;">
+      <p style="margin: 0 0 8px;">¿Tienes alguna pregunta? Responde a este email</p>
+      <p style="margin: 0;">
+        © ${new Date().getFullYear()} FashionMarket. Todos los derechos reservados.
+      </p>
+    </div>
+  </div>
+</body>
+</html>
+  `;
+
+  return sendEmail({
+    to: data.customerEmail,
+    subject: `Pedido ${data.orderNumber} cancelado - FashionMarket`,
     html,
   });
 }
