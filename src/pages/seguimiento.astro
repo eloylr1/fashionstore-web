@@ -1,0 +1,235 @@
+---
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * FASHIONMARKET - Seguimiento de Pedido (Invitados)
+ * Permite a los invitados ver el estado de su pedido con email + número
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
+
+export const prerender = false;
+
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { supabase, isSupabaseConfigured } from '../lib/supabase/client';
+
+// Obtener parámetros de la URL
+const orderNumber = Astro.url.searchParams.get('order');
+const email = Astro.url.searchParams.get('email');
+
+let order: any = null;
+let orderItems: any[] = [];
+let error = '';
+
+if (orderNumber && email && isSupabaseConfigured() && supabase) {
+  // Buscar pedido por número y email de invitado
+  const { data: orderData, error: orderError } = await supabase
+    .from('orders')
+    .select('*')
+    .eq('order_number', orderNumber)
+    .eq('guest_email', email)
+    .single();
+
+  if (orderError || !orderData) {
+    error = 'No se encontró el pedido. Verifica el número de pedido y el email.';
+  } else {
+    order = orderData;
+    
+    // Obtener items del pedido
+    const { data: items } = await supabase
+      .from('order_items')
+      .select('*')
+      .eq('order_id', order.id);
+    
+    orderItems = items || [];
+  }
+}
+
+// Mapeo de estados
+const statusMap: Record<string, { label: string; color: string; icon: string }> = {
+  'pending': { label: 'Pendiente', color: 'yellow', icon: '🕐' },
+  'awaiting_payment': { label: 'Esperando pago', color: 'orange', icon: '💳' },
+  'paid': { label: 'Pagado', color: 'green', icon: '✓' },
+  'processing': { label: 'Procesando', color: 'blue', icon: '📦' },
+  'shipped': { label: 'Enviado', color: 'purple', icon: '🚚' },
+  'delivered': { label: 'Entregado', color: 'green', icon: '✓' },
+  'cancelled': { label: 'Cancelado', color: 'red', icon: '✕' },
+};
+
+function formatPrice(cents: number): string {
+  return (cents / 100).toLocaleString('es-ES', { style: 'currency', currency: 'EUR' });
+}
+
+function formatDate(date: string): string {
+  return new Date(date).toLocaleDateString('es-ES', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+}
+---
+
+<BaseLayout title="Seguimiento de Pedido | FashionMarket">
+  <main class="min-h-screen bg-ivory py-12">
+    <div class="max-w-3xl mx-auto px-4">
+      
+      <!-- Header -->
+      <div class="text-center mb-8">
+        <h1 class="font-serif text-3xl text-navy-900 mb-2">Seguimiento de Pedido</h1>
+        <p class="text-charcoal-500">Consulta el estado de tu pedido</p>
+      </div>
+
+      {!orderNumber || !email ? (
+        <!-- Formulario de búsqueda -->
+        <div class="bg-white rounded-lg shadow-subtle p-8 max-w-md mx-auto">
+          <form method="GET" class="space-y-4">
+            <div>
+              <label for="order" class="block text-sm font-medium text-charcoal-700 mb-1">Número de Pedido</label>
+              <input 
+                type="text" 
+                id="order" 
+                name="order" 
+                required
+                placeholder="FM-XXXXXXX"
+                class="w-full px-4 py-2.5 border border-charcoal-200 rounded-lg focus:ring-2 focus:ring-navy-900/20 focus:border-navy-900"
+              />
+            </div>
+            <div>
+              <label for="email" class="block text-sm font-medium text-charcoal-700 mb-1">Email del pedido</label>
+              <input 
+                type="email" 
+                id="email" 
+                name="email" 
+                required
+                placeholder="tu@email.com"
+                class="w-full px-4 py-2.5 border border-charcoal-200 rounded-lg focus:ring-2 focus:ring-navy-900/20 focus:border-navy-900"
+              />
+            </div>
+            <button 
+              type="submit"
+              class="w-full py-3 bg-navy-900 text-white font-medium rounded-lg hover:bg-navy-800 transition-colors"
+            >
+              Buscar Pedido
+            </button>
+          </form>
+        </div>
+      ) : error ? (
+        <!-- Error -->
+        <div class="bg-white rounded-lg shadow-subtle p-8 text-center max-w-md mx-auto">
+          <div class="w-16 h-16 mx-auto bg-red-100 rounded-full flex items-center justify-center mb-4">
+            <svg class="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </div>
+          <h2 class="text-xl font-semibold text-navy-900 mb-2">Pedido no encontrado</h2>
+          <p class="text-charcoal-500 mb-6">{error}</p>
+          <a href="/seguimiento" class="inline-flex items-center gap-2 px-6 py-2 bg-navy-900 text-white rounded-lg hover:bg-navy-800 transition-colors">
+            Intentar de nuevo
+          </a>
+        </div>
+      ) : order && (
+        <!-- Detalles del pedido -->
+        <div class="space-y-6">
+          <!-- Estado principal -->
+          <div class="bg-white rounded-lg shadow-subtle p-6">
+            <div class="flex items-center justify-between flex-wrap gap-4">
+              <div>
+                <p class="text-sm text-charcoal-500">Pedido</p>
+                <p class="text-xl font-bold text-navy-900 font-mono">{order.order_number}</p>
+              </div>
+              <div class={`px-4 py-2 rounded-full text-sm font-medium ${
+                statusMap[order.status]?.color === 'green' ? 'bg-green-100 text-green-700' :
+                statusMap[order.status]?.color === 'yellow' ? 'bg-yellow-100 text-yellow-700' :
+                statusMap[order.status]?.color === 'blue' ? 'bg-blue-100 text-blue-700' :
+                statusMap[order.status]?.color === 'purple' ? 'bg-purple-100 text-purple-700' :
+                statusMap[order.status]?.color === 'red' ? 'bg-red-100 text-red-700' :
+                'bg-charcoal-100 text-charcoal-700'
+              }`}>
+                {statusMap[order.status]?.icon} {statusMap[order.status]?.label || order.status}
+              </div>
+            </div>
+            <p class="text-sm text-charcoal-400 mt-2">
+              Realizado el {formatDate(order.created_at)}
+            </p>
+          </div>
+
+          <!-- Productos -->
+          <div class="bg-white rounded-lg shadow-subtle overflow-hidden">
+            <div class="bg-navy-900 px-6 py-4">
+              <h2 class="text-white font-medium">Productos</h2>
+            </div>
+            <div class="p-6 space-y-4">
+              {orderItems.map(item => (
+                <div class="flex items-center gap-4 pb-4 border-b border-charcoal-100 last:border-0 last:pb-0">
+                  <div class="flex-1">
+                    <p class="font-medium text-navy-900">{item.product_name}</p>
+                    <p class="text-sm text-charcoal-500">
+                      {item.size && `Talla: ${item.size}`}
+                      {item.color && ` • Color: ${item.color}`}
+                      {` • Cantidad: ${item.quantity}`}
+                    </p>
+                  </div>
+                  <p class="font-semibold text-navy-900">{formatPrice(item.price * item.quantity)}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <!-- Totales -->
+          <div class="bg-white rounded-lg shadow-subtle p-6">
+            <div class="space-y-2">
+              <div class="flex justify-between text-sm">
+                <span class="text-charcoal-500">Subtotal</span>
+                <span>{formatPrice(order.subtotal)}</span>
+              </div>
+              {order.discount > 0 && (
+                <div class="flex justify-between text-sm text-green-600">
+                  <span>Descuento</span>
+                  <span>-{formatPrice(order.discount)}</span>
+                </div>
+              )}
+              <div class="flex justify-between text-sm">
+                <span class="text-charcoal-500">Envío</span>
+                <span>{order.shipping_cost === 0 ? 'Gratis' : formatPrice(order.shipping_cost)}</span>
+              </div>
+              {order.cod_extra_cost > 0 && (
+                <div class="flex justify-between text-sm">
+                  <span class="text-charcoal-500">Contrareembolso</span>
+                  <span>{formatPrice(order.cod_extra_cost)}</span>
+                </div>
+              )}
+              <div class="flex justify-between font-semibold text-lg pt-3 border-t border-charcoal-100 mt-3">
+                <span class="text-navy-900">Total</span>
+                <span class="text-navy-900">{formatPrice(order.total)}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Dirección de envío -->
+          <div class="bg-white rounded-lg shadow-subtle p-6">
+            <h3 class="font-medium text-navy-900 mb-3 flex items-center gap-2">
+              <span>📦</span> Dirección de envío
+            </h3>
+            <p class="text-charcoal-600 leading-relaxed">
+              {order.shipping_name}<br>
+              {order.shipping_address_line1}<br>
+              {order.shipping_address_line2 && <>{order.shipping_address_line2}<br></>}
+              {order.shipping_postal_code} {order.shipping_city}, {order.shipping_province}<br>
+              {order.shipping_country || 'España'}
+            </p>
+          </div>
+
+          <!-- Volver -->
+          <div class="text-center">
+            <a href="/tienda" class="inline-flex items-center gap-2 px-6 py-3 border border-charcoal-200 rounded-lg text-charcoal-700 hover:bg-charcoal-50 transition-colors">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+              </svg>
+              Seguir comprando
+            </a>
+          </div>
+        </div>
+      )}
+    </div>
+  </main>
+</BaseLayout>

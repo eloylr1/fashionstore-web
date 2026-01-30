@@ -325,7 +325,7 @@ export async function sendOrderConfirmationEmail(data: OrderData): Promise<Email
         <div style="margin-top: 32px; text-align: center;">
           <a href="${data.invoiceUrl}" 
              style="display: inline-block; background: #1e3a5f; color: white; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 500;">
-            Ver Factura Completa
+            Ver Mi Pedido
           </a>
         </div>
       </div>

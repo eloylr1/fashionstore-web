@@ -379,6 +379,11 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       ? storeSettings.shipping.express_delivery_days 
       : storeSettings.shipping.estimated_delivery_days;
 
+    // URL para ver el pedido - funciona para usuarios logueados y invitados
+    const orderViewUrl = userId 
+      ? `${siteUrl}/cuenta/pedidos` 
+      : `${siteUrl}/seguimiento?order=${order.order_number || orderNumber}&email=${encodeURIComponent(finalEmail)}`;
+
     await sendOrderConfirmationEmail({
       orderNumber: order.order_number || orderNumber,
       customerName: shipping_address.full_name,
@@ -400,7 +405,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       estimatedDeliveryDays: deliveryDays,
       paymentMethod: payment_method,
       invoiceNumber: invoice?.invoice_number || invoiceNumber,
-      invoiceUrl: invoice ? `${siteUrl}/api/invoices/${invoice.id}` : '',
+      invoiceUrl: orderViewUrl,
       // Datos bancarios para transferencia
       bankDetails: payment_method === 'transfer' ? {
         bank: 'Banco FashionMarket',
