@@ -54,7 +54,7 @@ if (shippingMethods.length === 0) {
 const stripePublicKey = import.meta.env.PUBLIC_STRIPE_PUBLISHABLE_KEY || '';
 ---
 
-<BaseLayout title="Checkout | FashionMarket" description="Finaliza tu compra de forma segura">
+<BaseLayout title="Checkout | FashionMarket" description="Finaliza tu compra de forma segura" noHeaderFooter={true}>
   <!-- Header simplificado para checkout -->
   <header class="bg-white border-b border-charcoal-100 sticky top-0 z-40">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -124,8 +124,8 @@ const stripePublicKey = import.meta.env.PUBLIC_STRIPE_PUBLISHABLE_KEY || '';
             <div class="bg-white rounded-lg shadow-subtle overflow-hidden">
               <div class="bg-navy-900 px-6 py-4">
                 <h2 class="text-white font-serif text-lg flex items-center gap-3">
-                  <span class="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center text-sm">1</span>
-                  Datos de Envío
+                  <span class="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center text-sm font-medium">1</span>
+                  <span class="text-white">Datos de Envío</span>
                 </h2>
               </div>
               
@@ -297,8 +297,8 @@ const stripePublicKey = import.meta.env.PUBLIC_STRIPE_PUBLISHABLE_KEY || '';
             <div class="bg-white rounded-lg shadow-subtle overflow-hidden">
               <div class="bg-navy-900 px-6 py-4 flex items-center justify-between">
                 <h2 class="text-white font-serif text-lg flex items-center gap-3">
-                  <span class="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center text-sm">2</span>
-                  Método de Pago
+                  <span class="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center text-sm font-medium">2</span>
+                  <span class="text-white">Método de Pago</span>
                 </h2>
                 <button type="button" id="back-to-shipping" class="text-white/70 hover:text-white text-sm flex items-center gap-1 transition-colors">
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -512,12 +512,12 @@ const stripePublicKey = import.meta.env.PUBLIC_STRIPE_PUBLISHABLE_KEY || '';
              ═══════════════════════════════════════════════════════════════ -->
         <aside class="lg:col-span-2" id="order-summary-aside">
           <div class="bg-white rounded-lg shadow-subtle sticky top-24 overflow-hidden">
-            <div class="bg-charcoal-800 px-6 py-4">
+            <div class="bg-navy-900 px-6 py-4">
               <h3 class="text-white font-serif text-lg flex items-center gap-2">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
                 </svg>
-                Resumen del pedido
+                <span class="text-white">Resumen del pedido</span>
               </h3>
             </div>
             
