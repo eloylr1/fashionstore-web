@@ -1,9 +1,9 @@
 /**
  * ═══════════════════════════════════════════════════════════════════════════
- * FASHIONMARKET - Cart Store (Nano Stores) v2
+ * FASHIONMARKET - Cart Store (Nano Stores) v3
  * Manejo de estado persistente del carrito con sincronización por usuario
- * - Invitados: carrito TEMPORAL (no se guarda en localStorage)
- * - Usuarios logueados: persistido en localStorage + sincronizado con BD
+ * - Invitados: sessionStorage (persiste durante navegación, se elimina al cerrar navegador)
+ * - Usuarios logueados: localStorage + sincronizado con BD (persiste siempre)
  * ═══════════════════════════════════════════════════════════════════════════
  */
 
@@ -38,13 +38,30 @@ export interface CartNotification {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// CONSTANTES
+// ─────────────────────────────────────────────────────────────────────────────
+
+const CART_KEY = 'fashionmarket-cart';
+const GUEST_CART_KEY = 'fashionmarket-cart-guest';
+
+// ─────────────────────────────────────────────────────────────────────────────
 // STORE PRINCIPAL
 // ─────────────────────────────────────────────────────────────────────────────
 
-// Estado inicial - NO cargar desde localStorage aquí
-// Solo se cargará cuando se verifique que hay sesión activa
+// Estado inicial - Cargar desde sessionStorage para invitados
 const getInitialState = (): CartItem[] => {
-  // No cargar nada al inicio - se cargará después de verificar autenticación
+  if (typeof window === 'undefined') return [];
+  
+  // Intentar cargar carrito de invitado desde sessionStorage
+  try {
+    const guestCart = sessionStorage.getItem(GUEST_CART_KEY);
+    if (guestCart) {
+      return JSON.parse(guestCart);
+    }
+  } catch {
+    // Ignorar errores de parsing
+  }
+  
   return [];
 };
 
@@ -353,24 +370,27 @@ export function initializeGuestCart(): void {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Persistir carrito en localStorage
- * SOLO si el usuario está logueado
+ * Persistir carrito en storage
+ * - Invitados: sessionStorage (se elimina al cerrar el navegador)
+ * - Usuarios logueados: localStorage (persiste siempre)
  */
 function persistCart(items: CartItem[]): void {
   if (typeof window === 'undefined') return;
   
   const userId = currentUserId.get();
   
-  // Solo guardar en localStorage si hay usuario logueado
-  if (!userId) {
-    // Para invitados, no persistimos - el carrito es temporal
-    return;
-  }
-  
   try {
-    localStorage.setItem('fashionmarket-cart', JSON.stringify(items));
+    if (userId) {
+      // Usuario logueado: guardar en localStorage (persiste siempre)
+      localStorage.setItem(CART_KEY, JSON.stringify(items));
+      // Limpiar sessionStorage de invitado si existía
+      sessionStorage.removeItem(GUEST_CART_KEY);
+    } else {
+      // Invitado: guardar en sessionStorage (se elimina al cerrar navegador)
+      sessionStorage.setItem(GUEST_CART_KEY, JSON.stringify(items));
+    }
   } catch (error) {
-    console.error('Error saving cart to localStorage:', error);
+    console.error('Error saving cart to storage:', error);
   }
 }
 
@@ -386,13 +406,20 @@ export function formatPrice(cents: number): string {
 
 /**
  * Inicializar carrito (llamar en el cliente)
- * Solo carga desde localStorage si hay usuario logueado
+ * Carga inmediatamente desde sessionStorage para invitados
+ * y luego verifica sesión para usuarios logueados
  */
 export function initializeCart(): void {
   if (typeof window === 'undefined') return;
   
-  // Verificar si hay usuario logueado y cargar su carrito
-  // NO cargamos nada de localStorage hasta verificar la sesión
+  // PRIMERO: Cargar inmediatamente desde sessionStorage (para invitados)
+  // Esto asegura que el carrito se muestre instantáneamente al navegar
+  const guestCart = loadCartFromSessionStorage();
+  if (guestCart.length > 0 && cartItems.get().length === 0) {
+    cartItems.set(guestCart);
+  }
+  
+  // LUEGO: Verificar si hay usuario logueado y sincronizar
   checkAndLoadUserCart();
 }
 
@@ -403,7 +430,21 @@ function loadCartFromLocalStorage(): CartItem[] {
   if (typeof window === 'undefined') return [];
   
   try {
-    const saved = localStorage.getItem('fashionmarket-cart');
+    const saved = localStorage.getItem(CART_KEY);
+    return saved ? JSON.parse(saved) : [];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Cargar carrito desde sessionStorage (para invitados)
+ */
+function loadCartFromSessionStorage(): CartItem[] {
+  if (typeof window === 'undefined') return [];
+  
+  try {
+    const saved = sessionStorage.getItem(GUEST_CART_KEY);
     return saved ? JSON.parse(saved) : [];
   } catch {
     return [];
@@ -412,14 +453,19 @@ function loadCartFromLocalStorage(): CartItem[] {
 
 /**
  * Verificar sesión y cargar carrito del usuario
- * Solo carga el carrito si el usuario está logueado
+ * - Usuarios logueados: cargar desde localStorage
+ * - Invitados: mantener sessionStorage (ya cargado en getInitialState)
  */
 async function checkAndLoadUserCart(): Promise<void> {
   try {
     const response = await fetch('/api/auth/session');
     if (!response.ok) {
-      // Usuario no logueado - carrito vacío (no persistente)
-      console.log('Guest user - cart is temporary and will not be saved');
+      // Usuario no logueado - carrito en sessionStorage (persiste durante navegación)
+      const guestCart = loadCartFromSessionStorage();
+      if (guestCart.length > 0) {
+        cartItems.set(guestCart);
+      }
+      console.log('Guest user - cart stored in sessionStorage (clears when browser closes)');
       return;
     }
     
@@ -430,18 +476,39 @@ async function checkAndLoadUserCart(): Promise<void> {
       
       // Usuario logueado - cargar desde localStorage primero
       const savedItems = loadCartFromLocalStorage();
-      if (savedItems.length > 0) {
+      
+      // También verificar si hay items de sesión de invitado para fusionar
+      const guestItems = loadCartFromSessionStorage();
+      
+      if (guestItems.length > 0 && savedItems.length === 0) {
+        // Si hay carrito de invitado pero no de usuario, usar el de invitado
+        cartItems.set(guestItems);
+        persistCart(guestItems); // Guardará en localStorage
+        // Limpiar sessionStorage
+        sessionStorage.removeItem(GUEST_CART_KEY);
+      } else if (savedItems.length > 0) {
         cartItems.set(savedItems);
       }
+      
+      // Limpiar sessionStorage de invitado si existía
+      sessionStorage.removeItem(GUEST_CART_KEY);
       
       // Luego sincronizar con el servidor
       await loadCartFromServer();
     } else {
-      // Usuario no logueado - carrito vacío (temporal)
-      console.log('Guest user - cart is temporary and will not be saved');
+      // Usuario no logueado - carrito en sessionStorage
+      const guestCart = loadCartFromSessionStorage();
+      if (guestCart.length > 0) {
+        cartItems.set(guestCart);
+      }
+      console.log('Guest user - cart stored in sessionStorage (clears when browser closes)');
     }
   } catch (error) {
-    // Usuario no logueado, carrito temporal
-    console.log('Using guest cart (temporary - not saved)');
+    // Usuario no logueado, carrito en sessionStorage
+    const guestCart = loadCartFromSessionStorage();
+    if (guestCart.length > 0) {
+      cartItems.set(guestCart);
+    }
+    console.log('Using guest cart (sessionStorage - clears when browser closes)');
   }
 }
