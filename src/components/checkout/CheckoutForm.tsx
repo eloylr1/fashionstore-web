@@ -637,9 +637,23 @@ export default function CheckoutForm({
   // Esperando hidratación del cliente
   if (!mounted) {
     return (
-      <div className="flex flex-col items-center justify-center p-8 space-y-3">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-navy-900"></div>
-        <span className="text-charcoal-600">Cargando método de pago...</span>
+      <div className="space-y-6">
+        {/* Skeleton de métodos de pago */}
+        <div className="space-y-3">
+          <div className="h-4 w-40 bg-charcoal-200 rounded animate-pulse"></div>
+          <div className="h-20 bg-charcoal-100 rounded-lg animate-pulse"></div>
+          <div className="h-20 bg-charcoal-100 rounded-lg animate-pulse"></div>
+        </div>
+        
+        {/* Skeleton del formulario */}
+        <div className="border-t border-charcoal-200 pt-4">
+          <div className="h-48 bg-charcoal-100 rounded-lg animate-pulse"></div>
+        </div>
+        
+        {/* Skeleton del botón */}
+        <div className="h-14 bg-charcoal-200 rounded-lg animate-pulse"></div>
+        
+        <p className="text-center text-sm text-charcoal-500">Cargando opciones de pago...</p>
       </div>
     );
   }
@@ -666,33 +680,133 @@ export default function CheckoutForm({
   }
 
   // Loading inicial para Stripe - mostrar siempre que stripe no esté listo
-  if (!stripe && !error) {
+  if (!stripe && !error && selectedPaymentMethod === 'stripe') {
     return (
-      <div className="flex flex-col items-center justify-center p-8 space-y-3">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-navy-900"></div>
-        <span className="text-charcoal-600">Cargando formulario de pago...</span>
-        <span className="text-xs text-charcoal-400">Conectando con Stripe...</span>
+      <div className="space-y-6">
+        {/* Selector de método de pago visible mientras carga */}
+        <div className="space-y-3">
+          <label className="block text-sm font-medium text-navy-900">
+            Selecciona método de pago
+          </label>
+          
+          {/* Opción Stripe seleccionada */}
+          <label className="flex items-center gap-4 p-4 border-2 border-navy-900 bg-navy-50 rounded-lg">
+            <input type="radio" checked readOnly className="w-4 h-4 text-navy-900" />
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <svg className="w-5 h-5 text-navy-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                </svg>
+                <span className="font-medium text-navy-900">Pago con tarjeta</span>
+              </div>
+              <p className="text-xs text-charcoal-500 mt-1">Tarjeta de crédito/débito, Google Pay, Apple Pay</p>
+            </div>
+          </label>
+          
+          {/* Opción Contrareembolso mientras carga */}
+          {storeSettings.cod_enabled && (
+            <label 
+              className="flex items-center gap-4 p-4 border-2 border-charcoal-200 rounded-lg cursor-pointer hover:border-charcoal-300"
+              onClick={() => setSelectedPaymentMethod('cod')}
+            >
+              <input type="radio" checked={false} readOnly className="w-4 h-4 text-navy-900" />
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+                  </svg>
+                  <span className="font-medium text-navy-900">Contrareembolso</span>
+                </div>
+                <p className="text-xs text-charcoal-500 mt-1">Paga en efectivo al recibir tu pedido</p>
+              </div>
+              {storeSettings.cod_fee > 0 && (
+                <span className="text-sm font-medium text-amber-600">
+                  +{formatPrice(storeSettings.cod_fee)}
+                </span>
+              )}
+            </label>
+          )}
+        </div>
+        
+        {/* Área de carga del formulario */}
+        <div className="border-t border-charcoal-200 pt-6">
+          <div className="flex flex-col items-center justify-center py-12 bg-charcoal-50 rounded-lg">
+            <div className="relative">
+              <div className="animate-spin rounded-full h-10 w-10 border-4 border-charcoal-200 border-t-navy-900"></div>
+            </div>
+            <p className="mt-4 text-charcoal-600 font-medium">Cargando formulario de pago seguro...</p>
+            <p className="mt-1 text-xs text-charcoal-400">Conectando con Stripe</p>
+          </div>
+        </div>
+        
+        {/* Botón deshabilitado */}
+        <button
+          disabled
+          className="w-full bg-charcoal-300 text-white py-4 rounded-lg font-semibold cursor-not-allowed"
+        >
+          Esperando formulario de pago...
+        </button>
+        
+        {/* Mensaje de seguridad */}
+        <div className="flex items-center justify-center gap-2 text-xs text-charcoal-500">
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+          </svg>
+          <span>Pago seguro con encriptación SSL de 256 bits</span>
+        </div>
       </div>
     );
   }
   
-  // Error de carga de Stripe
-  if (error) {
+  // Error de carga de Stripe - pero permitir contrareembolso
+  if (error && selectedPaymentMethod === 'stripe') {
     return (
-      <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
-        <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-          <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-          </svg>
+      <div className="space-y-6">
+        {/* Mensaje de error */}
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+          <div className="flex items-start gap-4">
+            <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
+              <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+            <div className="flex-1">
+              <h3 className="text-lg font-semibold text-red-900 mb-2">Error al cargar el pago con tarjeta</h3>
+              <p className="text-red-700 mb-3">{error}</p>
+              <button
+                onClick={() => {
+                  setError('');
+                  window.location.reload();
+                }}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition text-sm font-medium"
+              >
+                Reintentar
+              </button>
+            </div>
+          </div>
         </div>
-        <h3 className="text-lg font-semibold text-red-900 mb-2">Error de configuración</h3>
-        <p className="text-red-700 mb-4">{error}</p>
-        <button
-          onClick={() => window.location.reload()}
-          className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition text-sm font-medium"
-        >
-          Reintentar
-        </button>
+        
+        {/* Alternativa: Contrareembolso si está habilitado */}
+        {storeSettings.cod_enabled && (
+          <div className="bg-green-50 border border-green-200 rounded-lg p-6">
+            <h4 className="font-semibold text-green-900 mb-2">¿Prefieres pagar al recibir?</h4>
+            <p className="text-green-700 text-sm mb-4">
+              Puedes usar el método de pago contrareembolso y pagar en efectivo cuando recibas tu pedido.
+            </p>
+            <button
+              onClick={() => {
+                setError('');
+                setSelectedPaymentMethod('cod');
+              }}
+              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition text-sm font-medium flex items-center gap-2"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+              </svg>
+              Pagar contrareembolso
+            </button>
+          </div>
+        )}
       </div>
     );
   }
@@ -835,22 +949,26 @@ export default function CheckoutForm({
       {selectedPaymentMethod === 'stripe' && (
         <div className="space-y-4">
           <div className="border-t border-charcoal-200 pt-4">
+            <label className="block text-sm font-medium text-navy-900 mb-3">
+              Datos de la tarjeta
+            </label>
             <div 
               ref={paymentElementRef}
-              className="min-h-[200px]"
+              className="min-h-[200px] bg-white rounded-lg"
             >
               {/* Cargando mientras no hay clientSecret */}
               {!clientSecret && (
-                <div className="flex flex-col items-center justify-center py-8">
-                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-navy-900"></div>
-                  <span className="mt-2 text-sm text-charcoal-500">Preparando formulario de pago...</span>
+                <div className="flex flex-col items-center justify-center py-12 bg-charcoal-50 rounded-lg border border-charcoal-200">
+                  <div className="animate-spin rounded-full h-8 w-8 border-4 border-charcoal-200 border-t-navy-900"></div>
+                  <span className="mt-3 text-sm text-charcoal-600">Preparando formulario de pago...</span>
+                  <span className="mt-1 text-xs text-charcoal-400">Esto puede tardar unos segundos</span>
                 </div>
               )}
               {/* Cargando Payment Element después de tener clientSecret */}
               {!paymentElementReady && clientSecret && (
-                <div className="flex items-center justify-center py-8">
-                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-navy-900"></div>
-                  <span className="ml-2 text-sm text-charcoal-500">Cargando métodos de pago...</span>
+                <div className="flex flex-col items-center justify-center py-12 bg-charcoal-50 rounded-lg border border-charcoal-200">
+                  <div className="animate-spin rounded-full h-8 w-8 border-4 border-charcoal-200 border-t-navy-900"></div>
+                  <span className="mt-3 text-sm text-charcoal-600">Cargando métodos de pago...</span>
                 </div>
               )}
             </div>

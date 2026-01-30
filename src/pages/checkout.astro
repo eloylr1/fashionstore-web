@@ -1001,11 +1001,45 @@ const isGuest = !user;
         window.dispatchEvent(new CustomEvent('cart-updated', { detail: { items: [] } }));
       });
     };
+    
+    // Verificar parámetros de URL (por si Stripe redirige de vuelta)
+    const checkUrlParams = () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      
+      // Si viene de un pago exitoso de Stripe
+      if (urlParams.get('success') === 'true' || urlParams.get('payment_intent')) {
+        // Limpiar datos del carrito
+        localStorage.removeItem('fashionmarket-cart');
+        localStorage.removeItem('fashionmarket-shipping-address');
+        localStorage.removeItem('fashionmarket-applied-discount');
+        localStorage.removeItem('fashionmarket-checkout-options');
+        
+        // Mostrar paso de confirmación
+        showStep(3);
+        window.dispatchEvent(new CustomEvent('cart-updated', { detail: { items: [] } }));
+        
+        // Limpiar URL para evitar que se muestre de nuevo al refrescar
+        window.history.replaceState({}, '', '/checkout');
+        return true;
+      }
+      
+      // Si viene de un error de pago
+      if (urlParams.get('error')) {
+        console.error('Error de pago:', urlParams.get('error'));
+      }
+      
+      return false;
+    };
 
     // ==========================================
     // INICIALIZACIÓN
     // ==========================================
     const init = () => {
+      // Verificar primero si viene de un pago exitoso
+      if (checkUrlParams()) {
+        return; // No hacer nada más si ya se procesó el pago
+      }
+      
       const cartItems = getCart();
 
       // Si el carrito está vacío, redirigir
