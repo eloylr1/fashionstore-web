@@ -983,8 +983,11 @@ const stripePublicKey = import.meta.env.PUBLIC_STRIPE_PUBLISHABLE_KEY || '';
         el.classList.add('hidden');
       });
 
-      // Mostrar paso actual
-      document.querySelector(`[data-step="${step}"]`).classList.remove('hidden');
+      // Mostrar paso actual - buscar específicamente en las secciones con clase checkout-step
+      const stepSection = document.querySelector(`.checkout-step[data-step="${step}"]`);
+      if (stepSection) {
+        stepSection.classList.remove('hidden');
+      }
 
       // Actualizar indicadores
       document.querySelectorAll('.step-indicator').forEach((el, index) => {
