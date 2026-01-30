@@ -279,12 +279,17 @@ export async function loadCartFromServer(): Promise<void> {
       if (mergedItems.length > 0) {
         await syncCartToServer(mergedItems);
         
-        // Mostrar notificación si había items en el carrito
-        showCartNotification({
-          type: 'restored',
-          message: `¡Bienvenido de vuelta! Tienes ${mergedItems.length} artículo${mergedItems.length > 1 ? 's' : ''} en tu carrito.`,
-          itemCount: mergedItems.length,
-        });
+        // Mostrar notificación SOLO si es la primera vez en esta sesión
+        // y si el usuario acaba de iniciar sesión (no en cada navegación)
+        const welcomeShown = sessionStorage.getItem('fashionmarket-welcome-shown');
+        if (!welcomeShown) {
+          sessionStorage.setItem('fashionmarket-welcome-shown', 'true');
+          showCartNotification({
+            type: 'restored',
+            message: `¡Bienvenido de vuelta! Tienes ${mergedItems.length} artículo${mergedItems.length > 1 ? 's' : ''} en tu carrito.`,
+            itemCount: mergedItems.length,
+          });
+        }
       }
       
       // Guardar userId
