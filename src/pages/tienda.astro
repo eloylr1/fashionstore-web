@@ -106,10 +106,16 @@ if (isSupabaseConfigured() && supabase) {
 
   let { data: realProducts } = await query as { data: any[] | null };
 
-  // Mostrar todos los productos (ya no limitamos a uno por categoría)
-  
-  if (realProducts?.length) {
+  // Si hay filtros activos y Supabase devuelve resultados (incluso vacíos), usar esos resultados
+  // Solo usar demoProducts si NO hay filtros Y no hay productos reales
+  if (realProducts !== null) {
     products = realProducts;
+  } else if (!categoryFilter && !priceFilter && sortFilter === 'todos') {
+    // Sin filtros y sin resultados de Supabase, usar demo
+    products = demoProducts;
+  } else {
+    // Con filtros pero sin conexión a Supabase, mostrar vacío
+    products = [];
   }
 }
 
