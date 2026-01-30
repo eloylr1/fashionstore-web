@@ -764,7 +764,14 @@ const stripePublicKey = import.meta.env.PUBLIC_STRIPE_PUBLISHABLE_KEY || '';
     // ─────────────────────────────────────────────────────────────────────
     function loadCart() {
       try {
-        const saved = localStorage.getItem('fashionmarket-cart');
+        // Primero intentar localStorage (usuarios logueados)
+        let saved = localStorage.getItem('fashionmarket-cart');
+        
+        // Si no hay en localStorage, buscar en sessionStorage (invitados)
+        if (!saved) {
+          saved = sessionStorage.getItem('fashionmarket-cart-guest');
+        }
+        
         checkoutState.cartItems = saved ? JSON.parse(saved) : [];
       } catch {
         checkoutState.cartItems = [];
@@ -1244,8 +1251,9 @@ const stripePublicKey = import.meta.env.PUBLIC_STRIPE_PUBLISHABLE_KEY || '';
     // FINALIZAR CHECKOUT
     // ─────────────────────────────────────────────────────────────────────
     function completeCheckout(order) {
-      // Limpiar carrito
+      // Limpiar carrito de ambos storages
       localStorage.removeItem('fashionmarket-cart');
+      sessionStorage.removeItem('fashionmarket-cart-guest');
 
       // Actualizar UI de confirmación
       document.getElementById('confirmation-email').textContent = checkoutState.shippingData.email;
