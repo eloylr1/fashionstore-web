@@ -7,6 +7,7 @@
 
 import type { APIRoute } from 'astro';
 import { createClient } from '@supabase/supabase-js';
+import { sendNewsletterWelcomeEmail } from '../../../lib/email';
 
 const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL || '';
 const supabaseServiceKey = import.meta.env.SUPABASE_SERVICE_ROLE_KEY || '';
@@ -67,6 +68,18 @@ export const POST: APIRoute = async ({ request }) => {
           })
           .eq('id', existing.id);
 
+        // Enviar email de bienvenida al reactivar
+        try {
+          await sendNewsletterWelcomeEmail({
+            email: normalizedEmail,
+            promoCode: promoCode,
+            discountPercentage: '10%',
+          });
+          console.log('📧 Email de reactivación enviado a:', normalizedEmail);
+        } catch (emailError) {
+          console.error('Error enviando email de reactivación:', emailError);
+        }
+
         return new Response(
           JSON.stringify({
             success: true,
@@ -123,8 +136,23 @@ export const POST: APIRoute = async ({ request }) => {
       );
     }
 
-    // TODO: Aquí podrías enviar un email de bienvenida con el código
-    // await sendWelcomeEmail(normalizedEmail, promoCode);
+    // Enviar email de bienvenida con el código de descuento
+    try {
+      const emailResult = await sendNewsletterWelcomeEmail({
+        email: normalizedEmail,
+        promoCode: promoCode,
+        discountPercentage: '10%',
+      });
+      
+      if (emailResult.success) {
+        console.log('📧 Email de bienvenida enviado a:', normalizedEmail);
+      } else {
+        console.warn('⚠️ No se pudo enviar email de bienvenida:', emailResult.error);
+      }
+    } catch (emailError) {
+      // No fallar la suscripción si el email falla
+      console.error('Error enviando email de bienvenida:', emailError);
+    }
 
     return new Response(
       JSON.stringify({

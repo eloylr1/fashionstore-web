@@ -570,3 +570,176 @@ export async function sendOrderCancellationEmail(data: CancelOrderEmailData): Pr
     html,
   });
 }
+
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * EMAIL DE BIENVENIDA AL NEWSLETTER
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
+
+interface NewsletterWelcomeData {
+  email: string;
+  promoCode: string;
+  discountPercentage?: string;
+}
+
+/**
+ * Envía email de bienvenida al suscribirse al newsletter
+ */
+export async function sendNewsletterWelcomeEmail(data: NewsletterWelcomeData): Promise<EmailResult> {
+  const discount = data.discountPercentage || '10%';
+  
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f9fafb;">
+  <div style="max-width: 600px; margin: 0 auto; padding: 40px 20px;">
+    <!-- Header -->
+    <div style="text-align: center; margin-bottom: 32px;">
+      <h1 style="font-size: 28px; font-weight: 600; color: #1e3a5f; margin: 0;">
+        Fashion<span style="color: #c9a227;">Market</span>
+      </h1>
+      <p style="color: #6b7280; margin-top: 8px;">Moda masculina con estilo</p>
+    </div>
+
+    <!-- Card Principal -->
+    <div style="background: white; border-radius: 16px; box-shadow: 0 10px 40px rgba(0,0,0,0.1); overflow: hidden;">
+      <!-- Banner de bienvenida -->
+      <div style="background: linear-gradient(135deg, #1e3a5f 0%, #2d5a8f 50%, #1e3a5f 100%); padding: 48px 32px; text-align: center; position: relative;">
+        <!-- Decoración -->
+        <div style="position: absolute; top: 20px; left: 20px; width: 60px; height: 60px; border: 2px solid rgba(201,162,39,0.3); border-radius: 50%;"></div>
+        <div style="position: absolute; bottom: 20px; right: 20px; width: 40px; height: 40px; border: 2px solid rgba(201,162,39,0.3); border-radius: 50%;"></div>
+        
+        <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #c9a227 0%, #e6c75a 100%); border-radius: 50%; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 20px rgba(201,162,39,0.4);">
+          <span style="font-size: 40px; line-height: 80px;">🎉</span>
+        </div>
+        <h2 style="color: white; font-size: 28px; margin: 0 0 12px; font-weight: 700;">¡Bienvenido a la Familia!</h2>
+        <p style="color: rgba(255,255,255,0.9); margin: 0; font-size: 16px; line-height: 1.5;">
+          Gracias por unirte a nuestra comunidad de estilo
+        </p>
+      </div>
+
+      <!-- Contenido principal -->
+      <div style="padding: 40px 32px;">
+        <p style="color: #374151; font-size: 16px; line-height: 1.7; margin: 0 0 24px; text-align: center;">
+          Estamos encantados de que formes parte de <strong style="color: #1e3a5f;">FashionMarket</strong>. 
+          Como nuevo miembro, te hemos preparado algo especial para tu primera compra.
+        </p>
+
+        <!-- Código de descuento -->
+        <div style="background: linear-gradient(135deg, #fefce8 0%, #fef3c7 100%); border: 2px dashed #c9a227; border-radius: 12px; padding: 32px; text-align: center; margin-bottom: 32px;">
+          <p style="color: #92400e; font-size: 14px; text-transform: uppercase; letter-spacing: 2px; margin: 0 0 12px; font-weight: 600;">
+            Tu código exclusivo
+          </p>
+          <div style="background: white; border-radius: 8px; padding: 16px 24px; display: inline-block; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+            <span style="font-family: 'Courier New', monospace; font-size: 32px; font-weight: 700; color: #1e3a5f; letter-spacing: 4px;">
+              ${data.promoCode}
+            </span>
+          </div>
+          <p style="color: #1e3a5f; font-size: 24px; font-weight: 700; margin: 16px 0 0;">
+            ${discount} DE DESCUENTO
+          </p>
+          <p style="color: #6b7280; font-size: 14px; margin: 8px 0 0;">
+            en tu primera compra
+          </p>
+        </div>
+
+        <!-- Beneficios -->
+        <h3 style="color: #1e3a5f; font-size: 18px; margin: 0 0 20px; text-align: center;">
+          Como suscriptor disfrutarás de:
+        </h3>
+        
+        <div style="display: block; margin-bottom: 24px;">
+          <div style="background: #f8fafc; border-radius: 8px; padding: 16px; margin-bottom: 12px;">
+            <table style="width: 100%;">
+              <tr>
+                <td style="width: 40px; vertical-align: top;">
+                  <span style="font-size: 24px;">🛍️</span>
+                </td>
+                <td style="vertical-align: top;">
+                  <p style="color: #1e3a5f; font-weight: 600; margin: 0 0 4px;">Acceso anticipado</p>
+                  <p style="color: #6b7280; font-size: 14px; margin: 0;">Sé el primero en conocer nuevas colecciones</p>
+                </td>
+              </tr>
+            </table>
+          </div>
+          
+          <div style="background: #f8fafc; border-radius: 8px; padding: 16px; margin-bottom: 12px;">
+            <table style="width: 100%;">
+              <tr>
+                <td style="width: 40px; vertical-align: top;">
+                  <span style="font-size: 24px;">💰</span>
+                </td>
+                <td style="vertical-align: top;">
+                  <p style="color: #1e3a5f; font-weight: 600; margin: 0 0 4px;">Ofertas exclusivas</p>
+                  <p style="color: #6b7280; font-size: 14px; margin: 0;">Descuentos especiales solo para suscriptores</p>
+                </td>
+              </tr>
+            </table>
+          </div>
+          
+          <div style="background: #f8fafc; border-radius: 8px; padding: 16px; margin-bottom: 12px;">
+            <table style="width: 100%;">
+              <tr>
+                <td style="width: 40px; vertical-align: top;">
+                  <span style="font-size: 24px;">✨</span>
+                </td>
+                <td style="vertical-align: top;">
+                  <p style="color: #1e3a5f; font-weight: 600; margin: 0 0 4px;">Consejos de estilo</p>
+                  <p style="color: #6b7280; font-size: 14px; margin: 0;">Tips y tendencias de moda masculina</p>
+                </td>
+              </tr>
+            </table>
+          </div>
+        </div>
+
+        <!-- CTA -->
+        <div style="text-align: center; margin-top: 32px;">
+          <a href="https://eloyfashionstore.victoriafp.online/tienda" 
+             style="display: inline-block; background: linear-gradient(135deg, #c9a227 0%, #dab82f 100%); color: #1e3a5f; text-decoration: none; padding: 16px 40px; border-radius: 8px; font-weight: 700; font-size: 16px; box-shadow: 0 4px 15px rgba(201,162,39,0.3); transition: all 0.3s ease;">
+            Usar Mi Descuento
+          </a>
+        </div>
+
+        <!-- Nota -->
+        <p style="color: #9ca3af; font-size: 12px; text-align: center; margin: 24px 0 0; line-height: 1.5;">
+          * Código válido para tu primera compra. No acumulable con otras ofertas.<br>
+          Envío gratis en pedidos superiores a 100€.
+        </p>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div style="text-align: center; margin-top: 32px; color: #9ca3af; font-size: 14px;">
+      <p style="margin: 0 0 8px;">
+        Síguenos para más inspiración
+      </p>
+      <div style="margin: 16px 0;">
+        <a href="#" style="color: #1e3a5f; text-decoration: none; margin: 0 8px;">Instagram</a>
+        <span style="color: #d1d5db;">|</span>
+        <a href="#" style="color: #1e3a5f; text-decoration: none; margin: 0 8px;">Facebook</a>
+        <span style="color: #d1d5db;">|</span>
+        <a href="#" style="color: #1e3a5f; text-decoration: none; margin: 0 8px;">Twitter</a>
+      </div>
+      <p style="margin: 16px 0 0; color: #d1d5db; font-size: 12px;">
+        © ${new Date().getFullYear()} FashionMarket. Todos los derechos reservados.
+      </p>
+      <p style="margin: 8px 0 0; color: #d1d5db; font-size: 11px;">
+        Si no deseas recibir más emails, puedes <a href="https://eloyfashionstore.victoriafp.online/unsubscribe?email=${encodeURIComponent(data.email)}" style="color: #9ca3af;">darte de baja aquí</a>.
+      </p>
+    </div>
+  </div>
+</body>
+</html>
+  `;
+
+  return sendEmail({
+    to: data.email,
+    subject: '🎉 ¡Bienvenido a FashionMarket! Tu código de descuento está aquí',
+    html,
+  });
+}
