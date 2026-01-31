@@ -41,8 +41,16 @@ export interface CartNotification {
 // CONSTANTES
 // ─────────────────────────────────────────────────────────────────────────────
 
-const CART_KEY = 'fashionmarket-cart';
+const CART_KEY_PREFIX = 'fashionmarket-cart-'; // Se añade el userId al final
 const GUEST_CART_KEY = 'fashionmarket-cart-guest';
+const OLD_CART_KEY = 'fashionmarket-cart'; // Clave antigua para limpieza
+
+/**
+ * Obtener clave de localStorage específica para el usuario
+ */
+function getUserCartKey(userId: string): string {
+  return `${CART_KEY_PREFIX}${userId}`;
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // STORE PRINCIPAL
@@ -255,8 +263,6 @@ export async function loadCartFromServer(): Promise<void> {
     const data = await response.json();
     
     if (data.items && Array.isArray(data.items)) {
-      const localItems = cartItems.get();
-      
       // Convertir items del servidor al formato del carrito
       const serverItems: CartItem[] = data.items.map((item: any) => ({
         productId: item.product_id,
@@ -269,26 +275,27 @@ export async function loadCartFromServer(): Promise<void> {
         maxStock: item.stock || 99,
       }));
       
-      // Merge: combinar items locales con los del servidor
-      const mergedItems = mergeCartItems(localItems, serverItems);
-      
-      cartItems.set(mergedItems);
-      persistCart(mergedItems);
-      
-      // Sincronizar el resultado de vuelta al servidor
-      if (mergedItems.length > 0) {
-        await syncCartToServer(mergedItems);
+      // El servidor es la fuente de verdad - usar sus items directamente
+      // (ya no hacemos merge para evitar conflictos entre cuentas)
+      if (serverItems.length > 0) {
+        cartItems.set(serverItems);
+        persistCart(serverItems);
         
         // Mostrar notificación SOLO si es la primera vez en esta sesión
-        // y si el usuario acaba de iniciar sesión (no en cada navegación)
         const welcomeShown = sessionStorage.getItem('fashionmarket-welcome-shown');
         if (!welcomeShown) {
           sessionStorage.setItem('fashionmarket-welcome-shown', 'true');
           showCartNotification({
             type: 'restored',
-            message: `¡Bienvenido de vuelta! Tienes ${mergedItems.length} artículo${mergedItems.length > 1 ? 's' : ''} en tu carrito.`,
-            itemCount: mergedItems.length,
+            message: `¡Bienvenido de vuelta! Tienes ${serverItems.length} artículo${serverItems.length > 1 ? 's' : ''} en tu carrito.`,
+            itemCount: serverItems.length,
           });
+        }
+      } else {
+        // Si el servidor no tiene items pero ya hay items locales, sincronizar al servidor
+        const localItems = cartItems.get();
+        if (localItems.length > 0) {
+          await syncCartToServer(localItems);
         }
       }
       
@@ -335,37 +342,40 @@ function mergeCartItems(localItems: CartItem[], serverItems: CartItem[]): CartIt
 
 /**
  * Limpiar carrito al cerrar sesión
- * Borra el carrito tanto de memoria como de localStorage
+ * Borra el carrito de memoria pero NO del localStorage del usuario
+ * (así cuando vuelva a iniciar sesión tendrá su carrito)
  */
 export function clearCartForGuest(): void {
-  // Limpiar el carrito de memoria y localStorage
+  // Limpiar el carrito de memoria
   cartItems.set([]);
-  currentUserId.set(null);
   
-  // Limpiar localStorage
+  // Limpiar clave antigua genérica si existe
   if (typeof window !== 'undefined') {
     try {
-      localStorage.removeItem('fashionmarket-cart');
+      localStorage.removeItem(OLD_CART_KEY);
     } catch (error) {
-      console.error('Error clearing cart from localStorage:', error);
+      console.error('Error clearing old cart key:', error);
     }
   }
+  
+  currentUserId.set(null);
 }
 
 /**
  * Inicializar carrito para usuario invitado
- * Carrito vacío y temporal (no se persiste)
+ * Carrito vacío y temporal (no se persiste en localStorage)
  */
 export function initializeGuestCart(): void {
   cartItems.set([]);
   currentUserId.set(null);
   
-  // Limpiar cualquier carrito guardado previamente
+  // Limpiar clave antigua si existe
   if (typeof window !== 'undefined') {
     try {
-      localStorage.removeItem('fashionmarket-cart');
+      localStorage.removeItem(OLD_CART_KEY);
+      sessionStorage.removeItem(GUEST_CART_KEY);
     } catch (error) {
-      console.error('Error clearing cart from localStorage:', error);
+      console.error('Error clearing cart storage:', error);
     }
   }
 }
@@ -377,7 +387,7 @@ export function initializeGuestCart(): void {
 /**
  * Persistir carrito en storage
  * - Invitados: sessionStorage (se elimina al cerrar el navegador)
- * - Usuarios logueados: localStorage (persiste siempre)
+ * - Usuarios logueados: localStorage con clave única por usuario
  */
 function persistCart(items: CartItem[]): void {
   if (typeof window === 'undefined') return;
@@ -386,10 +396,12 @@ function persistCart(items: CartItem[]): void {
   
   try {
     if (userId) {
-      // Usuario logueado: guardar en localStorage (persiste siempre)
-      localStorage.setItem(CART_KEY, JSON.stringify(items));
+      // Usuario logueado: guardar en localStorage con clave específica del usuario
+      localStorage.setItem(getUserCartKey(userId), JSON.stringify(items));
       // Limpiar sessionStorage de invitado si existía
       sessionStorage.removeItem(GUEST_CART_KEY);
+      // Limpiar clave antigua si existe
+      localStorage.removeItem(OLD_CART_KEY);
     } else {
       // Invitado: guardar en sessionStorage (se elimina al cerrar navegador)
       sessionStorage.setItem(GUEST_CART_KEY, JSON.stringify(items));
@@ -437,11 +449,12 @@ export function initializeCart(): void {
 /**
  * Cargar carrito desde localStorage (solo para usuarios logueados)
  */
-function loadCartFromLocalStorage(): CartItem[] {
+function loadCartFromLocalStorage(userId: string): CartItem[] {
   if (typeof window === 'undefined') return [];
   
   try {
-    const saved = localStorage.getItem(CART_KEY);
+    // Usar clave específica del usuario
+    const saved = localStorage.getItem(getUserCartKey(userId));
     return saved ? JSON.parse(saved) : [];
   } catch {
     return [];
@@ -464,7 +477,7 @@ function loadCartFromSessionStorage(): CartItem[] {
 
 /**
  * Verificar sesión y cargar carrito del usuario
- * - Usuarios logueados: cargar desde localStorage
+ * - Usuarios logueados: cargar desde localStorage con clave específica del usuario
  * - Invitados: mantener sessionStorage (ya cargado en getInitialState)
  */
 async function checkAndLoadUserCart(): Promise<void> {
@@ -483,10 +496,14 @@ async function checkAndLoadUserCart(): Promise<void> {
     const data = await response.json();
     
     if (data.user?.id) {
-      currentUserId.set(data.user.id);
+      const userId = data.user.id;
+      currentUserId.set(userId);
       
-      // Usuario logueado - cargar desde localStorage primero
-      const savedItems = loadCartFromLocalStorage();
+      // Limpiar clave antigua genérica si existe (migración)
+      localStorage.removeItem(OLD_CART_KEY);
+      
+      // Usuario logueado - cargar desde localStorage con clave específica
+      const savedItems = loadCartFromLocalStorage(userId);
       
       // También verificar si hay items de sesión de invitado para fusionar
       const guestItems = loadCartFromSessionStorage();
@@ -494,17 +511,19 @@ async function checkAndLoadUserCart(): Promise<void> {
       if (guestItems.length > 0 && savedItems.length === 0) {
         // Si hay carrito de invitado pero no de usuario, usar el de invitado
         cartItems.set(guestItems);
-        persistCart(guestItems); // Guardará en localStorage
-        // Limpiar sessionStorage
-        sessionStorage.removeItem(GUEST_CART_KEY);
+        persistCart(guestItems); // Guardará en localStorage con clave del usuario
       } else if (savedItems.length > 0) {
+        // Usar carrito guardado del usuario
         cartItems.set(savedItems);
+      } else {
+        // Sin carrito local, iniciar vacío
+        cartItems.set([]);
       }
       
-      // Limpiar sessionStorage de invitado si existía
+      // Limpiar sessionStorage de invitado
       sessionStorage.removeItem(GUEST_CART_KEY);
       
-      // Luego sincronizar con el servidor
+      // Luego sincronizar con el servidor (que tiene la versión real)
       await loadCartFromServer();
     } else {
       // Usuario no logueado - carrito en sessionStorage
