@@ -282,14 +282,12 @@ if (accessToken?.value) {
                 </a>
               </nav>
               <div class="border-t border-charcoal-100 p-3 mx-2">
-                <form action="/api/auth/logout" method="POST" id="logout-form">
-                  <button type="submit" class="flex items-center justify-center gap-2 w-full px-4 py-2.5 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                    </svg>
-                    Cerrar sesión Admin
-                  </button>
-                </form>
+                <button type="button" id="logout-btn-admin" class="flex items-center justify-center gap-2 w-full px-4 py-2.5 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                  </svg>
+                  Cerrar sesión Admin
+                </button>
               </div>
             </div>
             ) : (
@@ -352,14 +350,12 @@ if (accessToken?.value) {
                 </a>
               </nav>
               <div class="border-t border-charcoal-100 p-3 mx-2">
-                <form action="/api/auth/logout" method="POST" id="logout-form">
-                  <button type="submit" class="flex items-center justify-center gap-2 w-full px-4 py-2.5 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                    </svg>
-                    Cerrar sesión
-                  </button>
-                </form>
+                <button type="button" id="logout-btn-user" class="flex items-center justify-center gap-2 w-full px-4 py-2.5 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                  </svg>
+                  Cerrar sesión
+                </button>
               </div>
             </div>
             )}
@@ -494,11 +490,25 @@ if (accessToken?.value) {
       }, true);
     }
 
-    // Handle logout - clear localStorage
-    const logoutForm = document.getElementById('logout-form');
-    logoutForm?.addEventListener('submit', () => {
+    // Handle logout - usando navegación GET para evitar CSRF
+    function handleLogout() {
+      // Limpiar localStorage
       localStorage.removeItem('user-name');
-    });
+      localStorage.removeItem('fashionmarket-cart');
+      sessionStorage.removeItem('fashionmarket-cart-guest');
+      sessionStorage.removeItem('fashionmarket-welcome-shown');
+      
+      // Redirigir al endpoint de logout (GET)
+      window.location.href = '/api/auth/logout';
+    }
+    
+    // Botón logout admin
+    const logoutBtnAdmin = document.getElementById('logout-btn-admin');
+    logoutBtnAdmin?.addEventListener('click', handleLogout);
+    
+    // Botón logout usuario
+    const logoutBtnUser = document.getElementById('logout-btn-user');
+    logoutBtnUser?.addEventListener('click', handleLogout);
     
     // Scroll behavior for homepage
     if (isHomepage && header) {
