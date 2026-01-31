@@ -14,25 +14,46 @@ interface WelcomePopupProps {
 export default function WelcomePopup({ isLoggedIn = false }: WelcomePopupProps) {
   const [isVisible, setIsVisible] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
 
   const DISCOUNT_CODE = 'WELCOME10';
   const DISCOUNT_PERCENTAGE = '10%';
 
   useEffect(() => {
+    // Marcar que el componente está montado (solo en cliente)
+    setIsMounted(true);
+  }, []);
+
+  useEffect(() => {
+    // Solo ejecutar en cliente cuando está montado
+    if (!isMounted) return;
+
+    console.log('[WelcomePopup] Checking conditions:', { isLoggedIn, isMounted });
+    
     // No mostrar si el usuario está logueado
-    if (isLoggedIn) return;
+    if (isLoggedIn) {
+      console.log('[WelcomePopup] User is logged in, not showing popup');
+      return;
+    }
 
     // Verificar si ya vio el popup
     const hasSeenPopup = localStorage.getItem('welcome-popup-seen');
-    if (hasSeenPopup) return;
+    console.log('[WelcomePopup] Has seen popup:', hasSeenPopup);
+    
+    if (hasSeenPopup) {
+      console.log('[WelcomePopup] User has already seen popup');
+      return;
+    }
 
     // Mostrar popup después de 3 segundos
+    console.log('[WelcomePopup] Will show popup in 3 seconds...');
     const timer = setTimeout(() => {
+      console.log('[WelcomePopup] Showing popup now!');
       setIsVisible(true);
     }, 3000);
 
     return () => clearTimeout(timer);
-  }, [isLoggedIn]);
+  }, [isLoggedIn, isMounted]);
 
   const handleClose = () => {
     setIsVisible(false);
