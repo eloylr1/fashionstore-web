@@ -190,10 +190,43 @@ export function updateQuantity(productId: string, size: string, quantity: number
 
 /**
  * Vaciar carrito completamente
+ * Limpia el estado, todos los storages posibles y sincroniza con el servidor
  */
 export function clearCart(): void {
+  console.log('🧹 Limpiando carrito completamente...');
+  
+  // 1. Limpiar el estado del store
   cartItems.set([]);
-  persistCart([]);
+  
+  // 2. Limpiar todos los posibles lugares de almacenamiento
+  if (typeof window !== 'undefined') {
+    const userId = currentUserId.get();
+    
+    // Limpiar sessionStorage de invitado
+    sessionStorage.removeItem(GUEST_CART_KEY);
+    
+    // Limpiar localStorage antiguo
+    localStorage.removeItem(OLD_CART_KEY);
+    
+    // Limpiar localStorage del usuario si está logueado
+    if (userId) {
+      localStorage.removeItem(getUserCartKey(userId));
+    }
+    
+    // Limpiar cualquier otra clave de carrito que pueda existir
+    const keysToRemove: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key?.startsWith(CART_KEY_PREFIX)) {
+        keysToRemove.push(key);
+      }
+    }
+    keysToRemove.forEach(key => localStorage.removeItem(key));
+    
+    console.log('✅ Storage limpiado');
+  }
+  
+  // 3. Sincronizar con el servidor (vaciar carrito en BD)
   syncCartToServer([]);
 }
 

@@ -15,7 +15,7 @@ import {
   useStripe,
   useElements,
 } from '@stripe/react-stripe-js';
-import { clearCart } from '../../lib/stores/cart';
+import { clearCart, cartItems } from '../../lib/stores/cart';
 
 // Inicializar Stripe fuera del componente
 const stripePromise = loadStripe(import.meta.env.PUBLIC_STRIPE_PUBLISHABLE_KEY || '');
@@ -47,12 +47,49 @@ interface ShippingAddress {
 const getCartFromStorage = (): { items: CartItem[]; total: number } => {
   if (typeof window === 'undefined') return { items: [], total: 0 };
   try {
-    const saved = localStorage.getItem('fashionmarket-cart');
-    if (!saved) return { items: [], total: 0 };
-    const items: CartItem[] = JSON.parse(saved);
-    if (!Array.isArray(items) || items.length === 0) return { items: [], total: 0 };
-    const total = items.reduce((sum, item) => sum + (item.price || 0) * (item.quantity || 0), 0);
-    return { items, total };
+    // Primero intentar obtener del store de nanostores
+    const storeItems = cartItems.get();
+    if (storeItems && storeItems.length > 0) {
+      const total = storeItems.reduce((sum, item) => sum + (item.price || 0) * (item.quantity || 0), 0);
+      return { items: storeItems, total };
+    }
+    
+    // Fallback: buscar en sessionStorage (invitados)
+    const guestCart = sessionStorage.getItem('fashionmarket-cart-guest');
+    if (guestCart) {
+      const items: CartItem[] = JSON.parse(guestCart);
+      if (Array.isArray(items) && items.length > 0) {
+        const total = items.reduce((sum, item) => sum + (item.price || 0) * (item.quantity || 0), 0);
+        return { items, total };
+      }
+    }
+    
+    // Fallback: buscar en localStorage con clave antigua
+    const oldCart = localStorage.getItem('fashionmarket-cart');
+    if (oldCart) {
+      const items: CartItem[] = JSON.parse(oldCart);
+      if (Array.isArray(items) && items.length > 0) {
+        const total = items.reduce((sum, item) => sum + (item.price || 0) * (item.quantity || 0), 0);
+        return { items, total };
+      }
+    }
+    
+    // Fallback: buscar cualquier clave de carrito de usuario
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key?.startsWith('fashionmarket-cart-') && key !== 'fashionmarket-cart-guest') {
+        const userCart = localStorage.getItem(key);
+        if (userCart) {
+          const items: CartItem[] = JSON.parse(userCart);
+          if (Array.isArray(items) && items.length > 0) {
+            const total = items.reduce((sum, item) => sum + (item.price || 0) * (item.quantity || 0), 0);
+            return { items, total };
+          }
+        }
+      }
+    }
+    
+    return { items: [], total: 0 };
   } catch {
     return { items: [], total: 0 };
   }
@@ -257,20 +294,16 @@ function StripeCardForm({
       console.error('Error creating order:', err);
     }
 
-    // Limpiar carrito usando el store (esto limpia el estado y el storage correcto)
+    // Limpiar carrito usando el store (esto limpia el estado y TODOS los storages)
+    console.log('🛒 Limpiando carrito después de pedido exitoso...');
     clearCart();
-    
-    // Limpiar también el sessionStorage para invitados
-    if (typeof window !== 'undefined') {
-      sessionStorage.removeItem('fashionmarket-cart-guest');
-      // Limpiar claves antiguas por si acaso
-      localStorage.removeItem('fashionmarket-cart');
-    }
     
     // Limpiar otros datos del checkout
     localStorage.removeItem('fashionmarket-applied-discount');
     localStorage.removeItem('fashionmarket-shipping-address');
     localStorage.removeItem('fashionmarket-checkout-options');
+    
+    console.log('✅ Carrito y datos de checkout limpiados');
   };
 
   return (
