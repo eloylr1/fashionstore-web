@@ -219,49 +219,66 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 
     // Generar número de factura
     const year = new Date().getFullYear();
-    const { count } = await supabase
+    const { count, error: countError } = await supabase
       .from('invoices')
       .select('*', { count: 'exact', head: true })
       .ilike('invoice_number', `FM-${year}-%`);
     
+    if (countError) {
+      console.error('⚠️ Error contando facturas:', countError);
+    }
+    
     const invoiceNumber = `FM-${year}-${String((count || 0) + 1).padStart(6, '0')}`;
+    console.log('📋 Generando factura:', invoiceNumber);
 
     // Crear factura
     const finalEmail = customerEmail || user?.email || guestEmail || '';
-    const finalName = customerName || shippingAddress?.name || user?.email?.split('@')[0] || guestName || 'Cliente';
+    const finalName = customerName || shippingAddress?.name || shippingAddress?.full_name || user?.email?.split('@')[0] || guestName || 'Cliente';
+    
+    console.log('📧 Email para factura:', finalEmail);
+    console.log('👤 Nombre para factura:', finalName);
+    console.log('🔑 User ID:', user?.id || 'INVITADO');
+    
+    // Datos de la factura
+    const invoiceData = {
+      order_id: order.id,
+      user_id: user?.id || null, // null para invitados
+      invoice_number: invoiceNumber,
+      customer_name: finalName,
+      customer_email: finalEmail,
+      customer_nif: customerNif || null,
+      customer_address: shippingAddress,
+      subtotal,
+      tax_rate: taxRate,
+      tax_amount: taxAmount,
+      total,
+      status: 'paid',
+      payment_method: 'card',
+      stripe_payment_intent_id: paymentIntentId,
+      paid_date: new Date().toISOString(),
+      items: items.map((item: any) => ({
+        name: item.name,
+        quantity: item.quantity,
+        unit_price: item.price,
+        total: item.price * item.quantity,
+        size: item.size,
+        color: item.color,
+      })),
+    };
+    
+    console.log('📝 Insertando factura en DB...');
     
     const { data: invoice, error: invoiceError } = await supabase
       .from('invoices')
-      .insert({
-        order_id: order.id,
-        user_id: user?.id || null, // null para invitados
-        invoice_number: invoiceNumber,
-        customer_name: finalName,
-        customer_email: finalEmail,
-        customer_nif: customerNif,
-        customer_address: shippingAddress,
-        subtotal,
-        tax_rate: taxRate,
-        tax_amount: taxAmount,
-        total,
-        status: 'paid',
-        payment_method: 'card',
-        stripe_payment_intent_id: paymentIntentId,
-        paid_date: new Date().toISOString(),
-        items: items.map((item: any) => ({
-          name: item.name,
-          quantity: item.quantity,
-          unit_price: item.price,
-          total: item.price * item.quantity,
-          size: item.size,
-          color: item.color,
-        })),
-      })
+      .insert(invoiceData)
       .select()
       .single();
 
     if (invoiceError) {
-      console.error('Error creating invoice:', invoiceError);
+      console.error('❌ Error creating invoice:', invoiceError);
+      console.error('❌ Invoice data that failed:', JSON.stringify(invoiceData, null, 2));
+    } else {
+      console.log('✅ Factura creada correctamente:', invoice.invoice_number);
     }
 
     // Generar PDF de la factura para adjuntar al email

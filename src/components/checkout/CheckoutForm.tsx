@@ -15,6 +15,7 @@ import {
   useStripe,
   useElements,
 } from '@stripe/react-stripe-js';
+import { clearCart } from '../../lib/stores/cart';
 
 // Inicializar Stripe fuera del componente
 const stripePromise = loadStripe(import.meta.env.PUBLIC_STRIPE_PUBLISHABLE_KEY || '');
@@ -228,7 +229,7 @@ function StripeCardForm({
     const appliedDiscount = getAppliedDiscountFromStorage();
 
     try {
-      await fetch('/api/orders/complete', {
+      const response = await fetch('/api/orders/complete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -239,14 +240,34 @@ function StripeCardForm({
           paymentMethod: 'card',
           discountCodeId: appliedDiscount?.discount_code_id,
           discountAmount: appliedDiscount?.discount_amount || 0,
+          // Incluir datos del cliente para la factura
+          customerEmail: shippingAddress?.email,
+          customerName: shippingAddress?.name,
         }),
       });
+      
+      const result = await response.json();
+      if (!response.ok) {
+        console.error('Error al completar pedido:', result.error);
+      } else {
+        console.log('✅ Pedido creado:', result.order?.orderNumber);
+        console.log('✅ Factura creada:', result.invoice?.invoiceNumber);
+      }
     } catch (err) {
       console.error('Error creating order:', err);
     }
 
-    // Limpiar localStorage
-    localStorage.removeItem('fashionmarket-cart');
+    // Limpiar carrito usando el store (esto limpia el estado y el storage correcto)
+    clearCart();
+    
+    // Limpiar también el sessionStorage para invitados
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem('fashionmarket-cart-guest');
+      // Limpiar claves antiguas por si acaso
+      localStorage.removeItem('fashionmarket-cart');
+    }
+    
+    // Limpiar otros datos del checkout
     localStorage.removeItem('fashionmarket-applied-discount');
     localStorage.removeItem('fashionmarket-shipping-address');
     localStorage.removeItem('fashionmarket-checkout-options');
