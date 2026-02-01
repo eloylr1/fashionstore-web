@@ -10,7 +10,7 @@ export const prerender = false;
 
 import AdminLayout from '../../../layouts/AdminLayout.astro';
 import ImageUploader from '../../../components/admin/ImageUploader';
-import { supabase, isSupabaseConfigured } from '../../../lib/supabase/client';
+import { supabaseAdmin, isSupabaseAdminConfigured } from '../../../lib/supabase/server';
 
 const { id } = Astro.params;
 
@@ -23,18 +23,19 @@ if (!id) {
 let product = null;
 let categories: { id: string; name: string; slug: string }[] = [];
 
-if (isSupabaseConfigured() && supabase) {
-  const { data: productData } = await supabase
+if (isSupabaseAdminConfigured() && supabaseAdmin) {
+  const { data: productData, error: prodError } = await supabaseAdmin
     .from('products')
     .select('*')
     .eq('id', id)
     .single();
   
+  if (prodError) console.error('Error fetching product:', prodError);
   if (productData) {
     product = productData;
   }
   
-  const { data: categoriesData } = await supabase
+  const { data: categoriesData } = await supabaseAdmin
     .from('categories')
     .select('id, name, slug')
     .order('name');

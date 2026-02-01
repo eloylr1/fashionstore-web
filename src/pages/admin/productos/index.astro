@@ -37,8 +37,8 @@ let categories: any[] = [
 ];
 
 // Obtener productos y categorías reales
-if (isSupabaseConfigured() && supabase) {
-  const { data: realProducts } = await supabase
+if (isSupabaseAdminConfigured() && supabaseAdmin) {
+  const { data: realProducts, error: prodError } = await supabaseAdmin
     .from('products')
     .select(`
       *,
@@ -49,9 +49,10 @@ if (isSupabaseConfigured() && supabase) {
     `)
     .order('created_at', { ascending: false });
   
+  if (prodError) console.error('Error fetching products:', prodError);
   if (realProducts?.length) products = realProducts;
 
-  const { data: realCategories } = await supabase
+  const { data: realCategories } = await supabaseAdmin
     .from('categories')
     .select('id, name')
     .order('name', { ascending: true });

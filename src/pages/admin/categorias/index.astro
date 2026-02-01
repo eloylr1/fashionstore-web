@@ -10,7 +10,7 @@ export const prerender = false;
 
 import AdminLayout from '../../../layouts/AdminLayout.astro';
 import CategoriesManager from '../../../components/admin/CategoriesManager.tsx';
-import { supabase, isSupabaseConfigured } from '../../../lib/supabase/client';
+import { supabaseAdmin, isSupabaseAdminConfigured } from '../../../lib/supabase/server';
 
 // La autenticación ya está verificada por el middleware
 
@@ -18,18 +18,19 @@ import { supabase, isSupabaseConfigured } from '../../../lib/supabase/client';
 let categories: any[] = [];
 let productsPerCategory: Record<string, number> = {};
 
-if (isSupabaseConfigured() && supabase) {
+if (isSupabaseAdminConfigured() && supabaseAdmin) {
   try {
-    const { data } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('categories')
       .select('*')
       .order('name', { ascending: true });
     
+    if (error) console.error('Error fetching categories:', error);
     categories = data || [];
 
     // Contar productos por categoría
     for (const cat of categories) {
-      const { count } = await supabase
+      const { count } = await supabaseAdmin
         .from('products')
         .select('*', { count: 'exact', head: true })
         .eq('category_id', cat.id);

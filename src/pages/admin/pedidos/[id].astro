@@ -9,7 +9,7 @@
 export const prerender = false;
 
 import AdminLayout from '../../../layouts/AdminLayout.astro';
-import { supabase, isSupabaseConfigured } from '../../../lib/supabase/client';
+import { supabaseAdmin, isSupabaseAdminConfigured } from '../../../lib/supabase/server';
 
 // La autenticación ya está verificada por el middleware
 
@@ -25,10 +25,10 @@ let order: any = null;
 let customer: any = null;
 let orderItems: any[] = [];
 
-if (isSupabaseConfigured() && supabase) {
+if (isSupabaseAdminConfigured() && supabaseAdmin) {
   try {
     // Obtener pedido con datos del cliente
-    const { data: orderData } = await supabase
+    const { data: orderData, error } = await supabaseAdmin
       .from('orders')
       .select(`
         *,
@@ -42,12 +42,16 @@ if (isSupabaseConfigured() && supabase) {
       .eq('id', id)
       .single();
     
+    if (error) {
+      console.error('Error fetching order:', error);
+    }
+    
     order = orderData;
     customer = (orderData as any)?.profiles;
 
     // Obtener items del pedido
     if (order) {
-      const { data: items } = await supabase
+      const { data: items } = await supabaseAdmin
         .from('order_items')
         .select(`
           *,

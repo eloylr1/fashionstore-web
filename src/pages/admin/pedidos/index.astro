@@ -9,30 +9,42 @@
 export const prerender = false;
 
 import AdminLayout from '../../../layouts/AdminLayout.astro';
-import { supabase, isSupabaseConfigured } from '../../../lib/supabase/client';
+import { supabaseAdmin, isSupabaseAdminConfigured } from '../../../lib/supabase/server';
 
 // La autenticación ya está verificada por el middleware
 
-// Obtener pedidos
+// Obtener pedidos con cliente admin (service_role_key)
 let orders: any[] = [];
 
-if (isSupabaseConfigured() && supabase) {
+if (isSupabaseAdminConfigured() && supabaseAdmin) {
   try {
-    const { data } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('orders')
       .select(`
         *,
-        profiles (
+        profiles:user_id (
           full_name,
           email
+        ),
+        order_items (
+          id,
+          product_name,
+          quantity,
+          price
         )
       `)
       .order('created_at', { ascending: false });
+    
+    if (error) {
+      console.error('Error fetching orders:', error);
+    }
     
     orders = data || [];
   } catch (error) {
     console.error('Error fetching orders:', error);
   }
+} else {
+  console.error('Supabase Admin no está configurado. Verificar SUPABASE_SERVICE_ROLE_KEY');
 }
 
 // Función para formatear fecha

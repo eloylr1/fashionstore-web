@@ -9,7 +9,7 @@
 export const prerender = false;
 
 import AdminLayout from '../../../layouts/AdminLayout.astro';
-import { supabase, isSupabaseConfigured } from '../../../lib/supabase/client';
+import { supabaseAdmin, isSupabaseAdminConfigured } from '../../../lib/supabase/server';
 
 // Obtener configuración de pagos
 let paymentConfig = {
@@ -22,13 +22,14 @@ let paymentConfig = {
   currency_symbol: '€'
 };
 
-if (isSupabaseConfigured() && supabase) {
-  const { data } = await supabase
+if (isSupabaseAdminConfigured() && supabaseAdmin) {
+  const { data, error } = await supabaseAdmin
     .from('store_settings')
     .select('*')
     .eq('category', 'payments')
-    .single() as { data: { settings: typeof paymentConfig } | null };
+    .single() as { data: { settings: typeof paymentConfig } | null, error: any };
   
+  if (error) console.error('Error fetching payment settings:', error);
   if (data?.settings) {
     paymentConfig = { ...paymentConfig, ...data.settings };
   }

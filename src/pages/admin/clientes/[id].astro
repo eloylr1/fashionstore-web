@@ -9,7 +9,7 @@
 export const prerender = false;
 
 import AdminLayout from '../../../layouts/AdminLayout.astro';
-import { supabase, isSupabaseConfigured } from '../../../lib/supabase/client';
+import { supabaseAdmin, isSupabaseAdminConfigured } from '../../../lib/supabase/server';
 
 // La autenticación ya está verificada por el middleware
 
@@ -26,20 +26,24 @@ let orders: any[] = [];
 let addresses: any[] = [];
 let totalSpent = 0;
 
-if (isSupabaseConfigured() && supabase) {
+if (isSupabaseAdminConfigured() && supabaseAdmin) {
   try {
     // Obtener perfil del cliente
-    const { data: profile } = await supabase
+    const { data: profile, error } = await supabaseAdmin
       .from('profiles')
       .select('*')
       .eq('id', id)
       .single();
     
+    if (error) {
+      console.error('Error fetching customer:', error);
+    }
+    
     customer = profile;
 
     if (customer) {
       // Obtener pedidos del cliente
-      const { data: orderData } = await supabase
+      const { data: orderData } = await supabaseAdmin
         .from('orders')
         .select('*')
         .eq('user_id', id)
@@ -51,7 +55,7 @@ if (isSupabaseConfigured() && supabase) {
       totalSpent = orders.reduce((sum, order) => sum + (order.total || 0), 0);
 
       // Obtener direcciones del cliente
-      const { data: addressData } = await supabase
+      const { data: addressData } = await supabaseAdmin
         .from('addresses')
         .select('*')
         .eq('user_id', id)
