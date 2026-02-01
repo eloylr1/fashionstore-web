@@ -49,6 +49,9 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     let body;
     try {
       body = await request.json();
+      console.log('📥 Recibida petición para completar pedido');
+      console.log('📦 Items recibidos:', body.items?.length || 0);
+      console.log('📧 Email recibido:', body.customerEmail || body.shippingAddress?.email || 'NO EMAIL');
     } catch {
       return new Response(
         JSON.stringify({ error: 'JSON inválido' }),
@@ -67,16 +70,22 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       customerName,
       customerNif,
     } = body;
+    
+    console.log('🔑 PaymentIntent ID:', paymentIntentId);
 
     // Verificar que el pago fue exitoso en Stripe
     const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+    console.log('💳 Estado del pago en Stripe:', paymentIntent.status);
     
     if (paymentIntent.status !== 'succeeded') {
+      console.log('❌ Pago no completado, abortando');
       return new Response(
         JSON.stringify({ error: 'El pago no ha sido completado' }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
       );
     }
+    
+    console.log('✅ Pago verificado, continuando con la creación del pedido...');
 
     // Obtener usuario de la cookie (opcional para invitados)
     const accessToken = cookies.get('sb-access-token')?.value;
