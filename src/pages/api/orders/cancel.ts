@@ -2,6 +2,7 @@
  * ═══════════════════════════════════════════════════════════════════════════
  * FASHIONMARKET - API: Cancelar Pedido
  * Llama a la RPC cancel_order_and_restore_stock para cancelación atómica
+ * Crea nota de crédito para la cancelación
  * Envía email de confirmación de cancelación
  * ═══════════════════════════════════════════════════════════════════════════
  */
@@ -13,6 +14,20 @@ import { sendOrderCancellationEmail } from '../../../lib/email';
 const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL || '';
 const supabaseAnonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY || '';
 const supabaseServiceKey = import.meta.env.SUPABASE_SERVICE_ROLE_KEY || '';
+
+/**
+ * Genera número de nota de crédito
+ * Formato: NC-YYYY-XXXXXX
+ */
+async function generateCreditNoteNumber(supabase: any): Promise<string> {
+  const year = new Date().getFullYear();
+  const { count } = await supabase
+    .from('credit_notes')
+    .select('*', { count: 'exact', head: true })
+    .ilike('credit_note_number', `NC-${year}-%`);
+  
+  return `NC-${year}-${String((count || 0) + 1).padStart(6, '0')}`;
+}
 
 export const POST: APIRoute = async ({ request, cookies }) => {
   try {
@@ -85,11 +100,18 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     try {
       const serviceClient = createClient(supabaseUrl, supabaseServiceKey);
       
-      // Obtener datos del pedido
+      // Obtener datos del pedido con factura asociada
       const { data: orderData } = await serviceClient
         .from('orders')
         .select('*, order_items(*)')
         .eq('id', order_id)
+        .single();
+      
+      // Obtener factura original
+      const { data: originalInvoice } = await serviceClient
+        .from('invoices')
+        .select('*')
+        .eq('order_id', order_id)
         .single();
       
       // Obtener email del usuario
@@ -98,6 +120,56 @@ export const POST: APIRoute = async ({ request, cookies }) => {
         .select('email, full_name')
         .eq('id', sessionData.user.id)
         .single();
+
+      // Crear nota de crédito si existe factura original
+      if (originalInvoice && orderData) {
+        try {
+          const creditNoteNumber = await generateCreditNoteNumber(serviceClient);
+          
+          // Los items de la nota de crédito (con valores negativos)
+          const creditNoteItems = (orderData.order_items || []).map((item: any) => ({
+            name: item.product_name,
+            quantity: item.quantity,
+            unit_price: item.price,
+            total: item.price * item.quantity,
+            size: item.size,
+            color: item.color,
+          }));
+
+          // Crear nota de crédito
+          const { error: creditNoteError } = await serviceClient
+            .from('credit_notes')
+            .insert({
+              original_invoice_id: originalInvoice.id,
+              order_id: order_id,
+              user_id: sessionData.user.id,
+              credit_note_number: creditNoteNumber,
+              customer_name: originalInvoice.customer_name,
+              customer_email: originalInvoice.customer_email,
+              customer_nif: originalInvoice.customer_nif,
+              customer_address: originalInvoice.customer_address,
+              items: creditNoteItems,
+              subtotal: -originalInvoice.subtotal, // Negativo
+              tax_rate: originalInvoice.tax_rate,
+              tax_amount: -originalInvoice.tax_amount, // Negativo
+              total: -originalInvoice.total, // Negativo
+              reason: 'Cancelación de pedido por el cliente',
+              refund_method: 'Devolución a tarjeta original',
+              company_name: originalInvoice.company_name,
+              company_nif: originalInvoice.company_nif,
+              company_address: originalInvoice.company_address,
+              issue_date: new Date().toISOString(),
+            });
+
+          if (creditNoteError) {
+            console.error('Error creating credit note:', creditNoteError);
+          } else {
+            console.log('✅ Credit note created:', creditNoteNumber);
+          }
+        } catch (cnError) {
+          console.error('Error in credit note creation:', cnError);
+        }
+      }
 
       if (orderData && profile?.email) {
         // Enviar email de confirmación de cancelación

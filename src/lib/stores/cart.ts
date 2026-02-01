@@ -392,7 +392,36 @@ export function initializeGuestCart(): void {
 function persistCart(items: CartItem[]): void {
   if (typeof window === 'undefined') return;
   
-  const userId = currentUserId.get();
+  let userId = currentUserId.get();
+  
+  // Si no hay userId en el store, intentar obtenerlo de la cookie
+  // Esto es un fallback para cuando el carrito se actualiza antes de que 
+  // el store haya cargado completamente el usuario
+  if (!userId) {
+    try {
+      // Verificar si hay token de sesión (indica usuario logueado)
+      const cookies = document.cookie.split(';');
+      const hasSession = cookies.some(c => c.trim().startsWith('sb-access-token='));
+      
+      if (hasSession) {
+        // Buscar si ya hay un carrito guardado con una clave de usuario
+        // para extraer el userId (fallback temporal)
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key?.startsWith(CART_KEY_PREFIX) && key !== OLD_CART_KEY) {
+            const extractedUserId = key.replace(CART_KEY_PREFIX, '');
+            if (extractedUserId && extractedUserId.length > 10) {
+              userId = extractedUserId;
+              currentUserId.set(userId);
+              break;
+            }
+          }
+        }
+      }
+    } catch (e) {
+      // Ignorar errores de cookies/storage
+    }
+  }
   
   try {
     if (userId) {
@@ -402,9 +431,11 @@ function persistCart(items: CartItem[]): void {
       sessionStorage.removeItem(GUEST_CART_KEY);
       // Limpiar clave antigua si existe
       localStorage.removeItem(OLD_CART_KEY);
+      console.log('💾 Carrito guardado para usuario:', userId.substring(0, 8) + '...');
     } else {
       // Invitado: guardar en sessionStorage (se elimina al cerrar navegador)
       sessionStorage.setItem(GUEST_CART_KEY, JSON.stringify(items));
+      console.log('💾 Carrito de invitado guardado en sessionStorage');
     }
   } catch (error) {
     console.error('Error saving cart to storage:', error);

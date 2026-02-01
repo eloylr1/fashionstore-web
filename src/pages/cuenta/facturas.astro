@@ -2,7 +2,7 @@
 /**
  * ═══════════════════════════════════════════════════════════════════════════
  * PÁGINA: Mis Facturas
- * Lista todas las facturas del usuario con opción de descarga
+ * Lista todas las facturas y notas de crédito del usuario con filtros
  * ═══════════════════════════════════════════════════════════════════════════
  */
 
@@ -44,6 +44,12 @@ const { data: creditNotes, error: creditNotesError } = await supabase
   .eq('user_id', user.id)
   .order('created_at', { ascending: false });
 
+// Combinar ambos tipos para mostrar en un solo listado filtrable
+const allDocuments = [
+  ...(invoices || []).map((inv: any) => ({ ...inv, docType: 'invoice' })),
+  ...(creditNotes || []).map((cn: any) => ({ ...cn, docType: 'credit_note' })),
+].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
 const formatDate = (date: string) => {
   return new Date(date).toLocaleDateString('es-ES', {
     day: '2-digit',
@@ -53,7 +59,7 @@ const formatDate = (date: string) => {
 };
 
 const formatCurrency = (cents: number) => {
-  return (cents / 100).toFixed(2) + '€';
+  return (Math.abs(cents) / 100).toFixed(2) + '€';
 };
 
 const getStatusBadge = (status: string) => {
@@ -80,7 +86,7 @@ const getCreditNoteStatusBadge = (status: string) => {
     case 'cancelled':
       return { text: 'Cancelada', class: 'bg-red-100 text-red-800' };
     default:
-      return { text: status, class: 'bg-gray-100 text-gray-800' };
+      return { text: status || 'Procesada', class: 'bg-gray-100 text-gray-800' };
   }
 };
 ---
@@ -161,195 +167,232 @@ const getCreditNoteStatusBadge = (status: string) => {
         <!-- Main Content -->
         <main class="flex-1">
           <div class="bg-white rounded-xl shadow-sm overflow-hidden">
-            <!-- Header -->
+            <!-- Header con Filtros -->
             <div class="p-6 border-b border-gray-100">
-              <div class="flex items-center justify-between">
+              <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
                 <div>
                   <h1 class="text-2xl font-bold text-gray-900">Mis Facturas</h1>
-                  <p class="text-gray-500 mt-1">Descarga tus facturas de compra</p>
+                  <p class="text-gray-500 mt-1">Descarga tus facturas y notas de crédito</p>
                 </div>
-                <div class="flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-lg">
-                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                  </svg>
-                  <span class="font-semibold">{invoices?.length || 0}</span>
-                  <span>facturas</span>
-                </div>
-              </div>
-            </div>
-
-            <!-- Invoices List -->
-            {invoices && invoices.length > 0 ? (
-              <div class="divide-y divide-gray-100">
-                {invoices.map((invoice: any) => {
-                  const status = getStatusBadge(invoice.status);
-                  const items = invoice.items as any[];
-                  return (
-                    <div class="p-6 hover:bg-gray-50 transition">
-                      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                        <div class="flex-1">
-                          <div class="flex items-center gap-3 mb-2">
-                            <span class="font-mono font-semibold text-primary">{invoice.invoice_number}</span>
-                            <span class={`px-2 py-0.5 text-xs font-medium rounded-full ${status.class}`}>
-                              {status.text}
-                            </span>
-                          </div>
-                          <p class="text-sm text-gray-500 mb-2">
-                            {formatDate(invoice.issue_date)}
-                          </p>
-                          <p class="text-sm text-gray-600">
-                            {items.length} {items.length === 1 ? 'artículo' : 'artículos'}
-                          </p>
-                        </div>
-                        
-                        <div class="flex items-center gap-6">
-                          <div class="text-right">
-                            <p class="text-sm text-gray-500">Total</p>
-                            <p class="text-lg font-bold text-gray-900">{formatCurrency(invoice.total)}</p>
-                          </div>
-                          
-                          <div class="flex items-center gap-2">
-                            <a
-                              href={`/api/invoices/${invoice.id}`}
-                              target="_blank"
-                              class="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition font-medium text-sm"
-                            >
-                              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
-                              </svg>
-                              Ver
-                            </a>
-                            <button
-                              onclick={`window.print(window.open('/api/invoices/${invoice.id}', '_blank'))`}
-                              class="inline-flex items-center gap-2 px-4 py-2 border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 transition font-medium text-sm"
-                              title="Imprimir / Guardar PDF"
-                            >
-                              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
-                              </svg>
-                              PDF
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <!-- Items preview -->
-                      <div class="mt-4 pt-4 border-t border-gray-100">
-                        <div class="flex flex-wrap gap-2">
-                          {items.slice(0, 3).map((item: any) => (
-                            <span class="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">
-                              {item.name} x{item.quantity}
-                            </span>
-                          ))}
-                          {items.length > 3 && (
-                            <span class="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">
-                              +{items.length - 3} más
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div class="p-12 text-center">
-                <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                  </svg>
-                </div>
-                <h3 class="text-lg font-semibold text-gray-900 mb-2">No tienes facturas</h3>
-                <p class="text-gray-500 mb-6">
-                  Las facturas aparecerán aquí después de completar tu primera compra.
-                </p>
-                <a
-                  href="/tienda"
-                  class="inline-flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary-dark transition font-medium"
-                >
-                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
-                  </svg>
-                  Ir a la tienda
-                </a>
-              </div>
-            )}
-          </div>
-
-          <!-- Notas de Crédito (Facturas de Abono) -->
-          {creditNotes && creditNotes.length > 0 && (
-            <div class="bg-white rounded-xl shadow-sm overflow-hidden mt-6">
-              <div class="p-6 border-b border-gray-100 bg-red-50">
-                <div class="flex items-center justify-between">
-                  <div>
-                    <h2 class="text-xl font-bold text-gray-900 flex items-center gap-2">
-                      <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2zM10 8.5a.5.5 0 11-1 0 .5.5 0 011 0zm5 5a.5.5 0 11-1 0 .5.5 0 011 0z"/>
-                      </svg>
-                      Notas de Crédito
-                    </h2>
-                    <p class="text-gray-600 mt-1 text-sm">Facturas de abono por devoluciones</p>
-                  </div>
-                  <div class="flex items-center gap-2 bg-red-100 text-red-700 px-4 py-2 rounded-lg">
+                <div class="flex items-center gap-4">
+                  <div class="flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-lg">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z"/>
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                     </svg>
-                    <span class="font-semibold">{creditNotes.length}</span>
-                    <span>abono{creditNotes.length !== 1 ? 's' : ''}</span>
+                    <span class="font-semibold">{invoices?.length || 0}</span>
+                    <span>facturas</span>
                   </div>
+                  {creditNotes && creditNotes.length > 0 && (
+                    <div class="flex items-center gap-2 bg-red-100 text-red-700 px-4 py-2 rounded-lg">
+                      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z"/>
+                      </svg>
+                      <span class="font-semibold">{creditNotes.length}</span>
+                      <span>notas</span>
+                    </div>
+                  )}
                 </div>
               </div>
-              
-              <div class="divide-y divide-gray-100">
-                {creditNotes.map((cn: any) => {
-                  const status = getCreditNoteStatusBadge(cn.status);
-                  const items = cn.items as any[];
-                  return (
-                    <div class="p-6 hover:bg-red-50/50 transition">
-                      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                        <div class="flex-1">
-                          <div class="flex items-center gap-3 mb-2">
-                            <span class="font-mono font-semibold text-red-600">{cn.credit_note_number}</span>
-                            <span class={`px-2 py-0.5 text-xs font-medium rounded-full ${status.class}`}>
-                              {status.text}
-                            </span>
-                          </div>
-                          <p class="text-sm text-gray-500 mb-2">
-                            {formatDate(cn.issue_date)}
-                          </p>
-                          <p class="text-sm text-gray-600">
-                            {cn.reason}
-                          </p>
-                        </div>
-                        
-                        <div class="flex items-center gap-6">
-                          <div class="text-right">
-                            <p class="text-sm text-gray-500">Importe Abonado</p>
-                            <p class="text-lg font-bold text-red-600">{formatCurrency(cn.total)}</p>
-                          </div>
-                          
-                          <div class="flex items-center gap-2">
-                            <a
-                              href={`/api/credit-notes/${cn.id}`}
-                              target="_blank"
-                              class="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-medium text-sm"
-                            >
-                              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
-                              </svg>
-                              Ver
-                            </a>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
+
+              <!-- Filtros -->
+              <div class="flex flex-col sm:flex-row gap-4">
+                <!-- Filtro por Tipo -->
+                <div class="flex-1 sm:max-w-xs">
+                  <label for="filterType" class="block text-sm font-medium text-gray-700 mb-1">Tipo de documento</label>
+                  <select id="filterType" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary transition">
+                    <option value="all">Todos los documentos</option>
+                    <option value="invoice">Solo Facturas</option>
+                    <option value="credit_note">Solo Notas de Crédito</option>
+                  </select>
+                </div>
+
+                <!-- Filtro por Fecha -->
+                <div class="flex-1 sm:max-w-xs">
+                  <label for="filterDate" class="block text-sm font-medium text-gray-700 mb-1">Fecha</label>
+                  <select id="filterDate" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary transition">
+                    <option value="all">Todas las fechas</option>
+                    <option value="last30">Últimos 30 días</option>
+                    <option value="last90">Últimos 90 días</option>
+                    <option value="thisYear">Este año</option>
+                    <option value="lastYear">Año anterior</option>
+                  </select>
+                </div>
+
+                <!-- Rango de fechas personalizado -->
+                <div class="flex gap-2 items-end">
+                  <div>
+                    <label for="dateFrom" class="block text-sm font-medium text-gray-700 mb-1">Desde</label>
+                    <input type="date" id="dateFrom" class="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary transition text-sm">
+                  </div>
+                  <div>
+                    <label for="dateTo" class="block text-sm font-medium text-gray-700 mb-1">Hasta</label>
+                    <input type="date" id="dateTo" class="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary transition text-sm">
+                  </div>
+                  <button id="clearFilters" class="px-3 py-2 text-gray-500 hover:text-gray-700 text-sm underline">
+                    Limpiar
+                  </button>
+                </div>
               </div>
             </div>
-          )}
+
+            <!-- Lista de Documentos -->
+            <div id="documentsList">
+              {allDocuments && allDocuments.length > 0 ? (
+                <div class="divide-y divide-gray-100">
+                  {allDocuments.map((doc: any) => {
+                    const isInvoice = doc.docType === 'invoice';
+                    const status = isInvoice ? getStatusBadge(doc.status) : getCreditNoteStatusBadge(doc.status);
+                    const items = doc.items as any[] || [];
+                    const docNumber = isInvoice ? doc.invoice_number : doc.credit_note_number;
+                    const issueDate = doc.issue_date || doc.created_at;
+                    
+                    return (
+                      <div 
+                        class={`document-item p-6 hover:bg-gray-50 transition ${!isInvoice ? 'bg-red-50/30' : ''}`}
+                        data-type={doc.docType}
+                        data-date={issueDate}
+                      >
+                        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                          <div class="flex-1">
+                            <div class="flex items-center gap-3 mb-2">
+                              {/* Icono según tipo */}
+                              {isInvoice ? (
+                                <span class="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center">
+                                  <svg class="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                  </svg>
+                                </span>
+                              ) : (
+                                <span class="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center">
+                                  <svg class="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z"/>
+                                  </svg>
+                                </span>
+                              )}
+                              
+                              <div>
+                                <span class={`font-mono font-semibold ${isInvoice ? 'text-primary' : 'text-red-600'}`}>
+                                  {docNumber}
+                                </span>
+                                <span class={`ml-2 px-2 py-0.5 text-xs font-medium rounded-full ${isInvoice ? 'bg-blue-100 text-blue-800' : 'bg-red-100 text-red-800'}`}>
+                                  {isInvoice ? 'Factura' : 'Nota de Crédito'}
+                                </span>
+                              </div>
+                              
+                              <span class={`px-2 py-0.5 text-xs font-medium rounded-full ${status.class}`}>
+                                {status.text}
+                              </span>
+                            </div>
+                            <p class="text-sm text-gray-500 mb-1">
+                              {formatDate(issueDate)}
+                            </p>
+                            {!isInvoice && doc.reason && (
+                              <p class="text-sm text-gray-600 italic">
+                                {doc.reason}
+                              </p>
+                            )}
+                            {isInvoice && (
+                              <p class="text-sm text-gray-600">
+                                {items.length} {items.length === 1 ? 'artículo' : 'artículos'}
+                              </p>
+                            )}
+                          </div>
+                          
+                          <div class="flex items-center gap-6">
+                            <div class="text-right">
+                              <p class="text-sm text-gray-500">{isInvoice ? 'Total' : 'Importe Abonado'}</p>
+                              <p class={`text-lg font-bold ${isInvoice ? 'text-gray-900' : 'text-red-600'}`}>
+                                {!isInvoice && '-'}{formatCurrency(doc.total)}
+                              </p>
+                            </div>
+                            
+                            <div class="flex items-center gap-2">
+                              <a
+                                href={isInvoice ? `/api/invoices/${doc.id}` : `/api/credit-notes/${doc.id}`}
+                                target="_blank"
+                                class={`inline-flex items-center gap-2 px-4 py-2 ${isInvoice ? 'bg-primary hover:bg-primary-dark' : 'bg-red-600 hover:bg-red-700'} text-white rounded-lg transition font-medium text-sm`}
+                              >
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                                </svg>
+                                Ver
+                              </a>
+                              <a
+                                href={isInvoice ? `/api/invoices/${doc.id}/pdf` : `/api/credit-notes/${doc.id}/pdf`}
+                                class="inline-flex items-center gap-2 px-4 py-2 border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 transition font-medium text-sm"
+                                title="Descargar PDF"
+                              >
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                                </svg>
+                                PDF
+                              </a>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {/* Items preview para facturas */}
+                        {isInvoice && items.length > 0 && (
+                          <div class="mt-4 pt-4 border-t border-gray-100">
+                            <div class="flex flex-wrap gap-2">
+                              {items.slice(0, 3).map((item: any) => (
+                                <span class="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">
+                                  {item.name} x{item.quantity}
+                                </span>
+                              ))}
+                              {items.length > 3 && (
+                                <span class="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">
+                                  +{items.length - 3} más
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div class="p-12 text-center" id="emptyState">
+                  <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                    </svg>
+                  </div>
+                  <h3 class="text-lg font-semibold text-gray-900 mb-2">No tienes facturas</h3>
+                  <p class="text-gray-500 mb-6">
+                    Las facturas aparecerán aquí después de completar tu primera compra.
+                  </p>
+                  <a
+                    href="/tienda"
+                    class="inline-flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary-dark transition font-medium"
+                  >
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
+                    </svg>
+                    Ir a la tienda
+                  </a>
+                </div>
+              )}
+            </div>
+
+            <!-- Mensaje cuando no hay resultados (oculto por defecto) -->
+            <div id="noResults" class="p-12 text-center hidden">
+              <div class="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg class="w-8 h-8 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                </svg>
+              </div>
+              <h3 class="text-lg font-semibold text-gray-900 mb-2">No hay resultados</h3>
+              <p class="text-gray-500 mb-6">
+                No se encontraron documentos con los filtros seleccionados.
+              </p>
+              <button id="resetFilters" class="text-primary hover:text-primary-dark font-medium underline">
+                Quitar filtros
+              </button>
+            </div>
+          </div>
 
           <!-- Info Card -->
           <div class="mt-6 bg-blue-50 border border-blue-100 rounded-xl p-6">
@@ -360,12 +403,13 @@ const getCreditNoteStatusBadge = (status: string) => {
                 </svg>
               </div>
               <div>
-                <h4 class="font-semibold text-blue-900 mb-1">Información sobre facturas</h4>
-                <p class="text-sm text-blue-700">
-                  Las facturas se generan automáticamente después de cada compra completada. 
-                  También recibirás una copia por correo electrónico. Para descargar una factura en PDF, 
-                  haz clic en "Ver" y usa la opción de imprimir (Ctrl+P) seleccionando "Guardar como PDF".
-                </p>
+                <h4 class="font-semibold text-blue-900 mb-1">Información sobre documentos</h4>
+                <ul class="text-sm text-blue-700 space-y-1">
+                  <li>• Las <strong>facturas</strong> se generan automáticamente después de cada compra completada.</li>
+                  <li>• Las <strong>notas de crédito</strong> se crean cuando cancelas un pedido o realizas una devolución.</li>
+                  <li>• Puedes descargar cualquier documento en formato PDF haciendo clic en el botón correspondiente.</li>
+                  <li>• También recibirás una copia de cada documento por correo electrónico.</li>
+                </ul>
               </div>
             </div>
           </div>
@@ -374,3 +418,104 @@ const getCreditNoteStatusBadge = (status: string) => {
     </div>
   </div>
 </BaseLayout>
+
+<script>
+  // Filtros de documentos
+  document.addEventListener('DOMContentLoaded', () => {
+    const filterType = document.getElementById('filterType') as HTMLSelectElement;
+    const filterDate = document.getElementById('filterDate') as HTMLSelectElement;
+    const dateFrom = document.getElementById('dateFrom') as HTMLInputElement;
+    const dateTo = document.getElementById('dateTo') as HTMLInputElement;
+    const clearFilters = document.getElementById('clearFilters');
+    const resetFilters = document.getElementById('resetFilters');
+    const noResults = document.getElementById('noResults');
+    const documentItems = document.querySelectorAll('.document-item');
+
+    function applyFilters() {
+      const typeValue = filterType?.value || 'all';
+      const dateValue = filterDate?.value || 'all';
+      const fromDate = dateFrom?.value ? new Date(dateFrom.value) : null;
+      const toDate = dateTo?.value ? new Date(dateTo.value + 'T23:59:59') : null;
+
+      let visibleCount = 0;
+
+      documentItems.forEach((item) => {
+        const el = item as HTMLElement;
+        const docType = el.dataset.type;
+        const docDate = new Date(el.dataset.date || '');
+        let show = true;
+
+        // Filtro por tipo
+        if (typeValue !== 'all' && docType !== typeValue) {
+          show = false;
+        }
+
+        // Filtro por fecha predefinida
+        if (show && dateValue !== 'all') {
+          const now = new Date();
+          const docDateMs = docDate.getTime();
+
+          switch (dateValue) {
+            case 'last30':
+              const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+              show = docDateMs >= thirtyDaysAgo.getTime();
+              break;
+            case 'last90':
+              const ninetyDaysAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+              show = docDateMs >= ninetyDaysAgo.getTime();
+              break;
+            case 'thisYear':
+              show = docDate.getFullYear() === now.getFullYear();
+              break;
+            case 'lastYear':
+              show = docDate.getFullYear() === now.getFullYear() - 1;
+              break;
+          }
+        }
+
+        // Filtro por rango de fechas personalizado
+        if (show && fromDate) {
+          show = docDate >= fromDate;
+        }
+        if (show && toDate) {
+          show = docDate <= toDate;
+        }
+
+        el.style.display = show ? '' : 'none';
+        if (show) visibleCount++;
+      });
+
+      // Mostrar/ocultar mensaje de no resultados
+      if (noResults) {
+        noResults.classList.toggle('hidden', visibleCount > 0 || documentItems.length === 0);
+      }
+    }
+
+    function resetAllFilters() {
+      if (filterType) filterType.value = 'all';
+      if (filterDate) filterDate.value = 'all';
+      if (dateFrom) dateFrom.value = '';
+      if (dateTo) dateTo.value = '';
+      applyFilters();
+    }
+
+    // Event listeners
+    filterType?.addEventListener('change', applyFilters);
+    filterDate?.addEventListener('change', () => {
+      // Limpiar fechas personalizadas al seleccionar predefinida
+      if (dateFrom) dateFrom.value = '';
+      if (dateTo) dateTo.value = '';
+      applyFilters();
+    });
+    dateFrom?.addEventListener('change', () => {
+      if (filterDate) filterDate.value = 'all'; // Reset predefinido
+      applyFilters();
+    });
+    dateTo?.addEventListener('change', () => {
+      if (filterDate) filterDate.value = 'all'; // Reset predefinido
+      applyFilters();
+    });
+    clearFilters?.addEventListener('click', resetAllFilters);
+    resetFilters?.addEventListener('click', resetAllFilters);
+  });
+</script>

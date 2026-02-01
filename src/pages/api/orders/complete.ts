@@ -2,6 +2,7 @@
  * ═══════════════════════════════════════════════════════════════════════════
  * API: Completar Pedido
  * Crear pedido y factura después de un pago exitoso con Stripe
+ * Genera PDF de factura y lo adjunta al email de confirmación
  * ═══════════════════════════════════════════════════════════════════════════
  */
 
@@ -11,6 +12,7 @@ import type { APIRoute } from 'astro';
 import { createClient } from '@supabase/supabase-js';
 import Stripe from 'stripe';
 import { sendOrderConfirmationEmail } from '../../../lib/email';
+import { generateInvoicePDF } from '../../../lib/pdf/invoiceGenerator';
 
 const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
 const supabaseServiceKey = import.meta.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -262,7 +264,50 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       console.error('Error creating invoice:', invoiceError);
     }
 
-    // Enviar email de confirmación con la factura
+    // Generar PDF de la factura para adjuntar al email
+    let invoicePdf: { buffer: Buffer; filename: string } | undefined;
+    
+    if (invoice) {
+      try {
+        const pdfBuffer = generateInvoicePDF({
+          invoice_number: invoice.invoice_number,
+          issue_date: invoice.issue_date,
+          customer_name: invoice.customer_name,
+          customer_email: invoice.customer_email,
+          customer_nif: customerNif,
+          customer_address: shippingAddress,
+          items: items.map((item: any) => ({
+            name: item.name,
+            quantity: item.quantity,
+            unit_price: item.price,
+            total: item.price * item.quantity,
+            size: item.size,
+            color: item.color,
+          })),
+          subtotal: invoice.subtotal,
+          tax_rate: invoice.tax_rate,
+          tax_amount: invoice.tax_amount,
+          total: invoice.total,
+          discount_amount: discountAmount,
+          company_name: invoice.company_name || 'FashionMarket S.L.',
+          company_nif: invoice.company_nif || 'B12345678',
+          company_address: invoice.company_address || 'Calle Ejemplo 123, 28001 Madrid',
+          status: invoice.status,
+          paid_date: invoice.paid_date,
+        });
+        
+        invoicePdf = {
+          buffer: pdfBuffer,
+          filename: `factura-${invoice.invoice_number}.pdf`,
+        };
+        console.log('✅ PDF de factura generado correctamente');
+      } catch (pdfError) {
+        console.error('Error generando PDF de factura:', pdfError);
+        // Continuar sin PDF adjunto
+      }
+    }
+
+    // Enviar email de confirmación con la factura adjunta
     const emailResult = await sendOrderConfirmationEmail({
       orderNumber: order.order_number,
       customerName: finalName,
@@ -282,6 +327,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       shippingAddress: shippingAddress || {},
       invoiceNumber: invoice?.invoice_number || '',
       invoiceUrl: `${siteUrl}/api/invoices/${invoice?.id || order.id}`,
+      invoicePdf,
     });
 
     if (!emailResult.success) {

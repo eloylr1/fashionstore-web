@@ -31,6 +31,11 @@ interface EmailOptions {
   to: string;
   subject: string;
   html: string;
+  attachments?: Array<{
+    filename: string;
+    content: Buffer;
+    contentType?: string;
+  }>;
 }
 
 interface EmailResult {
@@ -63,6 +68,11 @@ export async function sendEmail(options: EmailOptions): Promise<EmailResult> {
       to: options.to,
       subject: options.subject,
       html: options.html,
+      attachments: options.attachments?.map(att => ({
+        filename: att.filename,
+        content: att.content,
+        contentType: att.contentType || 'application/pdf',
+      })),
     });
 
     console.log('📧 Email enviado:', info.messageId);
@@ -115,6 +125,11 @@ interface OrderData {
   paymentMethod?: string; // 'card', 'transfer', 'cash_on_delivery'
   invoiceNumber: string;
   invoiceUrl: string;
+  // PDF de factura adjunto (opcional)
+  invoicePdf?: {
+    buffer: Buffer;
+    filename: string;
+  };
   // Datos bancarios para transferencia
   bankDetails?: {
     bank: string;
@@ -343,10 +358,18 @@ export async function sendOrderConfirmationEmail(data: OrderData): Promise<Email
 </html>
   `;
 
+  // Preparar adjuntos si hay PDF de factura
+  const attachments = data.invoicePdf ? [{
+    filename: data.invoicePdf.filename,
+    content: data.invoicePdf.buffer,
+    contentType: 'application/pdf',
+  }] : undefined;
+
   return sendEmail({
     to: data.customerEmail,
     subject: `✓ Pedido ${data.orderNumber} confirmado - FashionMarket`,
     html,
+    attachments,
   });
 }
 

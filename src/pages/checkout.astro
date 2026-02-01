@@ -702,7 +702,7 @@ const stripePublicKey = import.meta.env.PUBLIC_STRIPE_PUBLISHABLE_KEY || '';
   </style>
 
   <!-- Scripts del checkout -->
-  <script define:vars={{ stripePublicKey }}>
+  <script define:vars={{ stripePublicKey, userId: user?.id || null }}>
     // ═══════════════════════════════════════════════════════════════════════
     // CHECKOUT - SCRIPT PRINCIPAL
     // ═══════════════════════════════════════════════════════════════════════
@@ -736,10 +736,16 @@ const stripePublicKey = import.meta.env.PUBLIC_STRIPE_PUBLISHABLE_KEY || '';
     // INICIALIZACIÓN
     // ─────────────────────────────────────────────────────────────────────
     document.addEventListener('DOMContentLoaded', async () => {
-      // Cargar carrito desde localStorage
+      // Primero intentar cargar desde localStorage/sessionStorage
       loadCart();
       
-      // Si carrito vacío, mostrar mensaje
+      // Si carrito vacío y hay usuario logueado, intentar cargar del servidor
+      if (checkoutState.cartItems.length === 0 && userId) {
+        console.log('Carrito local vacío, intentando cargar del servidor...');
+        await loadCartFromServer();
+      }
+      
+      // Si sigue vacío, mostrar mensaje
       if (checkoutState.cartItems.length === 0) {
         document.getElementById('checkout-main').classList.add('hidden');
         document.getElementById('empty-cart').classList.remove('hidden');
@@ -758,37 +764,91 @@ const stripePublicKey = import.meta.env.PUBLIC_STRIPE_PUBLISHABLE_KEY || '';
       // Event listeners
       setupEventListeners();
     });
+    
+    // ─────────────────────────────────────────────────────────────────────
+    // CARGAR CARRITO DEL SERVIDOR
+    // ─────────────────────────────────────────────────────────────────────
+    async function loadCartFromServer() {
+      try {
+        const response = await fetch('/api/cart/get');
+        if (!response.ok) return;
+        
+        const data = await response.json();
+        
+        if (data.items && Array.isArray(data.items) && data.items.length > 0) {
+          checkoutState.cartItems = data.items.map(item => ({
+            productId: item.product_id,
+            name: item.name,
+            slug: item.slug,
+            price: item.price,
+            quantity: item.quantity,
+            size: item.size,
+            color: item.color,
+            image: item.image || '/placeholder.jpg',
+            maxStock: item.stock || 99,
+          }));
+          console.log('✅ Carrito cargado del servidor:', checkoutState.cartItems.length, 'items');
+          
+          // Guardar en localStorage para futuras visitas
+          if (userId) {
+            localStorage.setItem(`fashionmarket-cart-${userId}`, JSON.stringify(checkoutState.cartItems));
+          }
+        }
+      } catch (error) {
+        console.error('Error cargando carrito del servidor:', error);
+      }
+    }
 
     // ─────────────────────────────────────────────────────────────────────
     // CARGAR CARRITO
     // ─────────────────────────────────────────────────────────────────────
     function loadCart() {
       try {
-        // El carrito puede estar en sessionStorage (invitados) o localStorage (logueados)
-        // Prioridad: sessionStorage primero (más reciente para invitados)
-        let guestCart = sessionStorage.getItem('fashionmarket-cart-guest');
-        let userCart = localStorage.getItem('fashionmarket-cart');
+        // El carrito puede estar en:
+        // 1. sessionStorage con clave 'fashionmarket-cart-guest' (invitados)
+        // 2. localStorage con clave 'fashionmarket-cart-{userId}' (usuarios logueados)
         
-        // Si hay carrito de invitado en sessionStorage, usarlo (más reciente)
+        // Si hay usuario logueado, buscar su carrito específico
+        if (userId) {
+          const userCartKey = `fashionmarket-cart-${userId}`;
+          const userCart = localStorage.getItem(userCartKey);
+          
+          if (userCart) {
+            const parsed = JSON.parse(userCart);
+            if (parsed && Array.isArray(parsed) && parsed.length > 0) {
+              checkoutState.cartItems = parsed;
+              console.log('✅ Carrito cargado para usuario:', parsed.length, 'items');
+              return;
+            }
+          }
+        }
+        
+        // Si no hay usuario o no tiene carrito, buscar carrito de invitado
+        const guestCart = sessionStorage.getItem('fashionmarket-cart-guest');
         if (guestCart) {
           const parsed = JSON.parse(guestCart);
-          if (parsed && parsed.length > 0) {
+          if (parsed && Array.isArray(parsed) && parsed.length > 0) {
             checkoutState.cartItems = parsed;
+            console.log('✅ Carrito de invitado cargado:', parsed.length, 'items');
             return;
           }
         }
         
-        // Si no hay carrito de invitado, usar el de localStorage (usuario logueado)
-        if (userCart) {
-          const parsed = JSON.parse(userCart);
-          if (parsed && parsed.length > 0) {
+        // Fallback: buscar clave antigua por compatibilidad
+        const oldCart = localStorage.getItem('fashionmarket-cart');
+        if (oldCart) {
+          const parsed = JSON.parse(oldCart);
+          if (parsed && Array.isArray(parsed) && parsed.length > 0) {
             checkoutState.cartItems = parsed;
+            console.log('✅ Carrito legacy cargado:', parsed.length, 'items');
             return;
           }
         }
         
+        console.log('⚠️ No se encontró carrito');
         checkoutState.cartItems = [];
-      } catch {
+      } catch (error) {
+        console.error('Error cargando carrito:', error);
         checkoutState.cartItems = [];
       }
     }
