@@ -8,7 +8,7 @@
 
 import type { APIRoute } from 'astro';
 import { createClient } from '@supabase/supabase-js';
-import { sendOrderConfirmationEmail } from '../../../lib/email';
+import { sendEmail } from '../../../lib/email';
 
 const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL || '';
 const supabaseServiceKey = import.meta.env.SUPABASE_SERVICE_ROLE_KEY || '';
@@ -399,52 +399,197 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       console.log('✅ Factura creada:', invoice?.invoice_number);
     }
 
-    // 8) Enviar email de confirmación
+    // 8) Generar PDF de factura y enviar email
     const customerEmail = finalEmail;
     const deliveryDays = shipping_method === 'express' 
       ? storeSettings.shipping.express_delivery_days 
       : storeSettings.shipping.estimated_delivery_days;
 
-    // URL para ver el pedido - funciona para usuarios logueados y invitados
-    const orderViewUrl = userId 
-      ? `${siteUrl}/cuenta/pedidos` 
-      : `${siteUrl}/seguimiento?order=${order.order_number || orderNumber}&email=${encodeURIComponent(finalEmail)}`;
+    // URL para seguimiento
+    const trackingUrl = `${siteUrl}/seguimiento?order=${order.order_number || orderNumber}&email=${encodeURIComponent(finalEmail)}`;
 
+    // Generar PDF de factura
+    let pdfBuffer: Buffer | null = null;
     try {
-      await sendOrderConfirmationEmail({
+      const { generateInvoicePDFDirect } = await import('../../../lib/pdf/invoiceGenerator');
+      pdfBuffer = generateInvoicePDFDirect({
+        invoiceNumber: invoice?.invoice_number || invoiceNumber,
         orderNumber: order.order_number || orderNumber,
         customerName: shipping_address.full_name,
-        customerEmail,
+        customerEmail: finalEmail,
+        customerAddress: {
+          address_line1: shipping_address.address_line1,
+          address_line2: shipping_address.address_line2,
+          city: shipping_address.city,
+          postal_code: shipping_address.postal_code,
+          province: shipping_address.province,
+          country: shipping_address.country || 'España',
+        },
         items: items.map((item) => ({
           name: item.product_name,
           quantity: item.quantity,
-          price: item.unit_price,
-          size: item.size || undefined,
+          unit_price: item.unit_price,
+          size: item.size,
+          color: item.color,
         })),
         subtotal,
         shippingCost: shipping_cost,
         codExtraCost: cod_extra_cost,
         discount: discount_amount,
-        tax,
+        taxRate: storeSettings.taxes.tax_rate,
         total,
-        shippingAddress: shipping_address,
-        shippingMethod: shipping_method,
-        estimatedDeliveryDays: deliveryDays,
         paymentMethod: payment_method,
-        invoiceNumber: invoice?.invoice_number || invoiceNumber,
-        invoiceUrl: orderViewUrl,
-        // Datos bancarios para transferencia
-        bankDetails: payment_method === 'transfer' ? {
-          bank: 'Banco FashionMarket',
-          iban: 'ES00 0000 0000 0000 0000 0000',
-          beneficiary: 'FashionMarket S.L.',
-          reference: order.order_number || orderNumber,
-        } : undefined,
+        status: invoiceStatus,
       });
-      console.log('✅ Email de confirmación enviado');
+      console.log('✅ PDF generado correctamente');
+    } catch (pdfError: any) {
+      console.error('⚠️ Error generando PDF:', pdfError.message);
+    }
+
+    // Formatear precio
+    const formatPrice = (cents: number) => (cents / 100).toFixed(2).replace('.', ',') + ' €';
+
+    // Fecha de entrega estimada
+    const deliveryDate = new Date();
+    deliveryDate.setDate(deliveryDate.getDate() + deliveryDays);
+    const estimatedDelivery = deliveryDate.toLocaleDateString('es-ES', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long'
+    });
+
+    // Generar HTML del email - SIMPLE con PDF adjunto
+    const itemsHtml = items.map(item => `
+      <tr>
+        <td style="padding: 12px; border-bottom: 1px solid #eee;">${item.product_name}${item.size ? ` (Talla: ${item.size})` : ''}</td>
+        <td style="padding: 12px; border-bottom: 1px solid #eee; text-align: center;">${item.quantity}</td>
+        <td style="padding: 12px; border-bottom: 1px solid #eee; text-align: right;">${formatPrice(item.unit_price * item.quantity)}</td>
+      </tr>
+    `).join('');
+
+    const emailHtml = `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background: #f5f5f5;">
+  <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+    <div style="background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+      
+      <!-- Header -->
+      <div style="background: #1e3a5f; padding: 30px; text-align: center;">
+        <h1 style="color: white; margin: 0; font-size: 24px;">Fashion<span style="color: #c9a227;">Market</span></h1>
+        <p style="color: rgba(255,255,255,0.8); margin: 10px 0 0;">¡Gracias por tu compra!</p>
+      </div>
+      
+      <!-- Contenido -->
+      <div style="padding: 30px;">
+        <h2 style="color: #1e3a5f; margin: 0 0 20px;">Pedido Confirmado ✓</h2>
+        
+        <p style="color: #555; line-height: 1.6;">
+          Hola <strong>${shipping_address.full_name}</strong>,<br><br>
+          Tu pedido <strong>#${order.order_number || orderNumber}</strong> ha sido confirmado.
+          ${pdfBuffer ? '<strong>Adjuntamos tu factura en PDF.</strong>' : ''}
+        </p>
+        
+        <!-- Resumen del pedido -->
+        <div style="background: #f8f9fa; border-radius: 8px; padding: 20px; margin: 20px 0;">
+          <h3 style="margin: 0 0 15px; color: #1e3a5f;">Resumen del pedido</h3>
+          <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+              <tr style="background: #1e3a5f; color: white;">
+                <th style="padding: 10px; text-align: left;">Producto</th>
+                <th style="padding: 10px; text-align: center;">Cant.</th>
+                <th style="padding: 10px; text-align: right;">Precio</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${itemsHtml}
+            </tbody>
+          </table>
+          
+          <div style="margin-top: 15px; padding-top: 15px; border-top: 2px solid #1e3a5f;">
+            <table style="width: 100%;">
+              <tr>
+                <td style="padding: 5px 0; color: #666;">Subtotal:</td>
+                <td style="padding: 5px 0; text-align: right;">${formatPrice(subtotal)}</td>
+              </tr>
+              ${discount_amount > 0 ? `
+              <tr>
+                <td style="padding: 5px 0; color: #22c55e;">Descuento:</td>
+                <td style="padding: 5px 0; text-align: right; color: #22c55e;">-${formatPrice(discount_amount)}</td>
+              </tr>
+              ` : ''}
+              <tr>
+                <td style="padding: 5px 0; color: #666;">Envío:</td>
+                <td style="padding: 5px 0; text-align: right;">${shipping_cost === 0 ? 'Gratis' : formatPrice(shipping_cost)}</td>
+              </tr>
+              ${cod_extra_cost > 0 ? `
+              <tr>
+                <td style="padding: 5px 0; color: #666;">Contrareembolso:</td>
+                <td style="padding: 5px 0; text-align: right;">${formatPrice(cod_extra_cost)}</td>
+              </tr>
+              ` : ''}
+              <tr>
+                <td style="padding: 10px 0; font-size: 18px; font-weight: bold; color: #1e3a5f;">Total:</td>
+                <td style="padding: 10px 0; text-align: right; font-size: 18px; font-weight: bold; color: #1e3a5f;">${formatPrice(total)}</td>
+              </tr>
+            </table>
+          </div>
+        </div>
+        
+        <!-- Dirección de envío -->
+        <div style="background: #f0f9ff; border-radius: 8px; padding: 20px; margin: 20px 0;">
+          <h3 style="margin: 0 0 10px; color: #1e3a5f;">📦 Dirección de envío</h3>
+          <p style="margin: 0; color: #555; line-height: 1.6;">
+            ${shipping_address.full_name}<br>
+            ${shipping_address.address_line1}<br>
+            ${shipping_address.postal_code} ${shipping_address.city}, ${shipping_address.province}<br>
+            España
+          </p>
+          <p style="margin: 15px 0 0; color: #059669; font-weight: 500;">
+            🚚 Entrega estimada: ${estimatedDelivery}
+          </p>
+        </div>
+        
+        <!-- Botón de seguimiento -->
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${trackingUrl}" style="display: inline-block; background: #1e3a5f; color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold;">
+            Ver estado del pedido
+          </a>
+        </div>
+        
+        <p style="color: #888; font-size: 14px; text-align: center;">
+          Si tienes alguna pregunta, responde a este email.
+        </p>
+      </div>
+      
+      <!-- Footer -->
+      <div style="background: #f8f9fa; padding: 20px; text-align: center; border-top: 1px solid #eee;">
+        <p style="margin: 0; color: #888; font-size: 12px;">
+          © ${new Date().getFullYear()} FashionMarket · Moda masculina con estilo
+        </p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+    `;
+
+    // Enviar email con PDF adjunto
+    try {
+      await sendEmail({
+        to: customerEmail,
+        subject: `✅ Pedido #${order.order_number || orderNumber} confirmado - FashionMarket`,
+        html: emailHtml,
+        attachments: pdfBuffer ? [{
+          filename: `Factura-${invoice?.invoice_number || invoiceNumber}.pdf`,
+          content: pdfBuffer,
+          contentType: 'application/pdf',
+        }] : undefined,
+      });
+      console.log('✅ Email de confirmación enviado' + (pdfBuffer ? ' con PDF adjunto' : ''));
     } catch (emailError: any) {
       console.error('⚠️ Error enviando email:', emailError.message);
-      // No fallar el pedido si el email falla
     }
 
     // Construir respuesta según método de pago
