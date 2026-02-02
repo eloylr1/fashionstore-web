@@ -51,7 +51,13 @@ const { data: profile } = await sb
   .eq('id', user.id)
   .single() as { data: Profile | null };
 
-// Obtener pedidos recientes
+// Obtener TODOS los pedidos del usuario (para contar)
+const { data: allOrders } = await sb
+  .from('orders')
+  .select('id')
+  .eq('user_id', user.id);
+
+// Obtener pedidos recientes (para mostrar)
 const { data: recentOrders } = await sb
   .from('orders')
   .select('*')
@@ -59,12 +65,17 @@ const { data: recentOrders } = await sb
   .order('created_at', { ascending: false })
   .limit(3);
 
-// Obtener direcciones
+// Obtener TODAS las direcciones
 const { data: addresses } = await sb
   .from('addresses')
-  .select('*')
-  .eq('user_id', user.id)
-  .limit(1);
+  .select('id')
+  .eq('user_id', user.id);
+
+// Obtener favoritos del usuario
+const { data: wishlistItems } = await sb
+  .from('wishlist')
+  .select('id')
+  .eq('user_id', user.id);
 
 const menuItems = [
   { 
@@ -264,18 +275,18 @@ const formatDate = (date: string) => {
         <div class="lg:col-span-2 space-y-6">
           <!-- Resumen rápido -->
           <div class="grid sm:grid-cols-3 gap-4">
-            <div class="bg-white rounded-lg shadow-sm p-4 text-center">
-              <div class="text-3xl font-serif text-navy-900">{recentOrders?.length || 0}</div>
+            <a href="/cuenta/pedidos" class="bg-white rounded-lg shadow-sm p-4 text-center hover:shadow-md transition-shadow">
+              <div class="text-3xl font-serif text-navy-900">{allOrders?.length || 0}</div>
               <div class="text-sm text-charcoal-500">Pedidos totales</div>
-            </div>
-            <div class="bg-white rounded-lg shadow-sm p-4 text-center">
+            </a>
+            <a href="/cuenta/direcciones" class="bg-white rounded-lg shadow-sm p-4 text-center hover:shadow-md transition-shadow">
               <div class="text-3xl font-serif text-navy-900">{addresses?.length || 0}</div>
               <div class="text-sm text-charcoal-500">Direcciones</div>
-            </div>
-            <div class="bg-white rounded-lg shadow-sm p-4 text-center">
-              <div class="text-3xl font-serif text-navy-900">0</div>
+            </a>
+            <a href="/cuenta/favoritos" class="bg-white rounded-lg shadow-sm p-4 text-center hover:shadow-md transition-shadow">
+              <div class="text-3xl font-serif text-navy-900">{wishlistItems?.length || 0}</div>
               <div class="text-sm text-charcoal-500">En lista de deseos</div>
-            </div>
+            </a>
           </div>
 
           <!-- Pedidos recientes -->
