@@ -30,12 +30,30 @@ if (sessionError || !sessionData.user) {
 
 const user = sessionData.user;
 
-// Obtener facturas del usuario
-const { data: invoices, error: invoicesError } = await supabase
+// Obtener facturas del usuario - buscar por user_id O por email
+const { data: invoicesByUserId } = await supabase
   .from('invoices')
   .select('*')
   .eq('user_id', user.id)
   .order('created_at', { ascending: false });
+
+let invoicesByEmail: any[] = [];
+if (user.email) {
+  const emailResult = await supabase
+    .from('invoices')
+    .select('*')
+    .eq('customer_email', user.email as string)
+    .order('created_at', { ascending: false });
+  invoicesByEmail = emailResult.data || [];
+}
+
+// Combinar y eliminar duplicados
+const allInvoicesMap = new Map();
+(invoicesByUserId || []).forEach((inv: any) => allInvoicesMap.set(inv.id, inv));
+(invoicesByEmail || []).forEach((inv: any) => allInvoicesMap.set(inv.id, inv));
+const invoices = Array.from(allInvoicesMap.values()).sort((a: any, b: any) => 
+  new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+);
 
 // Obtener notas de crédito (facturas de abono)
 const { data: creditNotes, error: creditNotesError } = await supabase

@@ -1767,13 +1767,13 @@ const stripePublicKey = import.meta.env.PUBLIC_STRIPE_PUBLISHABLE_KEY || '';
       }
 
       // Pedido creado exitosamente
-      completeCheckout(data.order);
+      await completeCheckout(data.order);
     }
 
     // ─────────────────────────────────────────────────────────────────────
     // FINALIZAR CHECKOUT
     // ─────────────────────────────────────────────────────────────────────
-    function completeCheckout(order) {
+    async function completeCheckout(order) {
       console.log('🎉 Completando checkout, limpiando carrito...');
       
       // LIMPIAR CARRITO DE FORMA EXHAUSTIVA
@@ -1809,9 +1809,19 @@ const stripePublicKey = import.meta.env.PUBLIC_STRIPE_PUBLISHABLE_KEY || '';
         badge.style.display = 'none';
       });
       
+      // 7. CRÍTICO: Sincronizar carrito vacío al servidor para usuarios logueados
+      try {
+        await fetch('/api/cart/sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ items: [] }),
+        });
+        console.log('✅ Carrito sincronizado vacío al servidor');
+      } catch (e) {
+        console.error('Error sincronizando carrito vacío:', e);
+      }
+      
       console.log('✅ Carrito limpiado completamente');
-      console.log('📦 LocalStorage restante:', Object.keys(localStorage).filter(k => k.includes('cart')));
-      console.log('📦 SessionStorage restante:', Object.keys(sessionStorage).filter(k => k.includes('cart')));
 
       // Actualizar UI de confirmación
       document.getElementById('confirmation-email').textContent = checkoutState.shippingData.email;

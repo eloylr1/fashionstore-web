@@ -78,7 +78,12 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       if (sessionData?.user) {
         userId = sessionData.user.id;
         userEmail = sessionData.user.email || null;
+        console.log('✅ Usuario autenticado:', userId, userEmail);
+      } else {
+        console.log('⚠️ No se pudo autenticar usuario con tokens');
       }
+    } else {
+      console.log('⚠️ No hay tokens de sesión');
     }
 
     // Parsear body
