@@ -22,7 +22,7 @@ if (isSupabaseAdminConfigured() && supabaseAdmin) {
       .from('orders')
       .select(`
         *,
-        profiles:user_id (
+        profiles:user_id!left (
           full_name,
           email
         ),
@@ -138,8 +138,8 @@ const orderStatuses: Record<string, { label: string; color: string; bg: string }
                     </td>
                     <td class="px-6 py-4">
                       <div>
-                        <p class="text-sm font-medium text-charcoal-700">{order.profiles?.full_name || 'Cliente'}</p>
-                        <p class="text-xs text-charcoal-400">{order.profiles?.email || ''}</p>
+                        <p class="text-sm font-medium text-charcoal-700">{order.profiles?.full_name || order.guest_name || order.shipping_address?.name || 'Invitado'}</p>
+                        <p class="text-xs text-charcoal-400">{order.profiles?.email || order.guest_email || order.shipping_address?.email || ''}</p>
                       </div>
                     </td>
                     <td class="px-6 py-4">
