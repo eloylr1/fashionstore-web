@@ -143,29 +143,39 @@ const getBrandColor = (brand: string) => {
             </div>
           ) : (
             <div class="space-y-4">
-              {paymentMethods.map((method: any) => (
-                <div class={`border rounded-lg p-4 ${method.is_default ? 'border-gold-matte bg-gold-matte/5' : 'border-charcoal-200'}`}>
+              {paymentMethods.map((method: any) => {
+                const hasValidData = method.brand && method.last_four && method.stripe_payment_method_id;
+                return (
+                <div class={`border rounded-lg p-4 ${method.is_default ? 'border-gold-matte bg-gold-matte/5' : hasValidData ? 'border-charcoal-200' : 'border-red-300 bg-red-50'}`}>
                   <div class="flex items-center justify-between">
                     <div class="flex items-center gap-4">
-                      <div class={`w-12 h-8 ${getBrandColor(method.brand)} rounded flex items-center justify-center text-white text-xs font-bold`}>
+                      <div class={`w-12 h-8 ${hasValidData ? getBrandColor(method.brand) : 'bg-red-400'} rounded flex items-center justify-center text-white text-xs font-bold`}>
                         {method.brand?.toUpperCase().slice(0, 4) || 'CARD'}
                       </div>
                       <div>
-                        <p class="font-medium text-navy-900">
-                          {method.label || `${method.brand} •••• ${method.last_four}`}
+                        <p class={`font-medium ${hasValidData ? 'text-navy-900' : 'text-red-700'}`}>
+                          {hasValidData 
+                            ? (method.label || `${method.brand} •••• ${method.last_four}`)
+                            : 'Tarjeta con datos incompletos'}
                         </p>
-                        <p class="text-sm text-charcoal-500">
-                          Expira {method.expiry_month}/{method.expiry_year}
-                        </p>
+                        {hasValidData ? (
+                          <p class="text-sm text-charcoal-500">
+                            Expira {method.expiry_month}/{method.expiry_year}
+                          </p>
+                        ) : (
+                          <p class="text-sm text-red-600">
+                            Elimina esta tarjeta y añádela de nuevo
+                          </p>
+                        )}
                       </div>
                     </div>
                     <div class="flex items-center gap-3">
-                      {method.is_default && (
+                      {method.is_default && hasValidData && (
                         <span class="px-2 py-1 bg-gold-matte text-white text-xs rounded">
                           Predeterminada
                         </span>
                       )}
-                      {!method.is_default && (
+                      {!method.is_default && hasValidData && (
                         <button 
                           class="set-default-btn text-charcoal-500 hover:text-gold-matte transition-colors text-sm" 
                           data-id={method.id}
@@ -177,7 +187,7 @@ const getBrandColor = (brand: string) => {
                       <button 
                         class="delete-card-btn text-charcoal-500 hover:text-red-500 transition-colors" 
                         data-id={method.id}
-                        data-last-four={method.last_four}
+                        data-last-four={method.last_four || '****'}
                         title="Eliminar"
                       >
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -187,7 +197,7 @@ const getBrandColor = (brand: string) => {
                     </div>
                   </div>
                 </div>
-              ))}
+              )})}
             </div>
           )}
         </div>

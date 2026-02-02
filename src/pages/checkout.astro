@@ -463,48 +463,60 @@ const stripePublicKey = import.meta.env.PUBLIC_STRIPE_PUBLISHABLE_KEY || '';
                         </span>
                       </label>
                       <div class="space-y-2" id="saved-cards">
-                        {userPaymentMethods.map((card, index) => (
-                          <label class="saved-card-option flex items-center gap-3 p-4 border border-charcoal-200 rounded-lg cursor-pointer hover:border-navy-900/30 transition-colors">
+                        {userPaymentMethods.map((card, index) => {
+                          const hasValidData = card.brand && card.last_four && card.stripe_payment_method_id;
+                          const cardBrand = card.brand || 'card';
+                          const cardLastFour = card.last_four || '****';
+                          return (
+                          <label class={`saved-card-option flex items-center gap-3 p-4 border rounded-lg cursor-pointer transition-colors ${hasValidData ? 'border-charcoal-200 hover:border-navy-900/30' : 'border-red-200 bg-red-50/50'}`}>
                             <input 
                               type="radio" 
                               name="savedCard" 
                               value={card.id}
                               data-stripe-pm={card.stripe_payment_method_id || ''}
-                              data-last-four={card.last_four}
-                              data-brand={card.brand}
-                              checked={index === 0}
-                              class="w-4 h-4 text-navy-900 border-charcoal-300 focus:ring-navy-900"
+                              data-last-four={cardLastFour}
+                              data-brand={cardBrand}
+                              checked={index === 0 && hasValidData}
+                              disabled={!hasValidData}
+                              class="w-4 h-4 text-navy-900 border-charcoal-300 focus:ring-navy-900 disabled:opacity-50"
                             />
                             <div class="flex items-center gap-3 flex-1">
-                              {card.brand === 'visa' && (
+                              {cardBrand === 'visa' && (
                                 <svg class="h-8 w-12 text-[#1A1F71]" viewBox="0 0 48 32" fill="currentColor">
                                   <path d="M17.5 10.5l-1.8 11h2.9l1.8-11h-2.9zm12.1 0l-2.7 7.5-.3-1.5-.9-4.6c-.2-.7-.7-1-1.4-1h-4.5l-.1.3c1 .3 2.1.7 2.8 1 .4.2.5.4.6.7l2.2 8.6h3l4.5-11h-3.2zm4.8 7.4c0-.5.4-1 1.5-1.2.5-.1 1.9-.2 3.5.5l.6-2.7c-.8-.3-2-.6-3.3-.6-3.5 0-6 1.9-6 4.5 0 2 1.8 3.1 3.1 3.7 1.4.7 1.9 1.1 1.8 1.7 0 .9-1.1 1.3-2.1 1.4-1.8 0-2.8-.5-3.6-.9l-.6 2.9c.8.4 2.3.7 3.9.7 3.7 0 6.2-1.8 6.2-4.7 0-3.6-5-3.8-5-5.3zm14.1-7.4h-2.3c-.7 0-1.3.2-1.6 1l-4.6 11h3.2l.6-1.8h3.9l.4 1.8h2.8l-2.4-11zm-3.6 7.1l1.6-4.4.9 4.4h-2.5z"/>
                                 </svg>
                               )}
-                              {card.brand === 'mastercard' && (
+                              {cardBrand === 'mastercard' && (
                                 <svg class="h-8 w-12" viewBox="0 0 48 32">
                                   <circle cx="18" cy="16" r="10" fill="#EB001B"/>
                                   <circle cx="30" cy="16" r="10" fill="#F79E1B"/>
                                   <path d="M24 8.5a10 10 0 000 15 10 10 0 000-15z" fill="#FF5F00"/>
                                 </svg>
                               )}
-                              {card.brand !== 'visa' && card.brand !== 'mastercard' && (
+                              {cardBrand !== 'visa' && cardBrand !== 'mastercard' && (
                                 <div class="h-8 w-12 bg-charcoal-200 rounded flex items-center justify-center text-xs font-medium text-charcoal-600">
-                                  {card.brand?.toUpperCase() || 'CARD'}
+                                  {cardBrand.toUpperCase().slice(0, 4)}
                                 </div>
                               )}
                               <div>
                                 <div class="flex items-center gap-2">
-                                  <span class="font-medium text-navy-900">{card.label || `${card.brand?.charAt(0).toUpperCase()}${card.brand?.slice(1)} terminada en ${card.last_four}`}</span>
-                                  {card.is_default && (
+                                  <span class={`font-medium ${hasValidData ? 'text-navy-900' : 'text-red-600'}`}>
+                                    {hasValidData 
+                                      ? (card.label || `${cardBrand.charAt(0).toUpperCase()}${cardBrand.slice(1)} terminada en ${cardLastFour}`)
+                                      : 'Tarjeta con datos incompletos'}
+                                  </span>
+                                  {card.is_default && hasValidData && (
                                     <span class="px-2 py-0.5 bg-navy-100 text-navy-700 text-xs rounded-full">Principal</span>
                                   )}
+                                  {!hasValidData && (
+                                    <span class="px-2 py-0.5 bg-red-100 text-red-700 text-xs rounded-full">Eliminar y volver a añadir</span>
+                                  )}
                                 </div>
-                                <p class="text-sm text-charcoal-500">•••• •••• •••• {card.last_four}</p>
+                                <p class="text-sm text-charcoal-500">•••• •••• •••• {cardLastFour}</p>
                               </div>
                             </div>
                           </label>
-                        ))}
+                        )})}
                         <label class="saved-card-option flex items-center gap-3 p-4 border border-dashed border-charcoal-300 rounded-lg cursor-pointer hover:border-navy-900/50 hover:bg-charcoal-50 transition-colors">
                           <input 
                             type="radio" 
@@ -1340,13 +1352,24 @@ const stripePublicKey = import.meta.env.PUBLIC_STRIPE_PUBLISHABLE_KEY || '';
 
     // Inicializar estado de tarjeta guardada si hay una por defecto
     function initSavedCardState() {
-      const savedCardInput = document.querySelector('input[name="savedCard"]:checked');
+      const savedCardInput = document.querySelector('input[name="savedCard"]:checked:not(:disabled)');
       if (savedCardInput && savedCardInput.value !== 'new') {
-        checkoutState.usingSavedCard = true;
-        checkoutState.savedCardId = savedCardInput.value;
-        checkoutState.savedCardStripePM = savedCardInput.dataset.stripePm || '';
-        checkoutState.savedCardLastFour = savedCardInput.dataset.lastFour || '';
-        checkoutState.savedCardBrand = savedCardInput.dataset.brand || '';
+        const stripePM = savedCardInput.dataset.stripePm;
+        // Solo usar tarjeta guardada si tiene un stripe_payment_method_id válido
+        if (stripePM && stripePM !== '') {
+          checkoutState.usingSavedCard = true;
+          checkoutState.savedCardId = savedCardInput.value;
+          checkoutState.savedCardStripePM = stripePM;
+          checkoutState.savedCardLastFour = savedCardInput.dataset.lastFour || '****';
+          checkoutState.savedCardBrand = savedCardInput.dataset.brand || 'card';
+        } else {
+          // Si no hay stripe_payment_method_id, seleccionar "nueva tarjeta" por defecto
+          const newCardOption = document.querySelector('input[name="savedCard"][value="new"]');
+          if (newCardOption) {
+            newCardOption.checked = true;
+            handleSavedCardChange({ target: newCardOption });
+          }
+        }
       }
     }
 
@@ -1562,10 +1585,14 @@ const stripePublicKey = import.meta.env.PUBLIC_STRIPE_PUBLISHABLE_KEY || '';
 
     // Pago con tarjeta
     async function processCardPayment() {
-      // Verificar si estamos usando una tarjeta guardada
-      if (checkoutState.usingSavedCard && checkoutState.savedCardStripePM) {
+      // Verificar si estamos usando una tarjeta guardada y tiene el ID de Stripe
+      if (checkoutState.usingSavedCard && checkoutState.savedCardStripePM && checkoutState.savedCardStripePM !== '') {
         await processSavedCardPayment();
       } else {
+        // Si no hay payment method válido de Stripe, usar tarjeta nueva
+        if (checkoutState.usingSavedCard && (!checkoutState.savedCardStripePM || checkoutState.savedCardStripePM === '')) {
+          throw new Error('Esta tarjeta no tiene datos de pago válidos. Por favor, usa "Usar otra tarjeta" para añadir una nueva.');
+        }
         await processNewCardPayment();
       }
     }
@@ -1579,14 +1606,17 @@ const stripePublicKey = import.meta.env.PUBLIC_STRIPE_PUBLISHABLE_KEY || '';
         throw new Error('Por favor, introduce el CVV de tu tarjeta');
       }
 
-      // 1. Crear Payment Intent con el payment_method guardado
+      if (!checkoutState.savedCardStripePM) {
+        throw new Error('No se encontró el método de pago. Por favor, usa otra tarjeta.');
+      }
+
+      // 1. Crear Payment Intent
       const piResponse = await fetch('/api/stripe/create-payment-intent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           amount: checkoutState.total,
           currency: 'eur',
-          payment_method_id: checkoutState.savedCardStripePM,
           metadata: {
             customer_email: checkoutState.shippingData.email,
             saved_card: 'true',
