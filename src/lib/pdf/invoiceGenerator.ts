@@ -6,15 +6,7 @@
  */
 
 import { jsPDF } from 'jspdf';
-import 'jspdf-autotable';
-
-// Tipos para extender jsPDF con autoTable
-declare module 'jspdf' {
-  interface jsPDF {
-    autoTable: (options: any) => jsPDF;
-    lastAutoTable: { finalY: number };
-  }
-}
+import autoTable from 'jspdf-autotable';
 
 interface InvoiceItem {
   name: string;
@@ -221,7 +213,7 @@ export function generateInvoicePDF(invoice: InvoiceData): Buffer {
     ];
   });
 
-  doc.autoTable({
+  autoTable(doc, {
     startY: y,
     head: [['Descripción', 'Cant.', 'Precio unit.', 'Total']],
     body: tableBody,
@@ -250,7 +242,7 @@ export function generateInvoicePDF(invoice: InvoiceData): Buffer {
 
   // ─── TOTALES ───────────────────────────────────────────────────────────────
   
-  y = doc.lastAutoTable.finalY + 10;
+  y = (doc as any).lastAutoTable.finalY + 10;
   
   const totalsX = pageWidth - margin - 80;
   const valuesX = pageWidth - margin;
@@ -441,7 +433,7 @@ export function generateCreditNotePDF(creditNote: CreditNoteData): Buffer {
     ];
   });
 
-  doc.autoTable({
+  autoTable(doc, {
     startY: y,
     head: [['Descripción', 'Cant.', 'Precio unit.', 'Importe']],
     body: tableBody,
@@ -470,7 +462,7 @@ export function generateCreditNotePDF(creditNote: CreditNoteData): Buffer {
 
   // ─── TOTALES ───────────────────────────────────────────────────────────────
   
-  y = doc.lastAutoTable.finalY + 10;
+  y = (doc as any).lastAutoTable.finalY + 10;
   
   const totalsX = pageWidth - margin - 80;
   const valuesX = pageWidth - margin;
