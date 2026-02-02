@@ -178,6 +178,125 @@ function formatDate(date: string): string {
             <p class="text-sm text-charcoal-400 mt-2">
               Realizado el {formatDate(order.created_at)}
             </p>
+            
+            <!-- BARRA DE PROGRESO DEL PEDIDO -->
+            <div class="mt-6 pt-6 border-t border-charcoal-100">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-sm font-medium text-navy-900">Progreso del pedido</span>
+              </div>
+              
+              {/* Barra de pasos */}
+              <div class="relative">
+                {/* Línea de fondo */}
+                <div class="absolute top-5 left-0 right-0 h-0.5 bg-charcoal-200"></div>
+                
+                {/* Línea de progreso */}
+                <div 
+                  class="absolute top-5 left-0 h-0.5 bg-green-500 transition-all duration-500"
+                  style={`width: ${
+                    order.status === 'cancelled' ? '0%' :
+                    order.status === 'pending' || order.status === 'awaiting_payment' ? '0%' :
+                    order.status === 'paid' ? '33%' :
+                    order.status === 'processing' ? '50%' :
+                    order.status === 'shipped' ? '75%' :
+                    order.status === 'delivered' ? '100%' : '0%'
+                  }`}
+                ></div>
+                
+                {/* Pasos */}
+                <div class="relative flex justify-between">
+                  {/* Paso 1: Confirmado/Pagado */}
+                  <div class="flex flex-col items-center">
+                    <div class={`w-10 h-10 rounded-full flex items-center justify-center border-2 z-10 ${
+                      order.status !== 'cancelled' && order.status !== 'pending' && order.status !== 'awaiting_payment'
+                        ? 'bg-green-500 border-green-500 text-white' 
+                        : order.status === 'pending' || order.status === 'awaiting_payment'
+                        ? 'bg-yellow-100 border-yellow-400 text-yellow-600'
+                        : 'bg-white border-charcoal-300 text-charcoal-400'
+                    }`}>
+                      {order.status !== 'cancelled' && order.status !== 'pending' && order.status !== 'awaiting_payment' ? (
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                          <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                        </svg>
+                      ) : (
+                        <span class="text-sm font-bold">1</span>
+                      )}
+                    </div>
+                    <span class="mt-2 text-xs font-medium text-charcoal-600">Confirmado</span>
+                  </div>
+                  
+                  {/* Paso 2: En preparación */}
+                  <div class="flex flex-col items-center">
+                    <div class={`w-10 h-10 rounded-full flex items-center justify-center border-2 z-10 ${
+                      order.status === 'processing' || order.status === 'shipped' || order.status === 'delivered'
+                        ? 'bg-green-500 border-green-500 text-white' 
+                        : 'bg-white border-charcoal-300 text-charcoal-400'
+                    }`}>
+                      {order.status === 'processing' || order.status === 'shipped' || order.status === 'delivered' ? (
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                          <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                        </svg>
+                      ) : (
+                        <span class="text-sm font-bold">2</span>
+                      )}
+                    </div>
+                    <span class="mt-2 text-xs font-medium text-charcoal-600">Preparando</span>
+                  </div>
+                  
+                  {/* Paso 3: Enviado */}
+                  <div class="flex flex-col items-center">
+                    <div class={`w-10 h-10 rounded-full flex items-center justify-center border-2 z-10 ${
+                      order.status === 'shipped' || order.status === 'delivered'
+                        ? 'bg-green-500 border-green-500 text-white' 
+                        : 'bg-white border-charcoal-300 text-charcoal-400'
+                    }`}>
+                      {order.status === 'shipped' || order.status === 'delivered' ? (
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                          <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                        </svg>
+                      ) : (
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/>
+                        </svg>
+                      )}
+                    </div>
+                    <span class="mt-2 text-xs font-medium text-charcoal-600">Enviado</span>
+                  </div>
+                  
+                  {/* Paso 4: Entregado */}
+                  <div class="flex flex-col items-center">
+                    <div class={`w-10 h-10 rounded-full flex items-center justify-center border-2 z-10 ${
+                      order.status === 'delivered'
+                        ? 'bg-green-500 border-green-500 text-white' 
+                        : 'bg-white border-charcoal-300 text-charcoal-400'
+                    }`}>
+                      {order.status === 'delivered' ? (
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                          <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                        </svg>
+                      ) : (
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+                        </svg>
+                      )}
+                    </div>
+                    <span class="mt-2 text-xs font-medium text-charcoal-600">Entregado</span>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Mensaje de estado cancelado */}
+              {order.status === 'cancelled' && (
+                <div class="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <p class="text-sm text-red-700 flex items-center gap-2">
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                    </svg>
+                    Este pedido ha sido cancelado
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
 
           <!-- Productos -->

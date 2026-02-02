@@ -392,6 +392,8 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     // Log del resultado de la factura
     if (invoiceError) {
       console.error('⚠️ Error creando factura:', invoiceError.message);
+      console.error('⚠️ Detalles del error:', JSON.stringify(invoiceError));
+      console.error('⚠️ Datos de factura intentados:', JSON.stringify(invoiceData, null, 2));
       // No fallar el pedido si la factura falla
     } else {
       console.log('✅ Factura creada:', invoice?.invoice_number);
