@@ -48,6 +48,7 @@ interface Order {
   status: string;
   total: number;
   subtotal?: number;
+  shipping_cost?: number;
   discount_amount?: number;
   shipping_address: any;
   tracking_number?: string;
@@ -358,10 +359,10 @@ const isCancelled = order.status === 'cancelled' || order.status === 'refunded';
                       </p>
                       <div class="flex items-center justify-between mt-2">
                         <span class="text-sm text-charcoal-600">
-                          {formatPrice(item.unit_price)} × {item.quantity}
+                          {formatPrice(item.price || item.unit_price || 0)} × {item.quantity}
                         </span>
                         <span class="font-semibold text-navy-900">
-                          {formatPrice(item.unit_price * item.quantity)}
+                          {formatPrice((item.price || item.unit_price || 0) * item.quantity)}
                         </span>
                       </div>
                     </div>
@@ -399,7 +400,7 @@ const isCancelled = order.status === 'cancelled' || order.status === 'refunded';
             <div class="space-y-3">
               <div class="flex justify-between text-sm">
                 <span class="text-charcoal-600">Subtotal</span>
-                <span class="text-navy-900">{formatPrice(order.subtotal || order.total)}</span>
+                <span class="text-navy-900">{formatPrice(order.subtotal || (order.total - (order.shipping_cost || 0)))}</span>
               </div>
               {(order.discount_amount ?? 0) > 0 && (
                 <div class="flex justify-between text-sm">
@@ -409,7 +410,11 @@ const isCancelled = order.status === 'cancelled' || order.status === 'refunded';
               )}
               <div class="flex justify-between text-sm">
                 <span class="text-charcoal-600">Envío</span>
-                <span class="text-green-600 font-medium">GRATIS</span>
+                {(order.shipping_cost || 0) === 0 ? (
+                  <span class="text-green-600 font-medium">GRATIS</span>
+                ) : (
+                  <span class="text-navy-900">{formatPrice(order.shipping_cost || 0)}</span>
+                )}
               </div>
               <div class="flex justify-between text-lg font-semibold pt-3 border-t border-charcoal-100">
                 <span class="text-navy-900">Total</span>
