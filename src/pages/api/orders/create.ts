@@ -463,15 +463,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       month: 'long'
     });
 
-    // Generar HTML del email - SIMPLE con PDF adjunto
-    const itemsHtml = items.map(item => `
-      <tr>
-        <td style="padding: 12px; border-bottom: 1px solid #eee;">${item.product_name}${item.size ? ` (Talla: ${item.size})` : ''}</td>
-        <td style="padding: 12px; border-bottom: 1px solid #eee; text-align: center;">${item.quantity}</td>
-        <td style="padding: 12px; border-bottom: 1px solid #eee; text-align: right;">${formatPrice(item.unit_price * item.quantity)}</td>
-      </tr>
-    `).join('');
-
+    // Generar HTML del email - SIMPLIFICADO
     const emailHtml = `
 <!DOCTYPE html>
 <html>
@@ -487,83 +479,37 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       </div>
       
       <!-- Contenido -->
-      <div style="padding: 30px;">
-        <h2 style="color: #1e3a5f; margin: 0 0 20px;">Pedido Confirmado ✓</h2>
+      <div style="padding: 30px; text-align: center;">
+        <div style="font-size: 60px; margin-bottom: 20px;">✅</div>
+        <h2 style="color: #1e3a5f; margin: 0 0 15px;">¡Pedido Confirmado!</h2>
         
-        <p style="color: #555; line-height: 1.6;">
+        <p style="color: #555; line-height: 1.6; margin-bottom: 25px;">
           Hola <strong>${shipping_address.full_name}</strong>,<br><br>
-          Tu pedido <strong>#${order.order_number || orderNumber}</strong> ha sido confirmado.
-          ${pdfBuffer ? '<strong>Adjuntamos tu factura en PDF.</strong>' : ''}
+          Hemos recibido tu pedido <strong>#${order.order_number || orderNumber}</strong> correctamente.
         </p>
         
-        <!-- Resumen del pedido -->
-        <div style="background: #f8f9fa; border-radius: 8px; padding: 20px; margin: 20px 0;">
-          <h3 style="margin: 0 0 15px; color: #1e3a5f;">Resumen del pedido</h3>
-          <table style="width: 100%; border-collapse: collapse;">
-            <thead>
-              <tr style="background: #1e3a5f; color: white;">
-                <th style="padding: 10px; text-align: left;">Producto</th>
-                <th style="padding: 10px; text-align: center;">Cant.</th>
-                <th style="padding: 10px; text-align: right;">Precio</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${itemsHtml}
-            </tbody>
-          </table>
-          
-          <div style="margin-top: 15px; padding-top: 15px; border-top: 2px solid #1e3a5f;">
-            <table style="width: 100%;">
-              <tr>
-                <td style="padding: 5px 0; color: #666;">Subtotal:</td>
-                <td style="padding: 5px 0; text-align: right;">${formatPrice(subtotal)}</td>
-              </tr>
-              ${discount_amount > 0 ? `
-              <tr>
-                <td style="padding: 5px 0; color: #22c55e;">Descuento:</td>
-                <td style="padding: 5px 0; text-align: right; color: #22c55e;">-${formatPrice(discount_amount)}</td>
-              </tr>
-              ` : ''}
-              <tr>
-                <td style="padding: 5px 0; color: #666;">Envío:</td>
-                <td style="padding: 5px 0; text-align: right;">${shipping_cost === 0 ? 'Gratis' : formatPrice(shipping_cost)}</td>
-              </tr>
-              ${cod_extra_cost > 0 ? `
-              <tr>
-                <td style="padding: 5px 0; color: #666;">Contrareembolso:</td>
-                <td style="padding: 5px 0; text-align: right;">${formatPrice(cod_extra_cost)}</td>
-              </tr>
-              ` : ''}
-              <tr>
-                <td style="padding: 10px 0; font-size: 18px; font-weight: bold; color: #1e3a5f;">Total:</td>
-                <td style="padding: 10px 0; text-align: right; font-size: 18px; font-weight: bold; color: #1e3a5f;">${formatPrice(total)}</td>
-              </tr>
-            </table>
-          </div>
+        <div style="background: #f0f9ff; border-radius: 8px; padding: 20px; margin: 25px 0; text-align: left;">
+          <p style="margin: 0 0 10px; color: #1e3a5f; font-weight: bold;">📋 Detalles del pedido:</p>
+          <p style="margin: 0; color: #555;">
+            <strong>Total:</strong> ${formatPrice(total)}<br>
+            <strong>Entrega estimada:</strong> ${estimatedDelivery}
+          </p>
         </div>
         
-        <!-- Dirección de envío -->
-        <div style="background: #f0f9ff; border-radius: 8px; padding: 20px; margin: 20px 0;">
-          <h3 style="margin: 0 0 10px; color: #1e3a5f;">📦 Dirección de envío</h3>
-          <p style="margin: 0; color: #555; line-height: 1.6;">
-            ${shipping_address.full_name}<br>
-            ${shipping_address.address_line1}<br>
-            ${shipping_address.postal_code} ${shipping_address.city}, ${shipping_address.province}<br>
-            España
-          </p>
-          <p style="margin: 15px 0 0; color: #059669; font-weight: 500;">
-            🚚 Entrega estimada: ${estimatedDelivery}
+        ${pdfBuffer ? `
+        <div style="background: #ecfdf5; border-radius: 8px; padding: 15px; margin: 25px 0;">
+          <p style="margin: 0; color: #059669; font-weight: 500;">
+            📎 Tu factura está adjunta a este correo en formato PDF
           </p>
         </div>
+        ` : ''}
         
         <!-- Botón de seguimiento -->
-        <div style="text-align: center; margin: 30px 0;">
-          <a href="${trackingUrl}" style="display: inline-block; background: #1e3a5f; color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold;">
-            Ver estado del pedido
-          </a>
-        </div>
+        <a href="${trackingUrl}" style="display: inline-block; background: #1e3a5f; color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; margin: 20px 0;">
+          Ver estado del pedido
+        </a>
         
-        <p style="color: #888; font-size: 14px; text-align: center;">
+        <p style="color: #888; font-size: 14px; margin-top: 25px;">
           Si tienes alguna pregunta, responde a este email.
         </p>
       </div>
