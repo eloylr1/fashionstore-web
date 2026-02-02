@@ -340,7 +340,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       }
     }
 
-    // 7) Generar factura (solo si hay usuario o email de invitado)
+    // 7) Generar factura - SIEMPRE crear factura
     const year = new Date().getFullYear();
     const { count } = await supabase
       .from('invoices')
@@ -351,7 +351,9 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 
     const invoiceStatus = payment_method === 'card' ? 'paid' : 'pending';
     
-    // Preparar datos de factura
+    console.log('📝 Creando factura para usuario:', userId, 'email:', finalEmail);
+    
+    // Preparar datos de factura - SIEMPRE incluir user_id si está disponible
     const invoiceData: Record<string, any> = {
       order_id: order.id,
       invoice_number: invoiceNumber,
@@ -366,6 +368,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       total,
       status: invoiceStatus,
       payment_method,
+      user_id: userId, // Puede ser null si es invitado
       items: items.map((item) => ({
         name: item.product_name,
         quantity: item.quantity,
@@ -375,14 +378,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       })),
     };
     
-    // Añadir user_id solo si hay usuario logueado
-    if (userId) {
-      invoiceData.user_id = userId;
-    }
-    // Añadir guest_email si es invitado
-    if (!userId && finalEmail) {
-      invoiceData.guest_email = finalEmail;
-    }
+    console.log('📝 Datos de factura:', JSON.stringify(invoiceData, null, 2));
     
     const { data: invoice, error: invoiceError } = await supabase
       .from('invoices')
@@ -392,11 +388,11 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     
     // Log del resultado de la factura
     if (invoiceError) {
-      console.error('⚠️ Error creando factura:', invoiceError.message);
-      console.error('⚠️ Detalles del error:', JSON.stringify(invoiceError));
-      // No fallar el pedido si la factura falla
+      console.error('❌ ERROR creando factura:', invoiceError.message);
+      console.error('❌ Código de error:', invoiceError.code);
+      console.error('❌ Detalles:', JSON.stringify(invoiceError));
     } else {
-      console.log('✅ Factura creada:', invoice?.invoice_number);
+      console.log('✅ Factura creada exitosamente:', invoice?.invoice_number, 'ID:', invoice?.id);
     }
 
     // 8) Generar PDF de factura
@@ -414,8 +410,9 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 
     // Generar PDF usando la función importada al inicio
     let pdfBuffer: Buffer | null = null;
+    console.log('📄 Intentando generar PDF de factura...');
     try {
-      pdfBuffer = generateInvoicePDF({
+      const pdfData = {
         invoice_number: invoice?.invoice_number || invoiceNumber,
         issue_date: new Date().toISOString(),
         customer_name: shipping_address.full_name,
@@ -445,10 +442,13 @@ export const POST: APIRoute = async ({ request, cookies }) => {
         company_nif: 'B12345678',
         company_address: 'Calle Moda 123, 28001 Madrid, España',
         status: invoiceStatus,
-      });
-      console.log('✅ PDF de factura generado correctamente');
+      };
+      console.log('📄 Datos para PDF:', JSON.stringify(pdfData, null, 2));
+      pdfBuffer = generateInvoicePDF(pdfData);
+      console.log('✅ PDF generado, tamaño:', pdfBuffer?.length, 'bytes');
     } catch (pdfError: any) {
-      console.error('⚠️ Error generando PDF:', pdfError.message, pdfError.stack);
+      console.error('❌ ERROR generando PDF:', pdfError.message);
+      console.error('❌ Stack:', pdfError.stack);
     }
 
     // Formatear precio
@@ -581,8 +581,10 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     `;
 
     // Enviar email con PDF adjunto
+    console.log('📧 Enviando email a:', customerEmail);
+    console.log('📧 PDF adjunto:', pdfBuffer ? `SÍ (${pdfBuffer.length} bytes)` : 'NO');
     try {
-      await sendEmail({
+      const emailResult = await sendEmail({
         to: customerEmail,
         subject: `✅ Pedido #${order.order_number || orderNumber} confirmado - FashionMarket`,
         html: emailHtml,
@@ -592,9 +594,9 @@ export const POST: APIRoute = async ({ request, cookies }) => {
           contentType: 'application/pdf',
         }] : undefined,
       });
-      console.log('✅ Email de confirmación enviado' + (pdfBuffer ? ' con PDF adjunto' : ''));
+      console.log('✅ Email enviado:', emailResult);
     } catch (emailError: any) {
-      console.error('⚠️ Error enviando email:', emailError.message);
+      console.error('❌ Error enviando email:', emailError.message);
     }
 
     // Construir respuesta según método de pago
