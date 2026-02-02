@@ -18,6 +18,7 @@ const refreshToken = Astro.cookies.get('sb-refresh-token')?.value;
 let user: any = null;
 let profile: any = null;
 let userAddresses: any[] = [];
+let userPaymentMethods: any[] = [];
 
 if (accessToken && refreshToken && isSupabaseConfigured() && supabase) {
   const { data: { user: authUser } } = await supabase.auth.getUser(accessToken);
@@ -38,6 +39,15 @@ if (accessToken && refreshToken && isSupabaseConfigured() && supabase) {
       .order('is_default', { ascending: false })
       .order('created_at', { ascending: false });
     userAddresses = addressesData || [];
+    
+    // Obtener métodos de pago guardados del usuario
+    const { data: paymentMethodsData } = await supabase
+      .from('payment_methods')
+      .select('*')
+      .eq('user_id', authUser.id)
+      .order('is_default', { ascending: false })
+      .order('created_at', { ascending: false });
+    userPaymentMethods = paymentMethodsData || [];
   }
 }
 
@@ -200,6 +210,20 @@ const stripePublicKey = import.meta.env.PUBLIC_STRIPE_PUBLISHABLE_KEY || '';
                   </div>
                 )}
 
+                <!-- Campo de Email (siempre visible) -->
+                <div class="mb-4">
+                  <label for="email" class="block text-sm font-medium text-charcoal-700 mb-1.5">Email *</label>
+                  <input 
+                    type="email" 
+                    id="email" 
+                    name="email"
+                    required
+                    value={user?.email || ''}
+                    class="w-full px-4 py-2.5 border border-charcoal-200 rounded-lg focus:ring-2 focus:ring-navy-900/20 focus:border-navy-900 transition-colors"
+                    placeholder="tu@email.com"
+                  />
+                </div>
+
                 <!-- Formulario de dirección (siempre visible si no hay direcciones, o cuando seleccionan "nueva") -->
                 <div id="manual-address-form" class={user && userAddresses.length > 0 ? 'hidden' : ''}>
                   <!-- Datos personales -->
@@ -210,7 +234,6 @@ const stripePublicKey = import.meta.env.PUBLIC_STRIPE_PUBLISHABLE_KEY || '';
                       type="text" 
                       id="firstName" 
                       name="firstName"
-                      required
                       value={profile?.first_name || ''}
                       class="w-full px-4 py-2.5 border border-charcoal-200 rounded-lg focus:ring-2 focus:ring-navy-900/20 focus:border-navy-900 transition-colors"
                       placeholder="Tu nombre"
@@ -222,7 +245,6 @@ const stripePublicKey = import.meta.env.PUBLIC_STRIPE_PUBLISHABLE_KEY || '';
                       type="text" 
                       id="lastName" 
                       name="lastName"
-                      required
                       value={profile?.last_name || ''}
                       class="w-full px-4 py-2.5 border border-charcoal-200 rounded-lg focus:ring-2 focus:ring-navy-900/20 focus:border-navy-900 transition-colors"
                       placeholder="Tus apellidos"
@@ -230,54 +252,37 @@ const stripePublicKey = import.meta.env.PUBLIC_STRIPE_PUBLISHABLE_KEY || '';
                   </div>
                 </div>
 
-                <div class="grid sm:grid-cols-2 gap-4">
-                  <div>
-                    <label for="email" class="block text-sm font-medium text-charcoal-700 mb-1.5">Email *</label>
-                    <input 
-                      type="email" 
-                      id="email" 
-                      name="email"
-                      required
-                      value={user?.email || ''}
-                      class="w-full px-4 py-2.5 border border-charcoal-200 rounded-lg focus:ring-2 focus:ring-navy-900/20 focus:border-navy-900 transition-colors"
-                      placeholder="tu@email.com"
-                    />
-                  </div>
-                  <div>
-                    <label for="phone" class="block text-sm font-medium text-charcoal-700 mb-1.5">Teléfono *</label>
-                    <input 
-                      type="tel" 
-                      id="phone" 
-                      name="phone"
-                      required
-                      value={profile?.phone || ''}
-                      class="w-full px-4 py-2.5 border border-charcoal-200 rounded-lg focus:ring-2 focus:ring-navy-900/20 focus:border-navy-900 transition-colors"
-                      placeholder="+34 600 000 000"
-                    />
-                  </div>
+                <div class="mt-4">
+                  <label for="phone" class="block text-sm font-medium text-charcoal-700 mb-1.5">Teléfono *</label>
+                  <input 
+                    type="tel" 
+                    id="phone" 
+                    name="phone"
+                    value={profile?.phone || ''}
+                    class="w-full px-4 py-2.5 border border-charcoal-200 rounded-lg focus:ring-2 focus:ring-navy-900/20 focus:border-navy-900 transition-colors"
+                    placeholder="+34 600 000 000"
+                  />
                 </div>
 
                 <!-- Dirección -->
-                <div>
+                <div class="mt-4">
                   <label for="address" class="block text-sm font-medium text-charcoal-700 mb-1.5">Dirección *</label>
                   <input 
                     type="text" 
                     id="address" 
                     name="address"
-                    required
                     class="w-full px-4 py-2.5 border border-charcoal-200 rounded-lg focus:ring-2 focus:ring-navy-900/20 focus:border-navy-900 transition-colors"
                     placeholder="Calle, número, piso, puerta"
                   />
                 </div>
 
-                <div class="grid grid-cols-3 gap-4">
+                <div class="grid grid-cols-3 gap-4 mt-4">
                   <div>
                     <label for="postalCode" class="block text-sm font-medium text-charcoal-700 mb-1.5">C.P. *</label>
                     <input 
                       type="text" 
                       id="postalCode" 
                       name="postalCode"
-                      required
                       maxlength="5"
                       class="w-full px-4 py-2.5 border border-charcoal-200 rounded-lg focus:ring-2 focus:ring-navy-900/20 focus:border-navy-900 transition-colors"
                       placeholder="28001"
@@ -289,7 +294,6 @@ const stripePublicKey = import.meta.env.PUBLIC_STRIPE_PUBLISHABLE_KEY || '';
                       type="text" 
                       id="city" 
                       name="city"
-                      required
                       class="w-full px-4 py-2.5 border border-charcoal-200 rounded-lg focus:ring-2 focus:ring-navy-900/20 focus:border-navy-900 transition-colors"
                       placeholder="Madrid"
                     />
@@ -300,7 +304,6 @@ const stripePublicKey = import.meta.env.PUBLIC_STRIPE_PUBLISHABLE_KEY || '';
                       type="text" 
                       id="province" 
                       name="province"
-                      required
                       class="w-full px-4 py-2.5 border border-charcoal-200 rounded-lg focus:ring-2 focus:ring-navy-900/20 focus:border-navy-900 transition-colors"
                       placeholder="Madrid"
                     />
@@ -448,18 +451,130 @@ const stripePublicKey = import.meta.env.PUBLIC_STRIPE_PUBLISHABLE_KEY || '';
 
                 <!-- Formulario de tarjeta (Stripe) -->
                 <div id="card-payment-form" class="space-y-4">
-                  <div class="p-4 bg-charcoal-50 rounded-lg border border-charcoal-200">
-                    <div id="stripe-card-element" class="min-h-[44px]">
-                      <!-- Stripe Elements se insertará aquí -->
-                      <div class="animate-pulse flex items-center gap-2 text-charcoal-400">
-                        <svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
-                          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        <span class="text-sm">Cargando formulario de pago...</span>
+                  <!-- Selector de tarjetas guardadas (solo si hay usuario y tarjetas) -->
+                  {user && userPaymentMethods.length > 0 && (
+                    <div class="mb-4">
+                      <label class="block text-sm font-medium text-charcoal-700 mb-3">
+                        <span class="flex items-center gap-2">
+                          <svg class="w-4 h-4 text-navy-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
+                          </svg>
+                          Usar una tarjeta guardada
+                        </span>
+                      </label>
+                      <div class="space-y-2" id="saved-cards">
+                        {userPaymentMethods.map((card, index) => (
+                          <label class="saved-card-option flex items-center gap-3 p-4 border border-charcoal-200 rounded-lg cursor-pointer hover:border-navy-900/30 transition-colors">
+                            <input 
+                              type="radio" 
+                              name="savedCard" 
+                              value={card.id}
+                              data-stripe-pm={card.stripe_payment_method_id || ''}
+                              data-last-four={card.last_four}
+                              data-brand={card.brand}
+                              checked={index === 0}
+                              class="w-4 h-4 text-navy-900 border-charcoal-300 focus:ring-navy-900"
+                            />
+                            <div class="flex items-center gap-3 flex-1">
+                              {card.brand === 'visa' && (
+                                <svg class="h-8 w-12 text-[#1A1F71]" viewBox="0 0 48 32" fill="currentColor">
+                                  <path d="M17.5 10.5l-1.8 11h2.9l1.8-11h-2.9zm12.1 0l-2.7 7.5-.3-1.5-.9-4.6c-.2-.7-.7-1-1.4-1h-4.5l-.1.3c1 .3 2.1.7 2.8 1 .4.2.5.4.6.7l2.2 8.6h3l4.5-11h-3.2zm4.8 7.4c0-.5.4-1 1.5-1.2.5-.1 1.9-.2 3.5.5l.6-2.7c-.8-.3-2-.6-3.3-.6-3.5 0-6 1.9-6 4.5 0 2 1.8 3.1 3.1 3.7 1.4.7 1.9 1.1 1.8 1.7 0 .9-1.1 1.3-2.1 1.4-1.8 0-2.8-.5-3.6-.9l-.6 2.9c.8.4 2.3.7 3.9.7 3.7 0 6.2-1.8 6.2-4.7 0-3.6-5-3.8-5-5.3zm14.1-7.4h-2.3c-.7 0-1.3.2-1.6 1l-4.6 11h3.2l.6-1.8h3.9l.4 1.8h2.8l-2.4-11zm-3.6 7.1l1.6-4.4.9 4.4h-2.5z"/>
+                                </svg>
+                              )}
+                              {card.brand === 'mastercard' && (
+                                <svg class="h-8 w-12" viewBox="0 0 48 32">
+                                  <circle cx="18" cy="16" r="10" fill="#EB001B"/>
+                                  <circle cx="30" cy="16" r="10" fill="#F79E1B"/>
+                                  <path d="M24 8.5a10 10 0 000 15 10 10 0 000-15z" fill="#FF5F00"/>
+                                </svg>
+                              )}
+                              {card.brand !== 'visa' && card.brand !== 'mastercard' && (
+                                <div class="h-8 w-12 bg-charcoal-200 rounded flex items-center justify-center text-xs font-medium text-charcoal-600">
+                                  {card.brand?.toUpperCase() || 'CARD'}
+                                </div>
+                              )}
+                              <div>
+                                <div class="flex items-center gap-2">
+                                  <span class="font-medium text-navy-900">{card.label || `${card.brand?.charAt(0).toUpperCase()}${card.brand?.slice(1)} terminada en ${card.last_four}`}</span>
+                                  {card.is_default && (
+                                    <span class="px-2 py-0.5 bg-navy-100 text-navy-700 text-xs rounded-full">Principal</span>
+                                  )}
+                                </div>
+                                <p class="text-sm text-charcoal-500">•••• •••• •••• {card.last_four}</p>
+                              </div>
+                            </div>
+                          </label>
+                        ))}
+                        <label class="saved-card-option flex items-center gap-3 p-4 border border-dashed border-charcoal-300 rounded-lg cursor-pointer hover:border-navy-900/50 hover:bg-charcoal-50 transition-colors">
+                          <input 
+                            type="radio" 
+                            name="savedCard" 
+                            value="new"
+                            class="w-4 h-4 text-navy-900 border-charcoal-300 focus:ring-navy-900"
+                          />
+                          <div class="flex items-center gap-2 text-charcoal-600">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                            </svg>
+                            <span class="font-medium">Usar otra tarjeta</span>
+                          </div>
+                        </label>
                       </div>
                     </div>
-                    <div id="card-errors" class="text-red-600 text-sm mt-2 hidden"></div>
+                  )}
+
+                  <!-- Datos de seguridad para tarjeta guardada -->
+                  <div id="saved-card-security" class={userPaymentMethods.length > 0 ? '' : 'hidden'}>
+                    <div class="p-4 bg-charcoal-50 rounded-lg border border-charcoal-200">
+                      <p class="text-sm text-charcoal-600 mb-3">Por seguridad, introduce el CVV de tu tarjeta:</p>
+                      <div class="flex gap-4 items-end">
+                        <div class="w-24">
+                          <label for="saved-card-cvv" class="block text-xs font-medium text-charcoal-500 mb-1">CVV</label>
+                          <input 
+                            type="text" 
+                            id="saved-card-cvv" 
+                            maxlength="4"
+                            pattern="[0-9]*"
+                            inputmode="numeric"
+                            class="w-full px-3 py-2.5 border border-charcoal-300 rounded-lg focus:ring-2 focus:ring-navy-900/20 focus:border-navy-900 transition-colors text-center font-mono"
+                            placeholder="•••"
+                          />
+                        </div>
+                        <p class="text-xs text-charcoal-400 pb-2">Los 3 o 4 dígitos en el reverso de tu tarjeta</p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <!-- Formulario para nueva tarjeta -->
+                  <div id="new-card-form" class={userPaymentMethods.length > 0 ? 'hidden' : ''}>
+                    <div class="p-4 bg-charcoal-50 rounded-lg border border-charcoal-200">
+                      <div id="stripe-card-element" class="min-h-[44px]">
+                        <!-- Stripe Elements se insertará aquí -->
+                        <div class="animate-pulse flex items-center gap-2 text-charcoal-400">
+                          <svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          <span class="text-sm">Cargando formulario de pago...</span>
+                        </div>
+                      </div>
+                      <div id="card-errors" class="text-red-600 text-sm mt-2 hidden"></div>
+                      
+                      <!-- Opción de guardar tarjeta -->
+                      {user && (
+                        <div class="mt-4 pt-4 border-t border-charcoal-200">
+                          <label class="flex items-center gap-2 cursor-pointer">
+                            <input 
+                              type="checkbox" 
+                              id="save-card" 
+                              name="saveCard"
+                              class="w-4 h-4 text-navy-900 border-charcoal-300 rounded focus:ring-navy-900"
+                            />
+                            <span class="text-sm text-charcoal-600">Guardar esta tarjeta para futuras compras</span>
+                          </label>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
 
@@ -747,6 +862,12 @@ const stripePublicKey = import.meta.env.PUBLIC_STRIPE_PUBLISHABLE_KEY || '';
       box-shadow: 0 0 0 1px var(--color-navy-900);
     }
 
+    .saved-card-option:has(input:checked) {
+      border-color: var(--color-navy-900);
+      background: rgba(10, 22, 40, 0.03);
+      box-shadow: 0 0 0 1px var(--color-navy-900);
+    }
+
     .payment-method-card:has(input:checked) {
       border-color: var(--color-navy-900);
       border-width: 2px;
@@ -801,6 +922,12 @@ const stripePublicKey = import.meta.env.PUBLIC_STRIPE_PUBLISHABLE_KEY || '';
       stripe: null,
       cardElement: null,
       paymentIntentClientSecret: null,
+      // Estado de tarjeta guardada
+      usingSavedCard: false,
+      savedCardId: null,
+      savedCardStripePM: null,
+      savedCardLastFour: null,
+      savedCardBrand: null,
     };
 
     // Formatear precio
@@ -842,6 +969,9 @@ const stripePublicKey = import.meta.env.PUBLIC_STRIPE_PUBLISHABLE_KEY || '';
 
       // Event listeners
       setupEventListeners();
+      
+      // Inicializar estado de tarjeta guardada si hay una seleccionada por defecto
+      initSavedCardState();
     });
     
     // ─────────────────────────────────────────────────────────────────────
@@ -1106,6 +1236,11 @@ const stripePublicKey = import.meta.env.PUBLIC_STRIPE_PUBLISHABLE_KEY || '';
         input.addEventListener('change', handleSavedAddressChange);
       });
 
+      // Selector de tarjetas guardadas
+      document.querySelectorAll('input[name="savedCard"]').forEach(input => {
+        input.addEventListener('change', handleSavedCardChange);
+      });
+
       // Aplicar descuento
       document.getElementById('apply-discount').addEventListener('click', applyDiscount);
       document.getElementById('discount-code').addEventListener('keypress', (e) => {
@@ -1166,6 +1301,52 @@ const stripePublicKey = import.meta.env.PUBLIC_STRIPE_PUBLISHABLE_KEY || '';
         document.getElementById('postalCode').value = selectedInput.dataset.postalcode || '';
         document.getElementById('city').value = selectedInput.dataset.city || '';
         document.getElementById('province').value = selectedInput.dataset.province || '';
+      }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // MANEJO DE TARJETAS GUARDADAS
+    // ─────────────────────────────────────────────────────────────────────
+    function handleSavedCardChange(e) {
+      const newCardForm = document.getElementById('new-card-form');
+      const savedCardSecurity = document.getElementById('saved-card-security');
+      const selectedValue = e.target.value;
+      
+      if (selectedValue === 'new') {
+        // Mostrar formulario de nueva tarjeta
+        newCardForm.classList.remove('hidden');
+        savedCardSecurity.classList.add('hidden');
+        // Limpiar CVV guardado
+        const cvvInput = document.getElementById('saved-card-cvv');
+        if (cvvInput) cvvInput.value = '';
+        checkoutState.usingSavedCard = false;
+        checkoutState.savedCardId = null;
+      } else {
+        // Usar tarjeta guardada - mostrar solo campo CVV
+        newCardForm.classList.add('hidden');
+        savedCardSecurity.classList.remove('hidden');
+        checkoutState.usingSavedCard = true;
+        checkoutState.savedCardId = selectedValue;
+        
+        // Obtener datos de la tarjeta seleccionada
+        const selectedInput = e.target;
+        checkoutState.savedCardStripePM = selectedInput.dataset.stripePm || '';
+        checkoutState.savedCardLastFour = selectedInput.dataset.lastFour || '';
+        checkoutState.savedCardBrand = selectedInput.dataset.brand || '';
+      }
+      
+      updatePayButton();
+    }
+
+    // Inicializar estado de tarjeta guardada si hay una por defecto
+    function initSavedCardState() {
+      const savedCardInput = document.querySelector('input[name="savedCard"]:checked');
+      if (savedCardInput && savedCardInput.value !== 'new') {
+        checkoutState.usingSavedCard = true;
+        checkoutState.savedCardId = savedCardInput.value;
+        checkoutState.savedCardStripePM = savedCardInput.dataset.stripePm || '';
+        checkoutState.savedCardLastFour = savedCardInput.dataset.lastFour || '';
+        checkoutState.savedCardBrand = savedCardInput.dataset.brand || '';
       }
     }
 
@@ -1381,6 +1562,64 @@ const stripePublicKey = import.meta.env.PUBLIC_STRIPE_PUBLISHABLE_KEY || '';
 
     // Pago con tarjeta
     async function processCardPayment() {
+      // Verificar si estamos usando una tarjeta guardada
+      if (checkoutState.usingSavedCard && checkoutState.savedCardStripePM) {
+        await processSavedCardPayment();
+      } else {
+        await processNewCardPayment();
+      }
+    }
+
+    // Pago con tarjeta guardada
+    async function processSavedCardPayment() {
+      const cvvInput = document.getElementById('saved-card-cvv');
+      const cvv = cvvInput?.value?.trim();
+      
+      if (!cvv || cvv.length < 3) {
+        throw new Error('Por favor, introduce el CVV de tu tarjeta');
+      }
+
+      // 1. Crear Payment Intent con el payment_method guardado
+      const piResponse = await fetch('/api/stripe/create-payment-intent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount: checkoutState.total,
+          currency: 'eur',
+          payment_method_id: checkoutState.savedCardStripePM,
+          metadata: {
+            customer_email: checkoutState.shippingData.email,
+            saved_card: 'true',
+            card_last_four: checkoutState.savedCardLastFour,
+          }
+        }),
+      });
+
+      const piData = await piResponse.json();
+      
+      if (!piData.clientSecret) {
+        throw new Error(piData.error || 'Error al crear el pago');
+      }
+
+      // 2. Confirmar el pago con el payment_method guardado
+      const { error, paymentIntent } = await checkoutState.stripe.confirmCardPayment(
+        piData.clientSecret,
+        {
+          payment_method: checkoutState.savedCardStripePM,
+        }
+      );
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      if (paymentIntent.status === 'succeeded') {
+        await createOrder(paymentIntent.id);
+      }
+    }
+
+    // Pago con tarjeta nueva
+    async function processNewCardPayment() {
       // 1. Crear Payment Intent
       const piResponse = await fetch('/api/stripe/create-payment-intent', {
         method: 'POST',
@@ -1420,8 +1659,31 @@ const stripePublicKey = import.meta.env.PUBLIC_STRIPE_PUBLISHABLE_KEY || '';
       }
 
       if (paymentIntent.status === 'succeeded') {
+        // Guardar tarjeta si el usuario lo solicitó
+        const saveCardCheckbox = document.getElementById('save-card');
+        if (saveCardCheckbox?.checked && paymentIntent.payment_method) {
+          await savePaymentMethod(paymentIntent.payment_method);
+        }
+        
         // 3. Crear el pedido en el backend
         await createOrder(paymentIntent.id);
+      }
+    }
+
+    // Guardar método de pago para futuras compras
+    async function savePaymentMethod(paymentMethodId) {
+      try {
+        const response = await fetch('/api/payment-methods/save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ payment_method_id: paymentMethodId }),
+        });
+        
+        if (!response.ok) {
+          console.error('Error guardando método de pago');
+        }
+      } catch (error) {
+        console.error('Error guardando método de pago:', error);
       }
     }
 
