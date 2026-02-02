@@ -9,7 +9,6 @@
 import type { APIRoute } from 'astro';
 import { createClient } from '@supabase/supabase-js';
 import { sendOrderConfirmationEmail } from '../../../lib/email';
-import { generateInvoicePDFDirect } from '../../../lib/pdf/invoiceGenerator';
 
 const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL || '';
 const supabaseServiceKey = import.meta.env.SUPABASE_SERVICE_ROLE_KEY || '';
@@ -400,45 +399,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       console.log('✅ Factura creada:', invoice?.invoice_number);
     }
 
-    // 8) Generar PDF de factura para adjuntar al email (no falla el pedido si hay error)
-    let invoicePdfBuffer: Buffer | null = null;
-    try {
-      invoicePdfBuffer = generateInvoicePDFDirect({
-        invoiceNumber: invoice?.invoice_number || invoiceNumber,
-        orderNumber: order.order_number || orderNumber,
-        customerName: shipping_address.full_name,
-        customerEmail: finalEmail,
-        customerAddress: {
-          address_line1: shipping_address.address_line1,
-          address_line2: shipping_address.address_line2,
-          city: shipping_address.city,
-          postal_code: shipping_address.postal_code,
-          province: shipping_address.province,
-          country: shipping_address.country || 'España',
-        },
-        items: items.map((item) => ({
-          name: item.product_name,
-          quantity: item.quantity,
-          unit_price: item.unit_price,
-          size: item.size,
-          color: item.color,
-        })),
-        subtotal,
-        shippingCost: shipping_cost,
-        codExtraCost: cod_extra_cost,
-        discount: discount_amount,
-        taxRate: storeSettings.taxes.tax_rate,
-        total,
-        paymentMethod: payment_method,
-        status: invoiceStatus,
-      });
-      console.log('✅ PDF de factura generado correctamente');
-    } catch (pdfError: any) {
-      console.error('⚠️ Error generando PDF de factura:', pdfError.message);
-      // Continuar sin PDF adjunto
-    }
-
-    // 9) Enviar email de confirmación (con o sin PDF adjunto)
+    // 8) Enviar email de confirmación
     const customerEmail = finalEmail;
     const deliveryDays = shipping_method === 'express' 
       ? storeSettings.shipping.express_delivery_days 
@@ -449,41 +410,42 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       ? `${siteUrl}/cuenta/pedidos` 
       : `${siteUrl}/seguimiento?order=${order.order_number || orderNumber}&email=${encodeURIComponent(finalEmail)}`;
 
-    await sendOrderConfirmationEmail({
-      orderNumber: order.order_number || orderNumber,
-      customerName: shipping_address.full_name,
-      customerEmail,
-      items: items.map((item) => ({
-        name: item.product_name,
-        quantity: item.quantity,
-        price: item.unit_price,
-        size: item.size || undefined,
-      })),
-      subtotal,
-      shippingCost: shipping_cost,
-      codExtraCost: cod_extra_cost,
-      discount: discount_amount,
-      tax,
-      total,
-      shippingAddress: shipping_address,
-      shippingMethod: shipping_method,
-      estimatedDeliveryDays: deliveryDays,
-      paymentMethod: payment_method,
-      invoiceNumber: invoice?.invoice_number || invoiceNumber,
-      invoiceUrl: orderViewUrl,
-      // PDF de factura adjunto (solo si se generó correctamente)
-      invoicePdf: invoicePdfBuffer ? {
-        buffer: invoicePdfBuffer,
-        filename: `factura-${invoice?.invoice_number || invoiceNumber}.pdf`,
-      } : undefined,
-      // Datos bancarios para transferencia
-      bankDetails: payment_method === 'transfer' ? {
-        bank: 'Banco FashionMarket',
-        iban: 'ES00 0000 0000 0000 0000 0000',
-        beneficiary: 'FashionMarket S.L.',
-        reference: order.order_number || orderNumber,
-      } : undefined,
-    });
+    try {
+      await sendOrderConfirmationEmail({
+        orderNumber: order.order_number || orderNumber,
+        customerName: shipping_address.full_name,
+        customerEmail,
+        items: items.map((item) => ({
+          name: item.product_name,
+          quantity: item.quantity,
+          price: item.unit_price,
+          size: item.size || undefined,
+        })),
+        subtotal,
+        shippingCost: shipping_cost,
+        codExtraCost: cod_extra_cost,
+        discount: discount_amount,
+        tax,
+        total,
+        shippingAddress: shipping_address,
+        shippingMethod: shipping_method,
+        estimatedDeliveryDays: deliveryDays,
+        paymentMethod: payment_method,
+        invoiceNumber: invoice?.invoice_number || invoiceNumber,
+        invoiceUrl: orderViewUrl,
+        // Datos bancarios para transferencia
+        bankDetails: payment_method === 'transfer' ? {
+          bank: 'Banco FashionMarket',
+          iban: 'ES00 0000 0000 0000 0000 0000',
+          beneficiary: 'FashionMarket S.L.',
+          reference: order.order_number || orderNumber,
+        } : undefined,
+      });
+      console.log('✅ Email de confirmación enviado');
+    } catch (emailError: any) {
+      console.error('⚠️ Error enviando email:', emailError.message);
+      // No fallar el pedido si el email falla
+    }
 
     // Construir respuesta según método de pago
     let paymentInfo = null;
