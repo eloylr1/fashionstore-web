@@ -102,8 +102,13 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       notes 
     } = body;
 
-    // El email puede venir del usuario autenticado o del formulario (invitado)
-    const finalEmail = userEmail || customer_email || '';
+    // PRIORIZAR el email del formulario de checkout sobre el del usuario logueado
+    // Esto permite que un admin haga pedidos de prueba con otro email
+    const finalEmail = customer_email || userEmail || '';
+    
+    console.log('📧 Email del formulario (customer_email):', customer_email);
+    console.log('📧 Email del usuario logueado (userEmail):', userEmail);
+    console.log('📧 Email final usado:', finalEmail);
     
     if (!finalEmail) {
       return new Response(
