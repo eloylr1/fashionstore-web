@@ -1773,31 +1773,45 @@ const stripePublicKey = import.meta.env.PUBLIC_STRIPE_PUBLISHABLE_KEY || '';
     // ─────────────────────────────────────────────────────────────────────
     // FINALIZAR CHECKOUT
     // ─────────────────────────────────────────────────────────────────────
-    async function completeCheckout(order) {
-      // Importar y llamar clearCart del store para limpiar todo correctamente
-      try {
-        const { clearCart } = await import('../lib/stores/cart');
-        clearCart();
-        console.log('✅ Carrito limpiado correctamente via store');
-      } catch (e) {
-        console.error('Error limpiando carrito:', e);
-        // Fallback manual si falla la importación
-        localStorage.removeItem('fashionmarket-cart');
-        sessionStorage.removeItem('fashionmarket-cart-guest');
-        // Limpiar todas las claves de carrito por usuario
-        for (let i = localStorage.length - 1; i >= 0; i--) {
-          const key = localStorage.key(i);
-          if (key?.startsWith('fashionmarket-cart-')) {
-            localStorage.removeItem(key);
-          }
+    function completeCheckout(order) {
+      console.log('🎉 Completando checkout, limpiando carrito...');
+      
+      // LIMPIAR CARRITO DE FORMA EXHAUSTIVA
+      // 1. Limpiar sessionStorage (invitados)
+      sessionStorage.removeItem('fashionmarket-cart-guest');
+      
+      // 2. Limpiar localStorage viejo
+      localStorage.removeItem('fashionmarket-cart');
+      
+      // 3. Limpiar TODAS las claves de carrito por usuario
+      const keysToRemove = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith('fashionmarket-cart')) {
+          keysToRemove.push(key);
         }
       }
+      keysToRemove.forEach(key => {
+        console.log('🗑️ Eliminando:', key);
+        localStorage.removeItem(key);
+      });
       
-      // Limpiar el estado del carrito en memoria local
+      // 4. Limpiar estado en memoria
       checkoutState.cartItems = [];
       
-      // Disparar evento para que otros componentes actualicen (fallback)
+      // 5. Disparar evento personalizado
       window.dispatchEvent(new CustomEvent('cart-cleared'));
+      
+      // 6. Forzar recarga del contador del carrito actualizando el DOM directamente
+      const cartBadges = document.querySelectorAll('.cart-badge');
+      cartBadges.forEach(badge => {
+        badge.textContent = '0';
+        badge.style.display = 'none';
+      });
+      
+      console.log('✅ Carrito limpiado completamente');
+      console.log('📦 LocalStorage restante:', Object.keys(localStorage).filter(k => k.includes('cart')));
+      console.log('📦 SessionStorage restante:', Object.keys(sessionStorage).filter(k => k.includes('cart')));
 
       // Actualizar UI de confirmación
       document.getElementById('confirmation-email').textContent = checkoutState.shippingData.email;

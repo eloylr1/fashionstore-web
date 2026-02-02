@@ -220,12 +220,12 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     // Generar número de pedido
     const orderNumber = `FM-${Date.now().toString(36).toUpperCase()}`;
 
-    // 3) Crear pedido
+    // 3) Crear pedido - SIEMPRE guardar customer_email para búsquedas
     const { data: order, error: orderError } = await supabase
       .from('orders')
       .insert({
         user_id: userId, // Puede ser null si es invitado
-        guest_email: userId ? null : finalEmail, // Email de invitado
+        guest_email: finalEmail, // SIEMPRE guardar el email para búsqueda de seguimiento
         order_number: orderNumber,
         status: orderStatus,
         shipping_name: shipping_address.full_name,
