@@ -1773,15 +1773,30 @@ const stripePublicKey = import.meta.env.PUBLIC_STRIPE_PUBLISHABLE_KEY || '';
     // ─────────────────────────────────────────────────────────────────────
     // FINALIZAR CHECKOUT
     // ─────────────────────────────────────────────────────────────────────
-    function completeCheckout(order) {
-      // Limpiar carrito de ambos storages
-      localStorage.removeItem('fashionmarket-cart');
-      sessionStorage.removeItem('fashionmarket-cart-guest');
+    async function completeCheckout(order) {
+      // Importar y llamar clearCart del store para limpiar todo correctamente
+      try {
+        const { clearCart } = await import('../lib/stores/cart');
+        clearCart();
+        console.log('✅ Carrito limpiado correctamente via store');
+      } catch (e) {
+        console.error('Error limpiando carrito:', e);
+        // Fallback manual si falla la importación
+        localStorage.removeItem('fashionmarket-cart');
+        sessionStorage.removeItem('fashionmarket-cart-guest');
+        // Limpiar todas las claves de carrito por usuario
+        for (let i = localStorage.length - 1; i >= 0; i--) {
+          const key = localStorage.key(i);
+          if (key?.startsWith('fashionmarket-cart-')) {
+            localStorage.removeItem(key);
+          }
+        }
+      }
       
-      // Limpiar el estado del carrito en memoria (para que se actualice el icono del carrito)
+      // Limpiar el estado del carrito en memoria local
       checkoutState.cartItems = [];
       
-      // Disparar evento para que otros componentes actualicen
+      // Disparar evento para que otros componentes actualicen (fallback)
       window.dispatchEvent(new CustomEvent('cart-cleared'));
 
       // Actualizar UI de confirmación

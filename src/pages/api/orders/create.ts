@@ -345,33 +345,52 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 
     const invoiceStatus = payment_method === 'card' ? 'paid' : 'pending';
     
-    const { data: invoice } = await supabase
+    // Preparar datos de factura
+    const invoiceData: Record<string, any> = {
+      order_id: order.id,
+      invoice_number: invoiceNumber,
+      customer_name: shipping_address.full_name,
+      customer_email: finalEmail,
+      customer_address: shipping_address,
+      subtotal,
+      shipping_cost,
+      cod_extra_cost,
+      tax_rate: storeSettings.taxes.tax_rate,
+      tax_amount: tax,
+      total,
+      status: invoiceStatus,
+      payment_method,
+      items: items.map((item) => ({
+        name: item.product_name,
+        quantity: item.quantity,
+        unit_price: item.unit_price,
+        total: item.unit_price * item.quantity,
+        size: item.size,
+      })),
+    };
+    
+    // Añadir user_id solo si hay usuario logueado
+    if (userId) {
+      invoiceData.user_id = userId;
+    }
+    // Añadir guest_email si es invitado
+    if (!userId && finalEmail) {
+      invoiceData.guest_email = finalEmail;
+    }
+    
+    const { data: invoice, error: invoiceError } = await supabase
       .from('invoices')
-      .insert({
-        order_id: order.id,
-        user_id: userId, // Puede ser null
-        invoice_number: invoiceNumber,
-        customer_name: shipping_address.full_name,
-        customer_email: finalEmail,
-        customer_address: shipping_address,
-        subtotal,
-        shipping_cost,
-        cod_extra_cost,
-        tax_rate: storeSettings.taxes.tax_rate,
-        tax_amount: tax,
-        total,
-        status: invoiceStatus,
-        payment_method,
-        items: items.map((item) => ({
-          name: item.product_name,
-          quantity: item.quantity,
-          unit_price: item.unit_price,
-          total: item.unit_price * item.quantity,
-          size: item.size,
-        })),
-      })
+      .insert(invoiceData)
       .select()
       .single();
+    
+    // Log del resultado de la factura
+    if (invoiceError) {
+      console.error('⚠️ Error creando factura:', invoiceError.message);
+      // No fallar el pedido si la factura falla
+    } else {
+      console.log('✅ Factura creada:', invoice?.invoice_number);
+    }
 
     // 8) Enviar email de confirmación
     const customerEmail = finalEmail;

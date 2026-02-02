@@ -20,13 +20,58 @@ let orderItems: any[] = [];
 let error = '';
 
 if (orderNumber && email && isSupabaseConfigured() && supabase) {
-  // Buscar pedido por número y email de invitado
-  const { data: orderData, error: orderError } = await supabase
+  // Buscar pedido por número y email (puede ser invitado o usuario logueado)
+  // Primero intentar por guest_email (invitados)
+  let { data: orderData, error: orderError } = await supabase
     .from('orders')
     .select('*')
     .eq('order_number', orderNumber)
     .eq('guest_email', email)
     .single();
+
+  // Si no se encontró, buscar por usuario logueado que hizo el pedido con ese email
+  if ((orderError || !orderData) && email) {
+    // Buscar usuario con ese email
+    const { data: userData } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('email', email)
+      .single();
+    
+    if (userData && (userData as any).id) {
+      const result: any = await supabase
+        .from('orders')
+        .select('*')
+        .eq('order_number', orderNumber)
+        .eq('user_id', (userData as any).id)
+        .single();
+      
+      if (result.data) {
+        orderData = result.data;
+        orderError = null;
+      }
+    }
+    
+    // También intentar buscar solo por número de pedido y verificar email
+    if (!orderData) {
+      const result: any = await supabase
+        .from('orders')
+        .select('*')
+        .eq('order_number', orderNumber)
+        .single();
+      
+      const orderResult = result.data as any;
+      // Verificar que el email coincida con algún campo de email del pedido
+      if (orderResult && (
+        orderResult.guest_email === email ||
+        orderResult.shipping_email === email ||
+        orderResult.customer_email === email
+      )) {
+        orderData = orderResult;
+        orderError = null;
+      }
+    }
+  }
 
   if (orderError || !orderData) {
     error = 'No se encontró el pedido. Verifica el número de pedido y el email.';
