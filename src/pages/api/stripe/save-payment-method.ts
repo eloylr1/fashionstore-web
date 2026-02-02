@@ -56,13 +56,13 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       { auth: { persistSession: false } }
     );
 
-    // Verificar si ya existe esta tarjeta
+    // Verificar si ya existe esta tarjeta (usar card_last4 que es la columna original)
     const { data: existingCards } = await supabaseAdmin
       .from('payment_methods')
       .select('id')
       .eq('user_id', finalUserId)
-      .eq('last_four', last4)
-      .eq('brand', brand);
+      .eq('card_last4', last4)
+      .eq('card_brand', brand);
 
     if (existingCards && existingCards.length > 0) {
       return new Response(
@@ -79,24 +79,19 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 
     const isDefault = !userCards || userCards.length === 0;
 
-    // Crear label descriptivo
-    const brandName = brand ? brand.charAt(0).toUpperCase() + brand.slice(1) : 'Tarjeta';
-    const label = `${brandName} terminada en ${last4}`;
-
     // Insertar en base de datos usando el cliente admin
-    // IMPORTANTE: Usar los nombres de columna correctos según el schema
+    // Usamos los nombres de columna del schema original: card_brand, card_last4
     const { data, error: insertError } = await supabaseAdmin
       .from('payment_methods')
       .insert({
         user_id: finalUserId,
         type: 'card',
-        label: label,
-        brand: brand,
-        last_four: last4,
+        card_brand: brand,
+        card_last4: last4,
         expiry_month: expMonth,
         expiry_year: expYear,
         is_default: isDefault,
-        stripe_payment_method_id: paymentMethodId, // MUY IMPORTANTE para pagos futuros
+        // stripe_payment_method_id: paymentMethodId, // TODO: Añadir después de ejecutar migración SQL
       })
       .select();
 

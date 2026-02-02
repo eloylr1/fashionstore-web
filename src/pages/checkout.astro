@@ -464,9 +464,10 @@ const stripePublicKey = import.meta.env.PUBLIC_STRIPE_PUBLISHABLE_KEY || '';
                       </label>
                       <div class="space-y-2" id="saved-cards">
                         {userPaymentMethods.map((card, index) => {
-                          const hasValidData = card.brand && card.last_four && card.stripe_payment_method_id;
-                          const cardBrand = card.brand || 'card';
-                          const cardLastFour = card.last_four || '****';
+                          // Usar card_brand y card_last4 que son las columnas del schema original
+                          const hasValidData = card.card_brand && card.card_last4;
+                          const cardBrand = card.card_brand || 'card';
+                          const cardLastFour = card.card_last4 || '****';
                           return (
                           <label class={`saved-card-option flex items-center gap-3 p-4 border rounded-lg cursor-pointer transition-colors ${hasValidData ? 'border-charcoal-200 hover:border-navy-900/30' : 'border-red-200 bg-red-50/50'}`}>
                             <input 
