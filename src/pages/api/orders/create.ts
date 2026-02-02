@@ -9,6 +9,7 @@
 import type { APIRoute } from 'astro';
 import { createClient } from '@supabase/supabase-js';
 import { sendOrderConfirmationEmail } from '../../../lib/email';
+import { generateInvoicePDFDirect } from '../../../lib/pdf/invoiceGenerator';
 
 const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL || '';
 const supabaseServiceKey = import.meta.env.SUPABASE_SERVICE_ROLE_KEY || '';
@@ -399,7 +400,38 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       console.log('✅ Factura creada:', invoice?.invoice_number);
     }
 
-    // 8) Enviar email de confirmación
+    // 8) Generar PDF de factura para adjuntar al email
+    const invoicePdfBuffer = generateInvoicePDFDirect({
+      invoiceNumber: invoice?.invoice_number || invoiceNumber,
+      orderNumber: order.order_number || orderNumber,
+      customerName: shipping_address.full_name,
+      customerEmail: finalEmail,
+      customerAddress: {
+        address_line1: shipping_address.address_line1,
+        address_line2: shipping_address.address_line2,
+        city: shipping_address.city,
+        postal_code: shipping_address.postal_code,
+        province: shipping_address.province,
+        country: shipping_address.country || 'España',
+      },
+      items: items.map((item) => ({
+        name: item.product_name,
+        quantity: item.quantity,
+        unit_price: item.unit_price,
+        size: item.size,
+        color: item.color,
+      })),
+      subtotal,
+      shippingCost: shipping_cost,
+      codExtraCost: cod_extra_cost,
+      discount: discount_amount,
+      taxRate: storeSettings.taxes.tax_rate,
+      total,
+      paymentMethod: payment_method,
+      status: invoiceStatus,
+    });
+
+    // 9) Enviar email de confirmación con PDF adjunto
     const customerEmail = finalEmail;
     const deliveryDays = shipping_method === 'express' 
       ? storeSettings.shipping.express_delivery_days 
@@ -432,6 +464,11 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       paymentMethod: payment_method,
       invoiceNumber: invoice?.invoice_number || invoiceNumber,
       invoiceUrl: orderViewUrl,
+      // PDF de factura adjunto
+      invoicePdf: {
+        buffer: invoicePdfBuffer,
+        filename: `factura-${invoice?.invoice_number || invoiceNumber}.pdf`,
+      },
       // Datos bancarios para transferencia
       bankDetails: payment_method === 'transfer' ? {
         bank: 'Banco FashionMarket',

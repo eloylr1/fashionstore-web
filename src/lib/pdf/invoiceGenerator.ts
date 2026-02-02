@@ -521,6 +521,92 @@ export function generateCreditNotePDF(creditNote: CreditNoteData): Buffer {
 }
 
 /**
+ * Genera un PDF de factura directamente con los datos proporcionados
+ * Útil para generar el PDF antes de guardar en la BD
+ */
+export function generateInvoicePDFDirect(data: {
+  invoiceNumber: string;
+  orderNumber: string;
+  customerName: string;
+  customerEmail: string;
+  customerAddress?: {
+    address_line1?: string;
+    address_line2?: string;
+    city?: string;
+    postal_code?: string;
+    province?: string;
+    country?: string;
+  };
+  items: Array<{
+    name: string;
+    quantity: number;
+    unit_price: number;
+    size?: string | null;
+    color?: string | null;
+  }>;
+  subtotal: number;
+  shippingCost: number;
+  codExtraCost?: number;
+  discount?: number;
+  taxRate?: number;
+  total: number;
+  paymentMethod: string;
+  status: string;
+}): Buffer {
+  // Calcular tax amount
+  const baseImponible = Math.round(data.total / 1.21);
+  const taxAmount = data.total - baseImponible;
+  
+  // Convertir items al formato esperado
+  const invoiceItems: InvoiceItem[] = data.items.map(item => ({
+    name: item.name,
+    quantity: item.quantity,
+    unit_price: item.unit_price,
+    total: item.unit_price * item.quantity,
+    size: item.size || undefined,
+    color: item.color || undefined,
+  }));
+
+  // Agregar línea de envío si hay costo
+  if (data.shippingCost > 0) {
+    invoiceItems.push({
+      name: 'Gastos de envío',
+      quantity: 1,
+      unit_price: data.shippingCost,
+      total: data.shippingCost,
+    });
+  }
+
+  // Agregar cargo por contrareembolso si aplica
+  if (data.codExtraCost && data.codExtraCost > 0) {
+    invoiceItems.push({
+      name: 'Cargo por contrareembolso',
+      quantity: 1,
+      unit_price: data.codExtraCost,
+      total: data.codExtraCost,
+    });
+  }
+
+  return generateInvoicePDF({
+    invoice_number: data.invoiceNumber,
+    issue_date: new Date().toISOString(),
+    customer_name: data.customerName,
+    customer_email: data.customerEmail,
+    customer_address: data.customerAddress,
+    items: invoiceItems,
+    subtotal: data.subtotal + (data.shippingCost || 0) + (data.codExtraCost || 0),
+    tax_rate: data.taxRate || 21,
+    tax_amount: taxAmount,
+    total: data.total,
+    discount_amount: data.discount,
+    company_name: 'FashionMarket S.L.',
+    company_nif: 'B12345678',
+    company_address: 'Calle Moda 123, 28001 Madrid, España',
+    status: data.status,
+  });
+}
+
+/**
  * Obtiene los datos de factura desde Supabase y genera el PDF
  */
 export async function generateInvoicePDFFromDB(
