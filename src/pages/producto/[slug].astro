@@ -10,6 +10,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 import ProductGallery from '../../components/product/ProductGallery';
 import AddToCartButton from '../../components/islands/AddToCartButton';
 import ProductCard from '../../components/product/ProductCard.astro';
+import WishlistButton from '../../components/product/WishlistButton';
 import { supabase, isSupabaseConfigured } from '../../lib/supabase/client';
 
 // Generar rutas estáticas para todos los productos
@@ -147,9 +148,17 @@ if (!product) {
         )}
         
         <!-- Name -->
-        <h1 class="font-serif text-3xl lg:text-4xl font-medium text-navy-900 mb-4">
-          {product.name}
-        </h1>
+        <div class="flex items-start justify-between gap-4 mb-4">
+          <h1 class="font-serif text-3xl lg:text-4xl font-medium text-navy-900">
+            {product.name}
+          </h1>
+          <!-- Botón de favoritos - Solo visible para usuarios logueados -->
+          <WishlistButton 
+            client:visible 
+            productId={product.id} 
+            className="flex-shrink-0 shadow-md rounded-full" 
+          />
+        </div>
         
         <!-- Material -->
         <div class="flex items-center gap-4 text-sm text-charcoal-500 mb-6">

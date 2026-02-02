@@ -8,6 +8,7 @@
 
 import type { Product } from '../../lib/supabase/database.types';
 import { formatPrice } from '../../stores/cart';
+import WishlistButton from './WishlistButton.tsx';
 
 interface Props {
   product: Product;
@@ -55,15 +56,10 @@ const formattedPrice = formatPrice(product.price);
         )}
       </div>
       
-      <!-- Wishlist Button -->
-      <button 
-        class="absolute top-4 right-4 w-10 h-10 bg-white/90 backdrop-blur-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 hover:bg-white hover:scale-110"
-        aria-label="Añadir a favoritos"
-      >
-        <svg class="w-5 h-5 text-navy-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-        </svg>
-      </button>
+      <!-- Wishlist Button - Solo visible para usuarios logueados -->
+      <div class="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-all duration-300">
+        <WishlistButton productId={product.id} client:visible />
+      </div>
     </div>
     
     <!-- Product Info -->
