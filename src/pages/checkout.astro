@@ -17,6 +17,7 @@ const refreshToken = Astro.cookies.get('sb-refresh-token')?.value;
 
 let user: any = null;
 let profile: any = null;
+let userAddresses: any[] = [];
 
 if (accessToken && refreshToken && isSupabaseConfigured() && supabase) {
   const { data: { user: authUser } } = await supabase.auth.getUser(accessToken);
@@ -28,6 +29,15 @@ if (accessToken && refreshToken && isSupabaseConfigured() && supabase) {
       .eq('id', authUser.id)
       .single();
     profile = profileData;
+    
+    // Obtener direcciones guardadas del usuario
+    const { data: addressesData } = await supabase
+      .from('addresses')
+      .select('*')
+      .eq('user_id', authUser.id)
+      .order('is_default', { ascending: false })
+      .order('created_at', { ascending: false });
+    userAddresses = addressesData || [];
   }
 }
 
@@ -130,7 +140,69 @@ const stripePublicKey = import.meta.env.PUBLIC_STRIPE_PUBLISHABLE_KEY || '';
               </div>
               
               <form id="shipping-form" class="p-6 space-y-5">
-                <!-- Datos personales -->
+                <!-- Selector de direcciones guardadas (solo si hay usuario y direcciones) -->
+                {user && userAddresses.length > 0 && (
+                  <div class="mb-6">
+                    <label class="block text-sm font-medium text-charcoal-700 mb-3">
+                      <span class="flex items-center gap-2">
+                        <svg class="w-4 h-4 text-navy-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                        </svg>
+                        Usar una dirección guardada
+                      </span>
+                    </label>
+                    <div class="space-y-2" id="saved-addresses">
+                      {userAddresses.map((addr, index) => (
+                        <label class="saved-address-card flex items-start gap-3 p-4 border border-charcoal-200 rounded-lg cursor-pointer hover:border-navy-900/30 transition-colors">
+                          <input 
+                            type="radio" 
+                            name="savedAddress" 
+                            value={addr.id}
+                            data-fullname={addr.full_name}
+                            data-phone={addr.phone}
+                            data-address={addr.address_line1}
+                            data-address2={addr.address_line2 || ''}
+                            data-postalcode={addr.postal_code}
+                            data-city={addr.city}
+                            data-province={addr.province}
+                            checked={index === 0}
+                            class="mt-1 w-4 h-4 text-navy-900 border-charcoal-300 focus:ring-navy-900"
+                          />
+                          <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2 mb-1">
+                              <span class="font-medium text-navy-900">{addr.label || 'Dirección'}</span>
+                              {addr.is_default && (
+                                <span class="px-2 py-0.5 bg-navy-100 text-navy-700 text-xs rounded-full">Principal</span>
+                              )}
+                            </div>
+                            <p class="text-sm text-charcoal-600">{addr.full_name}</p>
+                            <p class="text-sm text-charcoal-500">{addr.address_line1}</p>
+                            <p class="text-sm text-charcoal-500">{addr.postal_code} {addr.city}, {addr.province}</p>
+                          </div>
+                        </label>
+                      ))}
+                      <label class="saved-address-card flex items-center gap-3 p-4 border border-dashed border-charcoal-300 rounded-lg cursor-pointer hover:border-navy-900/50 hover:bg-charcoal-50 transition-colors">
+                        <input 
+                          type="radio" 
+                          name="savedAddress" 
+                          value="new"
+                          class="w-4 h-4 text-navy-900 border-charcoal-300 focus:ring-navy-900"
+                        />
+                        <div class="flex items-center gap-2 text-charcoal-600">
+                          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                          </svg>
+                          <span class="font-medium">Usar otra dirección</span>
+                        </div>
+                      </label>
+                    </div>
+                  </div>
+                )}
+
+                <!-- Formulario de dirección (siempre visible si no hay direcciones, o cuando seleccionan "nueva") -->
+                <div id="manual-address-form" class={user && userAddresses.length > 0 ? 'hidden' : ''}>
+                  <!-- Datos personales -->
                 <div class="grid sm:grid-cols-2 gap-4">
                   <div>
                     <label for="firstName" class="block text-sm font-medium text-charcoal-700 mb-1.5">Nombre *</label>
@@ -234,6 +306,7 @@ const stripePublicKey = import.meta.env.PUBLIC_STRIPE_PUBLISHABLE_KEY || '';
                     />
                   </div>
                 </div>
+                </div> <!-- Cierre de manual-address-form -->
 
                 <!-- Método de envío -->
                 <div class="pt-4 border-t border-charcoal-100">
@@ -668,6 +741,12 @@ const stripePublicKey = import.meta.env.PUBLIC_STRIPE_PUBLISHABLE_KEY || '';
       background: rgba(10, 22, 40, 0.02);
     }
 
+    .saved-address-card:has(input:checked) {
+      border-color: var(--color-navy-900);
+      background: rgba(10, 22, 40, 0.03);
+      box-shadow: 0 0 0 1px var(--color-navy-900);
+    }
+
     .payment-method-card:has(input:checked) {
       border-color: var(--color-navy-900);
       border-width: 2px;
@@ -1022,6 +1101,11 @@ const stripePublicKey = import.meta.env.PUBLIC_STRIPE_PUBLISHABLE_KEY || '';
         input.addEventListener('change', handlePaymentMethodChange);
       });
 
+      // Selector de direcciones guardadas
+      document.querySelectorAll('input[name="savedAddress"]').forEach(input => {
+        input.addEventListener('change', handleSavedAddressChange);
+      });
+
       // Aplicar descuento
       document.getElementById('apply-discount').addEventListener('click', applyDiscount);
       document.getElementById('discount-code').addEventListener('keypress', (e) => {
@@ -1045,6 +1129,44 @@ const stripePublicKey = import.meta.env.PUBLIC_STRIPE_PUBLISHABLE_KEY || '';
           btn.innerHTML = '<svg class="w-5 h-5 text-navy-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>';
         }, 2000);
       });
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // MANEJO DE DIRECCIONES GUARDADAS
+    // ─────────────────────────────────────────────────────────────────────
+    function handleSavedAddressChange(e) {
+      const manualForm = document.getElementById('manual-address-form');
+      const selectedValue = e.target.value;
+      
+      if (selectedValue === 'new') {
+        // Mostrar formulario manual y limpiar campos
+        manualForm.classList.remove('hidden');
+        document.getElementById('firstName').value = '';
+        document.getElementById('lastName').value = '';
+        document.getElementById('phone').value = '';
+        document.getElementById('address').value = '';
+        document.getElementById('postalCode').value = '';
+        document.getElementById('city').value = '';
+        document.getElementById('province').value = '';
+      } else {
+        // Ocultar formulario manual y rellenar con datos de la dirección guardada
+        manualForm.classList.add('hidden');
+        
+        const selectedInput = e.target;
+        const fullName = selectedInput.dataset.fullname || '';
+        const nameParts = fullName.split(' ');
+        const firstName = nameParts[0] || '';
+        const lastName = nameParts.slice(1).join(' ') || '';
+        
+        // Actualizar campos ocultos o crear campos hidden para el submit
+        document.getElementById('firstName').value = firstName;
+        document.getElementById('lastName').value = lastName;
+        document.getElementById('phone').value = selectedInput.dataset.phone || '';
+        document.getElementById('address').value = selectedInput.dataset.address || '';
+        document.getElementById('postalCode').value = selectedInput.dataset.postalcode || '';
+        document.getElementById('city').value = selectedInput.dataset.city || '';
+        document.getElementById('province').value = selectedInput.dataset.province || '';
+      }
     }
 
     // ─────────────────────────────────────────────────────────────────────
@@ -1088,19 +1210,49 @@ const stripePublicKey = import.meta.env.PUBLIC_STRIPE_PUBLISHABLE_KEY || '';
       
       const form = e.target;
       const formData = new FormData(form);
+      
+      // Verificar si se usa una dirección guardada
+      const savedAddressValue = formData.get('savedAddress');
+      const usingSavedAddress = savedAddressValue && savedAddressValue !== 'new';
+      
+      let shippingData;
+      
+      if (usingSavedAddress) {
+        // Obtener datos de la dirección guardada seleccionada
+        const selectedInput = document.querySelector(`input[name="savedAddress"][value="${savedAddressValue}"]`);
+        const fullName = selectedInput?.dataset.fullname || '';
+        const nameParts = fullName.split(' ');
+        
+        shippingData = {
+          firstName: nameParts[0] || '',
+          lastName: nameParts.slice(1).join(' ') || '',
+          email: formData.get('email'),
+          phone: selectedInput?.dataset.phone || '',
+          address: selectedInput?.dataset.address || '',
+          postalCode: selectedInput?.dataset.postalcode || '',
+          city: selectedInput?.dataset.city || '',
+          province: selectedInput?.dataset.province || '',
+          shippingMethod: formData.get('shippingMethod'),
+          notes: formData.get('notes'),
+          savedAddressId: savedAddressValue,
+        };
+      } else {
+        // Usar datos del formulario manual
+        shippingData = {
+          firstName: formData.get('firstName'),
+          lastName: formData.get('lastName'),
+          email: formData.get('email'),
+          phone: formData.get('phone'),
+          address: formData.get('address'),
+          postalCode: formData.get('postalCode'),
+          city: formData.get('city'),
+          province: formData.get('province'),
+          shippingMethod: formData.get('shippingMethod'),
+          notes: formData.get('notes'),
+        };
+      }
 
-      checkoutState.shippingData = {
-        firstName: formData.get('firstName'),
-        lastName: formData.get('lastName'),
-        email: formData.get('email'),
-        phone: formData.get('phone'),
-        address: formData.get('address'),
-        postalCode: formData.get('postalCode'),
-        city: formData.get('city'),
-        province: formData.get('province'),
-        shippingMethod: formData.get('shippingMethod'),
-        notes: formData.get('notes'),
-      };
+      checkoutState.shippingData = shippingData;
 
       // Actualizar resumen en paso de pago
       document.getElementById('shipping-summary-name').textContent = 
