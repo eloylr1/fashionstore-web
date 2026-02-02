@@ -165,7 +165,21 @@ const getBrandColor = (brand: string) => {
                           Predeterminada
                         </span>
                       )}
-                      <button class="text-charcoal-500 hover:text-red-500 transition-colors" title="Eliminar">
+                      {!method.is_default && (
+                        <button 
+                          class="set-default-btn text-charcoal-500 hover:text-gold-matte transition-colors text-sm" 
+                          data-id={method.id}
+                          title="Establecer como predeterminada"
+                        >
+                          Predeterminar
+                        </button>
+                      )}
+                      <button 
+                        class="delete-card-btn text-charcoal-500 hover:text-red-500 transition-colors" 
+                        data-id={method.id}
+                        data-last-four={method.last_four}
+                        title="Eliminar"
+                      >
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                         </svg>
@@ -257,6 +271,39 @@ const getBrandColor = (brand: string) => {
           <svg class="w-3 h-3 inline-block mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
           Conexión segura mediante Stripe. No almacenamos los datos completos de tu tarjeta.
         </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de confirmación para eliminar tarjeta -->
+  <div id="delete-card-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+    <div class="bg-white rounded-lg shadow-xl max-w-sm w-full">
+      <div class="p-6">
+        <div class="flex items-center justify-center w-12 h-12 mx-auto bg-red-100 rounded-full mb-4">
+          <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+          </svg>
+        </div>
+        <h3 class="text-lg font-medium text-navy-900 text-center mb-2">¿Eliminar tarjeta?</h3>
+        <p class="text-sm text-charcoal-500 text-center mb-6">
+          ¿Estás seguro de que deseas eliminar la tarjeta terminada en <span id="delete-card-last-four" class="font-medium">****</span>? Esta acción no se puede deshacer.
+        </p>
+        <div class="flex gap-3">
+          <button
+            id="cancel-delete"
+            type="button"
+            class="flex-1 px-4 py-2 border border-charcoal-300 text-charcoal-700 rounded-lg hover:bg-charcoal-50 transition-colors"
+          >
+            Cancelar
+          </button>
+          <button
+            id="confirm-delete"
+            type="button"
+            class="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+          >
+            Eliminar
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -414,6 +461,111 @@ const getBrandColor = (brand: string) => {
         buttonText.classList.remove('hidden');
         buttonLoading.classList.add('hidden');
       }
+    });
+
+    // ─────────────────────────────────────────────────────────────────────
+    // ELIMINAR TARJETA
+    // ─────────────────────────────────────────────────────────────────────
+    const deleteModal = document.getElementById('delete-card-modal');
+    const cancelDeleteBtn = document.getElementById('cancel-delete');
+    const confirmDeleteBtn = document.getElementById('confirm-delete');
+    const deleteLastFourSpan = document.getElementById('delete-card-last-four');
+    let cardIdToDelete = null;
+
+    // Abrir modal de confirmación
+    document.querySelectorAll('.delete-card-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        cardIdToDelete = btn.dataset.id;
+        const lastFour = btn.dataset.lastFour || '****';
+        deleteLastFourSpan.textContent = lastFour;
+        deleteModal.classList.remove('hidden');
+        deleteModal.classList.add('flex');
+      });
+    });
+
+    // Cancelar eliminación
+    cancelDeleteBtn?.addEventListener('click', () => {
+      deleteModal.classList.add('hidden');
+      deleteModal.classList.remove('flex');
+      cardIdToDelete = null;
+    });
+
+    // Cerrar modal de eliminación con clic fuera
+    deleteModal?.addEventListener('click', (e) => {
+      if (e.target === deleteModal) {
+        deleteModal.classList.add('hidden');
+        deleteModal.classList.remove('flex');
+        cardIdToDelete = null;
+      }
+    });
+
+    // Confirmar eliminación
+    confirmDeleteBtn?.addEventListener('click', async () => {
+      if (!cardIdToDelete) return;
+
+      confirmDeleteBtn.disabled = true;
+      confirmDeleteBtn.innerHTML = '<span class="flex items-center justify-center gap-2"><div class="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>Eliminando...</span>';
+
+      try {
+        const response = await fetch('/api/payment-methods/delete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ payment_method_id: cardIdToDelete }),
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          window.location.reload();
+        } else {
+          alert(data.error || 'Error al eliminar la tarjeta');
+          deleteModal.classList.add('hidden');
+          deleteModal.classList.remove('flex');
+        }
+      } catch (err) {
+        console.error('Error:', err);
+        alert('Error al eliminar la tarjeta');
+      } finally {
+        confirmDeleteBtn.disabled = false;
+        confirmDeleteBtn.textContent = 'Eliminar';
+        cardIdToDelete = null;
+      }
+    });
+
+    // ─────────────────────────────────────────────────────────────────────
+    // ESTABLECER COMO PREDETERMINADA
+    // ─────────────────────────────────────────────────────────────────────
+    document.querySelectorAll('.set-default-btn').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const cardId = btn.dataset.id;
+        btn.disabled = true;
+        btn.textContent = 'Actualizando...';
+
+        try {
+          const response = await fetch('/api/payment-methods/set-default', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ payment_method_id: cardId }),
+          });
+
+          const data = await response.json();
+
+          if (response.ok) {
+            window.location.reload();
+          } else {
+            alert(data.error || 'Error al establecer la tarjeta predeterminada');
+            btn.disabled = false;
+            btn.textContent = 'Predeterminar';
+          }
+        } catch (err) {
+          console.error('Error:', err);
+          alert('Error al establecer la tarjeta predeterminada');
+          btn.disabled = false;
+          btn.textContent = 'Predeterminar';
+        }
+      });
     });
   </script>
 </BaseLayout>
