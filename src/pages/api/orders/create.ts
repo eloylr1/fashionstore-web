@@ -9,6 +9,7 @@
 import type { APIRoute } from 'astro';
 import { createClient } from '@supabase/supabase-js';
 import { sendEmail } from '../../../lib/email';
+import { generateInvoicePDF } from '../../../lib/pdf/invoiceGenerator';
 
 const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL || '';
 const supabaseServiceKey = import.meta.env.SUPABASE_SERVICE_ROLE_KEY || '';
@@ -393,13 +394,12 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     if (invoiceError) {
       console.error('⚠️ Error creando factura:', invoiceError.message);
       console.error('⚠️ Detalles del error:', JSON.stringify(invoiceError));
-      console.error('⚠️ Datos de factura intentados:', JSON.stringify(invoiceData, null, 2));
       // No fallar el pedido si la factura falla
     } else {
       console.log('✅ Factura creada:', invoice?.invoice_number);
     }
 
-    // 8) Generar PDF de factura y enviar email
+    // 8) Generar PDF de factura
     const customerEmail = finalEmail;
     const deliveryDays = shipping_method === 'express' 
       ? storeSettings.shipping.express_delivery_days 
@@ -408,16 +408,19 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     // URL para seguimiento
     const trackingUrl = `${siteUrl}/seguimiento?order=${order.order_number || orderNumber}&email=${encodeURIComponent(finalEmail)}`;
 
-    // Generar PDF de factura
+    // Calcular IVA
+    const baseImponible = Math.round(total / 1.21);
+    const ivaAmount = total - baseImponible;
+
+    // Generar PDF usando la función importada al inicio
     let pdfBuffer: Buffer | null = null;
     try {
-      const { generateInvoicePDFDirect } = await import('../../../lib/pdf/invoiceGenerator');
-      pdfBuffer = generateInvoicePDFDirect({
-        invoiceNumber: invoice?.invoice_number || invoiceNumber,
-        orderNumber: order.order_number || orderNumber,
-        customerName: shipping_address.full_name,
-        customerEmail: finalEmail,
-        customerAddress: {
+      pdfBuffer = generateInvoicePDF({
+        invoice_number: invoice?.invoice_number || invoiceNumber,
+        issue_date: new Date().toISOString(),
+        customer_name: shipping_address.full_name,
+        customer_email: finalEmail,
+        customer_address: {
           address_line1: shipping_address.address_line1,
           address_line2: shipping_address.address_line2,
           city: shipping_address.city,
@@ -429,21 +432,23 @@ export const POST: APIRoute = async ({ request, cookies }) => {
           name: item.product_name,
           quantity: item.quantity,
           unit_price: item.unit_price,
-          size: item.size,
-          color: item.color,
+          total: item.unit_price * item.quantity,
+          size: item.size || undefined,
+          color: item.color || undefined,
         })),
-        subtotal,
-        shippingCost: shipping_cost,
-        codExtraCost: cod_extra_cost,
-        discount: discount_amount,
-        taxRate: storeSettings.taxes.tax_rate,
+        subtotal: subtotal + shipping_cost + cod_extra_cost,
+        tax_rate: 21,
+        tax_amount: ivaAmount,
         total,
-        paymentMethod: payment_method,
+        discount_amount,
+        company_name: 'FashionMarket S.L.',
+        company_nif: 'B12345678',
+        company_address: 'Calle Moda 123, 28001 Madrid, España',
         status: invoiceStatus,
       });
-      console.log('✅ PDF generado correctamente');
+      console.log('✅ PDF de factura generado correctamente');
     } catch (pdfError: any) {
-      console.error('⚠️ Error generando PDF:', pdfError.message);
+      console.error('⚠️ Error generando PDF:', pdfError.message, pdfError.stack);
     }
 
     // Formatear precio
