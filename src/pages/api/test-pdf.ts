@@ -3,7 +3,7 @@
  */
 
 import type { APIRoute } from 'astro';
-import { generateInvoicePDF } from '../../../lib/pdf/invoiceGenerator';
+import { generateInvoicePDF } from '../../lib/pdf/invoiceGenerator';
 
 export const GET: APIRoute = async () => {
   try {
