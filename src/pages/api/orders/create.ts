@@ -358,7 +358,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     
     console.log('📝 Creando factura para usuario:', userId, 'email:', finalEmail);
     
-    // Preparar datos de factura - SIEMPRE incluir user_id si está disponible
+    // Preparar datos de factura - solo campos que existen en la tabla
     const invoiceData: Record<string, any> = {
       order_id: order.id,
       invoice_number: invoiceNumber,
@@ -366,14 +366,11 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       customer_email: finalEmail,
       customer_address: shipping_address,
       subtotal,
-      shipping_cost,
-      cod_extra_cost,
       tax_rate: storeSettings.taxes.tax_rate,
       tax_amount: tax,
       total,
       status: invoiceStatus,
       payment_method,
-      user_id: userId, // Puede ser null si es invitado
       items: items.map((item) => ({
         name: item.product_name,
         quantity: item.quantity,
@@ -382,6 +379,11 @@ export const POST: APIRoute = async ({ request, cookies }) => {
         size: item.size,
       })),
     };
+    
+    // Solo añadir user_id si existe (no null)
+    if (userId) {
+      invoiceData.user_id = userId;
+    }
     
     console.log('📝 Datos de factura:', JSON.stringify(invoiceData, null, 2));
     
