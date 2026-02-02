@@ -42,7 +42,7 @@ export const GET: APIRoute = async () => {
 
     console.log('✅ PDF generado, tamaño:', pdfBuffer.length, 'bytes');
 
-    return new Response(pdfBuffer, {
+    return new Response(new Uint8Array(pdfBuffer), {
       status: 200,
       headers: {
         'Content-Type': 'application/pdf',
