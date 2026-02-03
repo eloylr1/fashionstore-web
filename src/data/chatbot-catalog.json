@@ -9,7 +9,7 @@
     "colors": ["negro"],
     "inStock": true,
     "popularity": 95,
-    "url": "/producto/sudadera-oversize-negra"
+    "url": "/tienda?categoria=camisas"
   },
   {
     "id": "p002",
@@ -21,7 +21,7 @@
     "colors": ["blanco"],
     "inStock": true,
     "popularity": 92,
-    "url": "/producto/camiseta-basica-blanca"
+    "url": "/tienda?categoria=camisas"
   },
   {
     "id": "p003",
@@ -33,7 +33,7 @@
     "colors": ["beige"],
     "inStock": true,
     "popularity": 78,
-    "url": "/producto/pantalon-chino-beige"
+    "url": "/tienda?categoria=pantalones"
   },
   {
     "id": "p004",
@@ -45,7 +45,7 @@
     "colors": ["azul marino"],
     "inStock": true,
     "popularity": 85,
-    "url": "/producto/blazer-slim-fit-azul-marino"
+    "url": "/tienda?categoria=trajes"
   },
   {
     "id": "p005",
@@ -57,7 +57,7 @@
     "colors": ["gris"],
     "inStock": true,
     "popularity": 88,
-    "url": "/producto/jogger-deportivo-gris"
+    "url": "/tienda?categoria=pantalones"
   },
   {
     "id": "p006",
@@ -69,7 +69,7 @@
     "colors": ["celeste", "azul claro"],
     "inStock": true,
     "popularity": 82,
-    "url": "/producto/camisa-oxford-celeste"
+    "url": "/tienda?categoria=camisas"
   },
   {
     "id": "p007",
@@ -81,7 +81,7 @@
     "colors": ["negro"],
     "inStock": true,
     "popularity": 76,
-    "url": "/producto/abrigo-largo-negro"
+    "url": "/tienda"
   },
   {
     "id": "p008",
@@ -93,7 +93,7 @@
     "colors": ["verde"],
     "inStock": true,
     "popularity": 71,
-    "url": "/producto/polo-clasico-verde"
+    "url": "/tienda?categoria=camisas"
   },
   {
     "id": "p009",
@@ -105,7 +105,7 @@
     "colors": ["gris"],
     "inStock": true,
     "popularity": 90,
-    "url": "/producto/sudadera-capucha-gris"
+    "url": "/tienda?categoria=camisas"
   },
   {
     "id": "p010",
@@ -117,7 +117,7 @@
     "colors": ["antracita", "gris oscuro"],
     "inStock": true,
     "popularity": 74,
-    "url": "/producto/traje-completo-antracita"
+    "url": "/tienda?categoria=trajes"
   },
   {
     "id": "p011",
@@ -129,7 +129,7 @@
     "colors": ["negro", "blanco"],
     "inStock": true,
     "popularity": 86,
-    "url": "/producto/camiseta-estampada-urbana"
+    "url": "/tienda?categoria=camisas"
   },
   {
     "id": "p012",
@@ -141,6 +141,6 @@
     "colors": ["marrón"],
     "inStock": false,
     "popularity": 80,
-    "url": "/producto/chaqueta-bomber-marron"
+    "url": "/tienda"
   }
 ]

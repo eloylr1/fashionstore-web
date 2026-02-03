@@ -401,19 +401,22 @@ import faqData from '../../data/chatbot-faq.json';
   .chatbot-chips {
     display: flex;
     flex-wrap: wrap;
-    gap: 6px;
-    margin-top: 10px;
+    gap: 8px;
+    margin-top: 12px;
+    padding-top: 8px;
   }
 
   .chatbot-chip {
     background: white;
     border: 1px solid var(--chatbot-primary);
     color: var(--chatbot-primary);
-    padding: 6px 12px;
+    padding: 8px 14px;
     border-radius: 20px;
-    font-size: 12px;
+    font-size: 13px;
     cursor: pointer;
     transition: all 0.2s;
+    white-space: nowrap;
+    display: inline-block;
   }
 
   .chatbot-chip:hover {
