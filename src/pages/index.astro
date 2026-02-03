@@ -56,6 +56,7 @@ import NewsletterPopup from '../components/newsletter/NewsletterPopup';
 import OffersPopup from '../components/offers/OffersPopup';
 import WelcomePopup from '../components/promotions/WelcomePopup';
 import NewsletterSuccessPopup from '../components/promotions/NewsletterSuccessPopup';
+import HeroCarousel from '../components/home/HeroCarousel';
 ---
 
 <BaseLayout title="Moda Masculina Premium">
@@ -71,56 +72,8 @@ import NewsletterSuccessPopup from '../components/promotions/NewsletterSuccessPo
   <!-- Newsletter Popup (aparece después si no se ha suscrito) -->
   <NewsletterPopup client:load />
   
-  <!-- Hero Section - Pantalla completa -->
-  <section class="relative min-h-screen flex items-center justify-center overflow-hidden">
-    <!-- Background Image con Overlay Elegante -->
-    <div class="absolute inset-0">
-      <img 
-        src="https://images.unsplash.com/photo-1617137968427-85924c800a22?w=1920&q=80" 
-        alt="Moda masculina premium"
-        class="w-full h-full object-cover"
-      />
-      <div class="absolute inset-0 bg-gradient-to-b from-black/70 via-black/50 to-black/80"></div>
-    </div>
-    
-    <!-- Contenido del Hero -->
-    <div class="relative z-10 text-center px-4 max-w-5xl mx-auto">
-      <div class="animate-fade-in-up">
-        <span class="inline-block px-4 py-2 bg-white/15 backdrop-blur-sm border border-white/30 text-white text-xs font-medium tracking-[0.3em] uppercase mb-8">
-          Nueva Colección Primavera 2026
-        </span>
-      </div>
-      
-      <h1 class="font-serif text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-medium leading-[1.1] mb-6 animate-fade-in-up" style="animation-delay: 0.1s;">
-        <span class="text-white drop-shadow-lg">Elegancia</span><br/>
-        <span class="text-gold-matte drop-shadow-lg">Redefinida</span>
-      </h1>
-      
-      <p class="text-lg sm:text-xl text-white max-w-2xl mx-auto mb-10 leading-relaxed animate-fade-in-up drop-shadow-md" style="animation-delay: 0.2s;">
-        Descubre piezas únicas seleccionadas para el hombre contemporáneo. 
-        Calidad artesanal, diseño atemporal.
-      </p>
-      
-      <div class="flex flex-col sm:flex-row items-center justify-center gap-4 animate-fade-in-up" style="animation-delay: 0.3s;">
-        <a href="/tienda" class="group relative inline-flex items-center gap-3 px-8 py-4 bg-white text-navy-900 font-medium text-sm tracking-wide transition-all duration-300 hover:bg-gold-matte hover:text-white shadow-lg">
-          <span>Explorar Colección</span>
-          <svg class="w-4 h-4 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3" />
-          </svg>
-        </a>
-        <a href="/categoria/trajes" class="inline-flex items-center gap-3 px-8 py-4 border-2 border-white/60 text-white font-medium text-sm tracking-wide transition-all duration-300 hover:bg-white/20 hover:border-white shadow-lg">
-          Ver Trajes
-        </a>
-      </div>
-    </div>
-    
-    <!-- Scroll Indicator -->
-    <div class="absolute bottom-8 left-1/2 -translate-x-1/2 animate-bounce">
-      <div class="w-6 h-10 border-2 border-white/40 rounded-full flex items-start justify-center p-2">
-        <div class="w-1 h-2 bg-white/60 rounded-full animate-scroll-down"></div>
-      </div>
-    </div>
-  </section>
+  <!-- Hero Carousel - Pantalla completa con transiciones automáticas -->
+  <HeroCarousel client:load />
 
   <!-- Brand Statement -->
   <section class="py-24" style="background-color: #0a1628;">
