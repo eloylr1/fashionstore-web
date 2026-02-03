@@ -31,14 +31,14 @@ export const GET: APIRoute = async ({ url }) => {
     }
 
     if (category) {
-      const { data: cat } = await supabase
+      const catResult = await supabase
         .from('categories')
         .select('id')
         .eq('slug', category)
         .single();
       
-      if (cat) {
-        query = query.eq('category_id', cat.id);
+      if (catResult.data && catResult.data.id) {
+        query = query.eq('category_id', catResult.data.id);
       }
     }
 
@@ -56,7 +56,7 @@ export const GET: APIRoute = async ({ url }) => {
       case 'price-high':
         query = query.order('price', { ascending: false });
         break;
-      default: // popular/featured first
+      default:
         query = query.order('featured', { ascending: false }).order('created_at', { ascending: false });
     }
 

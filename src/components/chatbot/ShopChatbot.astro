@@ -1,6 +1,6 @@
 ---
 /**
- * FASHIONMARKET CHATBOT - Productos reales + Mejor contraste
+ * FASHIONMARKET CHATBOT - TEXTO VISIBLE
  */
 ---
 
@@ -18,709 +18,279 @@
   <div id="cb-panel" style="display:none">
     <div id="cb-header">
       <div id="cb-avatar">🛍️</div>
-      <div id="cb-header-info">
-        <div id="cb-title">Asistente</div>
-        <div id="cb-status"><span id="cb-dot"></span> En línea</div>
+      <div id="cb-info">
+        <span id="cb-title">Asistente</span>
+        <span id="cb-status">● En línea</span>
       </div>
-      <button id="cb-refresh" type="button" title="Reiniciar">↻</button>
-      <button id="cb-close-btn" type="button" title="Cerrar">✕</button>
+      <button id="cb-refresh" type="button">↻</button>
+      <button id="cb-close" type="button">✕</button>
     </div>
-    
-    <div id="cb-messages"></div>
-    
-    <div id="cb-footer">
-      <input type="text" id="cb-input" placeholder="Escribe tu mensaje..." autocomplete="off">
+    <div id="cb-body"></div>
+    <div id="cb-foot">
+      <input type="text" id="cb-input" placeholder="Escribe tu mensaje...">
       <button id="cb-send" type="button">➤</button>
     </div>
   </div>
 </div>
 
 <style>
-  #cb-widget {
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    z-index: 99999;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  }
+#cb-widget{position:fixed;bottom:20px;right:20px;z-index:99999;font-family:system-ui,-apple-system,sans-serif}
+#cb-fab{width:60px;height:60px;border-radius:50%;background:#c9a227;color:#000;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(201,162,39,0.5)}
+#cb-fab:hover{transform:scale(1.1)}
+#cb-panel{position:absolute;bottom:75px;right:0;width:380px;height:550px;background:#0d0d1a;border-radius:20px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.6);display:flex;flex-direction:column}
+#cb-header{background:#0a0a14;padding:16px;display:flex;align-items:center;gap:12px;border-bottom:1px solid #222}
+#cb-avatar{width:48px;height:48px;background:#c9a227;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:26px}
+#cb-info{flex:1}
+#cb-title{display:block;color:#fff;font-size:18px;font-weight:700}
+#cb-status{display:block;color:#22c55e;font-size:13px;font-weight:600}
+#cb-refresh,#cb-close{width:36px;height:36px;background:#1a1a2e;border:none;color:#aaa;font-size:18px;cursor:pointer;border-radius:8px}
+#cb-refresh:hover,#cb-close:hover{background:#2a2a4a;color:#fff}
+#cb-body{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:14px;background:#0d0d1a}
+#cb-body::-webkit-scrollbar{width:5px}
+#cb-body::-webkit-scrollbar-thumb{background:#333;border-radius:3px}
 
-  #cb-fab {
-    width: 60px;
-    height: 60px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #c9a227 0%, #ddb84a 100%);
-    color: #1a1a2e;
-    border: none;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 4px 20px rgba(201, 162, 39, 0.5);
-    transition: transform 0.2s, box-shadow 0.2s;
-  }
+.msg{max-width:90%;animation:slide .3s ease}
+@keyframes slide{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.msg-u{align-self:flex-end}
+.msg-b{align-self:flex-start}
+.bbl{padding:14px 18px;border-radius:18px;font-size:16px;line-height:1.6}
+.msg-u .bbl{background:#c9a227;color:#000;font-weight:600;border-bottom-right-radius:4px}
+.msg-b .bbl{background:#1e1e38;color:#FFFFFF;font-weight:500;border-bottom-left-radius:4px;border:1px solid #333}
 
-  #cb-fab:hover {
-    transform: scale(1.1);
-    box-shadow: 0 6px 30px rgba(201, 162, 39, 0.6);
-  }
+.chips{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+.chip{display:inline-block;background:#252545;color:#FFFFFF;border:2px solid #c9a227;padding:12px 18px;border-radius:25px;font-size:15px;font-weight:700;cursor:pointer;transition:all .2s}
+.chip:hover{background:#c9a227;color:#000;transform:translateY(-2px)}
 
-  #cb-panel {
-    position: absolute;
-    bottom: 75px;
-    right: 0;
-    width: 380px;
-    height: 550px;
-    background: #1e1e32;
-    border-radius: 20px;
-    overflow: hidden;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
-    display: flex;
-    flex-direction: column;
-  }
+.prods{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+.prod{background:#1a1a30;border-radius:14px;overflow:hidden;text-decoration:none;position:relative;border:1px solid #2a2a4a}
+.prod:hover{transform:translateY(-3px);box-shadow:0 8px 20px rgba(0,0,0,0.4);border-color:#c9a227}
+.badge{position:absolute;top:8px;left:8px;background:#c9a227;color:#000;padding:4px 10px;border-radius:6px;font-size:10px;font-weight:800;z-index:2}
+.prod-img{width:100%;height:100px;object-fit:cover;background:#0a0a14}
+.prod-info{padding:10px}
+.prod-name{color:#FFFFFF;font-size:14px;font-weight:700;margin:0 0 4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.prod-price{color:#ffd700;font-size:16px;font-weight:800;margin:0}
 
-  #cb-header {
-    background: #15152a;
-    padding: 16px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    border-bottom: 1px solid #3d3d5c;
-  }
+.loading{display:flex;gap:6px;padding:10px 0}
+.loading span{width:8px;height:8px;background:#c9a227;border-radius:50%;animation:bounce 1.4s infinite ease-in-out both}
+.loading span:nth-child(1){animation-delay:-.32s}
+.loading span:nth-child(2){animation-delay:-.16s}
+@keyframes bounce{0%,80%,100%{transform:scale(0)}40%{transform:scale(1)}}
 
-  #cb-avatar {
-    width: 48px;
-    height: 48px;
-    background: linear-gradient(135deg, #c9a227 0%, #ddb84a 100%);
-    border-radius: 14px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 26px;
-  }
+#cb-foot{padding:14px;background:#0a0a14;border-top:1px solid #222;display:flex;gap:10px}
+#cb-input{flex:1;background:#1a1a2e;border:2px solid #333;border-radius:25px;padding:14px 18px;color:#FFFFFF;font-size:15px}
+#cb-input:focus{outline:none;border-color:#c9a227}
+#cb-input::placeholder{color:#888}
+#cb-send{width:50px;height:50px;background:#c9a227;color:#000;border:none;border-radius:50%;font-size:20px;cursor:pointer;font-weight:bold}
+#cb-send:hover{transform:scale(1.05)}
 
-  #cb-header-info {
-    flex: 1;
-  }
-
-  #cb-title {
-    color: #ffffff;
-    font-size: 18px;
-    font-weight: 700;
-    letter-spacing: -0.3px;
-  }
-
-  #cb-status {
-    color: #4ade80;
-    font-size: 13px;
-    font-weight: 500;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-
-  #cb-dot {
-    width: 8px;
-    height: 8px;
-    background: #4ade80;
-    border-radius: 50%;
-    display: inline-block;
-    animation: pulse 2s infinite;
-  }
-
-  @keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.5; }
-  }
-
-  #cb-refresh, #cb-close-btn {
-    width: 38px;
-    height: 38px;
-    background: #2a2a48;
-    border: none;
-    color: #b8b8d0;
-    font-size: 18px;
-    cursor: pointer;
-    border-radius: 10px;
-    transition: all 0.2s;
-  }
-
-  #cb-refresh:hover, #cb-close-btn:hover {
-    background: #3d3d5c;
-    color: #ffffff;
-  }
-
-  #cb-messages {
-    flex: 1;
-    overflow-y: auto;
-    padding: 20px;
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-    background: #12121f;
-  }
-
-  #cb-messages::-webkit-scrollbar {
-    width: 6px;
-  }
-
-  #cb-messages::-webkit-scrollbar-thumb {
-    background: #3d3d5c;
-    border-radius: 3px;
-  }
-
-  .cb-msg {
-    max-width: 92%;
-    animation: cbSlide 0.3s ease;
-  }
-
-  @keyframes cbSlide {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-
-  .cb-msg-user {
-    align-self: flex-end;
-  }
-
-  .cb-msg-bot {
-    align-self: flex-start;
-  }
-
-  .cb-bubble {
-    padding: 14px 18px;
-    border-radius: 20px;
-    font-size: 15px;
-    line-height: 1.6;
-  }
-
-  .cb-msg-user .cb-bubble {
-    background: linear-gradient(135deg, #c9a227 0%, #ddb84a 100%);
-    color: #1a1a1a;
-    font-weight: 500;
-    border-bottom-right-radius: 6px;
-  }
-
-  .cb-msg-bot .cb-bubble {
-    background: #35355a;
-    color: #fff;
-    border-bottom-left-radius: 6px;
-    border: 1px solid #5555880;
-    font-size: 16px;
-    font-weight: 500;
-    line-height: 1.7;
-  }
-
-  .cb-msg-bot .cb-bubble strong {
-    color: #ffd54f;
-  }
-
-  /* CHIPS - BOTONES SEPARADOS */
-  .cb-chips {
-    display: flex !important;
-    flex-wrap: wrap !important;
-    gap: 10px !important;
-    margin-top: 14px !important;
-    padding: 0 !important;
-  }
-
-  .cb-chip {
-    display: inline-flex !important;
-    align-items: center !important;
-    background: #3a3a60 !important;
-    color: #fff !important;
-    border: 2px solid #c9a227 !important;
-    padding: 12px 20px !important;
-    border-radius: 25px !important;
-    font-size: 15px !important;
-    font-weight: 700 !important;
-    cursor: pointer !important;
-    transition: all 0.2s !important;
-    font-family: inherit !important;
-    white-space: nowrap !important;
-    text-decoration: none !important;
-    box-sizing: border-box !important;
-  }
-
-  .cb-chip:hover {
-    background: #c9a227 !important;
-    color: #1a1a1a !important;
-    transform: translateY(-2px) !important;
-    box-shadow: 0 4px 12px rgba(201, 162, 39, 0.4) !important;
-  }
-
-  /* PRODUCTOS - GRID */
-  .cb-products {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
-    margin-top: 14px;
-  }
-
-  .cb-product {
-    background: #2a2a48;
-    border-radius: 16px;
-    overflow: hidden;
-    text-decoration: none;
-    transition: all 0.2s;
-    position: relative;
-    border: 1px solid #3d3d5c;
-  }
-
-  .cb-product:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 10px 25px rgba(0,0,0,0.4);
-    border-color: #c9a227;
-  }
-
-  .cb-badge {
-    position: absolute;
-    top: 10px;
-    left: 10px;
-    background: linear-gradient(135deg, #c9a227 0%, #ddb84a 100%);
-    color: #1a1a1a;
-    padding: 4px 10px;
-    border-radius: 8px;
-    font-size: 10px;
-    font-weight: 800;
-    letter-spacing: 0.5px;
-    z-index: 2;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-  }
-
-  .cb-product-img {
-    width: 100%;
-    height: 100px;
-    object-fit: cover;
-    background: #15152a;
-  }
-
-  .cb-product-info {
-    padding: 12px;
-  }
-
-  .cb-product-name {
-    color: #fff;
-    font-size: 14px;
-    font-weight: 700;
-    margin: 0 0 6px 0;
-    line-height: 1.3;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .cb-product-price {
-    color: #ffd54f;
-    font-size: 17px;
-    font-weight: 800;
-    margin: 0;
-  }
-
-  .cb-loading {
-    display: flex;
-    gap: 6px;
-    padding: 10px 0;
-  }
-
-  .cb-loading span {
-    width: 8px;
-    height: 8px;
-    background: #c9a227;
-    border-radius: 50%;
-    animation: bounce 1.4s infinite ease-in-out both;
-  }
-
-  .cb-loading span:nth-child(1) { animation-delay: -0.32s; }
-  .cb-loading span:nth-child(2) { animation-delay: -0.16s; }
-
-  @keyframes bounce {
-    0%, 80%, 100% { transform: scale(0); }
-    40% { transform: scale(1); }
-  }
-
-  #cb-footer {
-    padding: 16px;
-    background: #15152a;
-    border-top: 1px solid #3d3d5c;
-    display: flex;
-    gap: 12px;
-  }
-
-  #cb-input {
-    flex: 1;
-    background: #2a2a48;
-    border: 2px solid #3d3d5c;
-    border-radius: 25px;
-    padding: 14px 20px;
-    color: #ffffff;
-    font-size: 15px;
-    font-family: inherit;
-  }
-
-  #cb-input:focus {
-    outline: none;
-    border-color: #c9a227;
-    background: #33334f;
-  }
-
-  #cb-input::placeholder {
-    color: #8888a8;
-  }
-
-  #cb-send {
-    width: 50px;
-    height: 50px;
-    background: linear-gradient(135deg, #c9a227 0%, #ddb84a 100%);
-    color: #1a1a1a;
-    border: none;
-    border-radius: 50%;
-    font-size: 20px;
-    cursor: pointer;
-    transition: all 0.2s;
-    font-weight: bold;
-  }
-
-  #cb-send:hover {
-    transform: scale(1.08);
-    box-shadow: 0 4px 16px rgba(201, 162, 39, 0.5);
-  }
-
-  @media (max-width: 480px) {
-    #cb-widget { bottom: 15px; right: 15px; }
-    #cb-panel { width: calc(100vw - 30px); height: 70vh; }
-    #cb-fab { width: 55px; height: 55px; }
-  }
+@media(max-width:480px){#cb-widget{bottom:15px;right:15px}#cb-panel{width:calc(100vw - 30px);height:70vh}#cb-fab{width:55px;height:55px}}
 </style>
 
 <script is:inline>
 (function(){
-  // ==================== FAQ ====================
-  var FAQ = {
-    envios: "📦 <strong>Envíos:</strong><br>• España peninsular: GRATIS a partir de 50€<br>• Entrega: 2-4 días laborables<br>• Baleares y Canarias: Consultar",
-    devoluciones: "↩️ <strong>Devoluciones:</strong><br>• 30 días para devolver<br>• El producto debe estar sin usar<br>• Devolución GRATIS en tienda",
-    pagos: "💳 <strong>Métodos de pago:</strong><br>• Tarjeta (Visa, Mastercard)<br>• PayPal<br>• Bizum<br>• Contrareembolso (+3€)",
-    tallas: "📏 <strong>Guía de tallas:</strong><br>Consulta la guía en cada producto. Si dudas entre dos tallas, te recomendamos la mayor.",
-    contacto: "📞 <strong>Contacto:</strong><br>• Email: info@fashionmarket.es<br>• WhatsApp: +34 612 345 678<br>• Horario: L-V 9:00-18:00"
-  };
+var FAQ={
+envios:"📦 <b>Envíos:</b><br>• España peninsular: GRATIS +50€<br>• Entrega: 2-4 días laborables<br>• Baleares/Canarias: Consultar",
+devoluciones:"↩️ <b>Devoluciones:</b><br>• 30 días para devolver<br>• Producto sin usar<br>• GRATIS en tienda",
+pagos:"💳 <b>Pagos:</b><br>• Tarjeta (Visa, Mastercard)<br>• PayPal<br>• Bizum<br>• Contrareembolso (+3€)",
+tallas:"📏 <b>Tallas:</b><br>Consulta la guía en cada producto. Si dudas, elige la mayor.",
+contacto:"📞 <b>Contacto:</b><br>• info@fashionmarket.es<br>• WhatsApp: +34 612 345 678<br>• L-V 9:00-18:00"
+};
 
-  // ==================== ELEMENTOS ====================
-  var fab = document.getElementById("cb-fab");
-  var panel = document.getElementById("cb-panel");
-  var iconChat = document.getElementById("cb-icon-chat");
-  var iconClose = document.getElementById("cb-icon-close");
-  var messages = document.getElementById("cb-messages");
-  var input = document.getElementById("cb-input");
-  var sendBtn = document.getElementById("cb-send");
-  var refreshBtn = document.getElementById("cb-refresh");
-  var closeBtn = document.getElementById("cb-close-btn");
+var fab=document.getElementById("cb-fab");
+var panel=document.getElementById("cb-panel");
+var iconChat=document.getElementById("cb-icon-chat");
+var iconClose=document.getElementById("cb-icon-close");
+var body=document.getElementById("cb-body");
+var input=document.getElementById("cb-input");
+var sendBtn=document.getElementById("cb-send");
+var refreshBtn=document.getElementById("cb-refresh");
+var closeBtn=document.getElementById("cb-close");
+if(!fab||!panel||!body||!input)return;
 
-  if (!fab || !panel || !messages || !input) return;
+var isOpen=false;
+var chips=[];
 
-  var isOpen = false;
-  var currentChips = [];
+function esc(s){if(!s)return"";var d=document.createElement("div");d.textContent=s;return d.innerHTML;}
 
-  // ==================== FUNCIONES ====================
-  function escape(str) {
-    if (!str) return "";
-    var div = document.createElement("div");
-    div.textContent = str;
-    return div.innerHTML;
-  }
+function toggle(){
+isOpen=!isOpen;
+panel.style.display=isOpen?"flex":"none";
+iconChat.style.display=isOpen?"none":"block";
+iconClose.style.display=isOpen?"block":"none";
+if(isOpen&&body.children.length===0)welcome();
+}
 
-  function toggle() {
-    isOpen = !isOpen;
-    panel.style.display = isOpen ? "flex" : "none";
-    iconChat.style.display = isOpen ? "none" : "block";
-    iconClose.style.display = isOpen ? "block" : "none";
-    if (isOpen && messages.children.length === 0) {
-      welcome();
-    }
-  }
+function userMsg(t){
+var d=document.createElement("div");
+d.className="msg msg-u";
+d.innerHTML='<div class="bbl">'+esc(t)+'</div>';
+body.appendChild(d);
+body.scrollTop=body.scrollHeight;
+}
 
-  function addUserMsg(text) {
-    var div = document.createElement("div");
-    div.className = "cb-msg cb-msg-user";
-    div.innerHTML = '<div class="cb-bubble">' + escape(text) + '</div>';
-    messages.appendChild(div);
-    messages.scrollTop = messages.scrollHeight;
-  }
+function botMsg(t,ch,pr){
+var d=document.createElement("div");
+d.className="msg msg-b";
+var h='<div class="bbl">'+t+'</div>';
 
-  function addBotMsg(text, chips, products) {
-    var div = document.createElement("div");
-    div.className = "cb-msg cb-msg-bot";
-    
-    var html = '<div class="cb-bubble">' + text + '</div>';
-    
-    // Chips como botones separados
-    if (chips && chips.length > 0) {
-      currentChips = chips;
-      html += '<div class="cb-chips">';
-      for (var i = 0; i < chips.length; i++) {
-        html += '<button type="button" class="cb-chip" data-chip-idx="' + i + '">' + escape(chips[i]) + '</button>';
-      }
-      html += '</div>';
-    }
-    
-    // Productos en grid
-    if (products && products.length > 0) {
-      html += '<div class="cb-products">';
-      for (var j = 0; j < products.length; j++) {
-        var p = products[j];
-        html += '<a href="' + escape(p.url) + '" class="cb-product">';
-        if (p.badge) {
-          html += '<span class="cb-badge">' + escape(p.badge) + '</span>';
-        }
-        if (p.img) {
-          html += '<img src="' + escape(p.img) + '" alt="' + escape(p.name) + '" class="cb-product-img" loading="lazy" onerror="this.style.display=\'none\'">';
-        } else {
-          html += '<div class="cb-product-img" style="display:flex;align-items:center;justify-content:center;color:#666;">📷</div>';
-        }
-        html += '<div class="cb-product-info">';
-        html += '<p class="cb-product-name">' + escape(p.name) + '</p>';
-        html += '<p class="cb-product-price">' + escape(p.price) + ' €</p>';
-        html += '</div></a>';
-      }
-      html += '</div>';
-    }
-    
-    div.innerHTML = html;
-    messages.appendChild(div);
-    messages.scrollTop = messages.scrollHeight;
+if(ch&&ch.length>0){
+chips=ch;
+h+='<div class="chips">';
+for(var i=0;i<ch.length;i++){
+h+='<button type="button" class="chip" data-i="'+i+'">'+esc(ch[i])+'</button>';
+}
+h+='</div>';
+}
 
-    // Event listeners para chips
-    var chipBtns = div.querySelectorAll(".cb-chip");
-    for (var k = 0; k < chipBtns.length; k++) {
-      chipBtns[k].addEventListener("click", function(e) {
-        var idx = parseInt(this.getAttribute("data-chip-idx"));
-        if (currentChips[idx]) {
-          handleChip(currentChips[idx]);
-        }
-      });
-    }
-  }
+if(pr&&pr.length>0){
+h+='<div class="prods">';
+for(var j=0;j<pr.length;j++){
+var p=pr[j];
+h+='<a href="'+esc(p.url)+'" class="prod">';
+if(p.badge)h+='<span class="badge">'+esc(p.badge)+'</span>';
+if(p.img)h+='<img src="'+esc(p.img)+'" alt="'+esc(p.name)+'" class="prod-img" loading="lazy" onerror="this.style.background=\'#1a1a2e\'">';
+else h+='<div class="prod-img" style="display:flex;align-items:center;justify-content:center;color:#666">📷</div>';
+h+='<div class="prod-info"><p class="prod-name">'+esc(p.name)+'</p><p class="prod-price">'+esc(p.price)+' €</p></div></a>';
+}
+h+='</div>';
+}
 
-  function showLoading() {
-    var div = document.createElement("div");
-    div.className = "cb-msg cb-msg-bot";
-    div.id = "cb-loading";
-    div.innerHTML = '<div class="cb-loading"><span></span><span></span><span></span></div>';
-    messages.appendChild(div);
-    messages.scrollTop = messages.scrollHeight;
-  }
+d.innerHTML=h;
+body.appendChild(d);
+body.scrollTop=body.scrollHeight;
 
-  function hideLoading() {
-    var loading = document.getElementById("cb-loading");
-    if (loading) loading.remove();
-  }
+var btns=d.querySelectorAll(".chip");
+for(var k=0;k<btns.length;k++){
+btns[k].addEventListener("click",function(){
+var idx=parseInt(this.getAttribute("data-i"));
+if(chips[idx])handleChip(chips[idx]);
+});
+}
+}
 
-  // Fetch productos reales
-  function fetchProducts(filter, callback) {
-    showLoading();
-    var url = "/api/chatbot/products?filter=" + (filter || "popular") + "&limit=4";
-    
-    fetch(url)
-      .then(function(res) { return res.json(); })
-      .then(function(data) {
-        hideLoading();
-        callback(data.products || []);
-      })
-      .catch(function() {
-        hideLoading();
-        callback([]);
-      });
-  }
+function loading(){
+var d=document.createElement("div");
+d.className="msg msg-b";
+d.id="ld";
+d.innerHTML='<div class="loading"><span></span><span></span><span></span></div>';
+body.appendChild(d);
+body.scrollTop=body.scrollHeight;
+}
 
-  function searchProducts(query, callback) {
-    showLoading();
-    var url = "/api/chatbot/products?q=" + encodeURIComponent(query) + "&limit=4";
-    
-    fetch(url)
-      .then(function(res) { return res.json(); })
-      .then(function(data) {
-        hideLoading();
-        callback(data.products || []);
-      })
-      .catch(function() {
-        hideLoading();
-        callback([]);
-      });
-  }
+function hideLoading(){var l=document.getElementById("ld");if(l)l.remove();}
 
-  function fetchByCategory(cat, callback) {
-    showLoading();
-    var url = "/api/chatbot/products?category=" + encodeURIComponent(cat) + "&limit=4";
-    
-    fetch(url)
-      .then(function(res) { return res.json(); })
-      .then(function(data) {
-        hideLoading();
-        callback(data.products || []);
-      })
-      .catch(function() {
-        hideLoading();
-        callback([]);
-      });
-  }
+function fetch_prods(f,cb){
+loading();
+fetch("/api/chatbot/products?filter="+(f||"popular")+"&limit=4")
+.then(function(r){return r.json();})
+.then(function(d){hideLoading();cb(d.products||[]);})
+.catch(function(){hideLoading();cb([]);});
+}
 
-  // ==================== WELCOME ====================
-  function welcome() {
-    setTimeout(function() {
-      fetchProducts("popular", function(products) {
-        var text = "¡Hola! 👋 Soy tu asistente de FashionMarket. ¿Qué buscas hoy?";
-        var chips = ["🔥 Ver más vendidos", "✨ Novedades", "🔍 Buscar traje", "❓ Ayuda"];
-        addBotMsg(text, chips, products.length > 0 ? products : null);
-      });
-    }, 300);
-  }
+function search_prods(q,cb){
+loading();
+fetch("/api/chatbot/products?q="+encodeURIComponent(q)+"&limit=4")
+.then(function(r){return r.json();})
+.then(function(d){hideLoading();cb(d.products||[]);})
+.catch(function(){hideLoading();cb([]);});
+}
 
-  // ==================== CHIP HANDLER ====================
-  function handleChip(chip) {
-    addUserMsg(chip);
-    
-    var lower = chip.toLowerCase();
-    
-    if (lower.indexOf("vendidos") !== -1 || lower.indexOf("popular") !== -1) {
-      fetchProducts("popular", function(products) {
-        if (products.length > 0) {
-          addBotMsg("🔥 Estos son nuestros más vendidos:", ["✨ Novedades", "🛒 Ver tienda", "❓ Ayuda"], products);
-        } else {
-          addBotMsg("No encontré productos destacados. <a href='/tienda' style='color:#c9a227'>Ver tienda</a>", ["✨ Novedades", "❓ Ayuda"], null);
-        }
-      });
-    }
-    else if (lower.indexOf("novedades") !== -1 || lower.indexOf("nuevo") !== -1) {
-      fetchProducts("new", function(products) {
-        if (products.length > 0) {
-          addBotMsg("✨ Las últimas novedades:", ["🔥 Ver más vendidos", "🛒 Ver tienda", "❓ Ayuda"], products);
-        } else {
-          addBotMsg("No hay novedades aún. <a href='/tienda' style='color:#c9a227'>Ver tienda</a>", ["🔥 Ver más vendidos", "❓ Ayuda"], null);
-        }
-      });
-    }
-    else if (lower.indexOf("traje") !== -1 || lower.indexOf("blazer") !== -1) {
-      fetchByCategory("trajes", function(products) {
-        if (products.length > 0) {
-          addBotMsg("👔 Nuestra selección de trajes:", ["🔥 Ver más vendidos", "❓ Ayuda"], products);
-        } else {
-          addBotMsg("No tenemos trajes disponibles. <a href='/tienda' style='color:#c9a227'>Ver toda la tienda</a>", ["🔥 Ver más vendidos", "❓ Ayuda"], null);
-        }
-      });
-    }
-    else if (lower.indexOf("camisa") !== -1) {
-      fetchByCategory("camisas", function(products) {
-        if (products.length > 0) {
-          addBotMsg("👕 Nuestras camisas:", ["🔥 Ver más vendidos", "❓ Ayuda"], products);
-        } else {
-          addBotMsg("No hay camisas disponibles. <a href='/tienda' style='color:#c9a227'>Ver tienda</a>", ["🔥 Ver más vendidos", "❓ Ayuda"], null);
-        }
-      });
-    }
-    else if (lower.indexOf("tienda") !== -1) {
-      window.location.href = "/tienda";
-    }
-    else if (lower.indexOf("ayuda") !== -1) {
-      addBotMsg("¿En qué puedo ayudarte?", ["📦 Envíos", "↩️ Devoluciones", "💳 Pagos", "📏 Tallas", "📞 Contacto"], null);
-    }
-    else if (lower.indexOf("envío") !== -1 || lower.indexOf("envio") !== -1) {
-      addBotMsg(FAQ.envios, ["🔥 Ver productos", "❓ Más ayuda"], null);
-    }
-    else if (lower.indexOf("devoluc") !== -1) {
-      addBotMsg(FAQ.devoluciones, ["🔥 Ver productos", "❓ Más ayuda"], null);
-    }
-    else if (lower.indexOf("pago") !== -1) {
-      addBotMsg(FAQ.pagos, ["🔥 Ver productos", "❓ Más ayuda"], null);
-    }
-    else if (lower.indexOf("talla") !== -1) {
-      addBotMsg(FAQ.tallas, ["🔥 Ver productos", "❓ Más ayuda"], null);
-    }
-    else if (lower.indexOf("contacto") !== -1) {
-      addBotMsg(FAQ.contacto, ["🔥 Ver productos", "❓ Más ayuda"], null);
-    }
-    else {
-      // Búsqueda genérica
-      var searchTerm = chip.replace(/[🔥✨🔍❓👔👕📦↩️💳📏📞🛒]/g, "").trim();
-      if (searchTerm) {
-        searchProducts(searchTerm, function(products) {
-          if (products.length > 0) {
-            addBotMsg("Encontré esto para ti:", ["🔥 Ver más vendidos", "❓ Ayuda"], products);
-          } else {
-            addBotMsg("No encontré productos. ¿Probamos otra búsqueda?", ["🔥 Ver más vendidos", "✨ Novedades", "❓ Ayuda"], null);
-          }
-        });
-      } else {
-        addBotMsg("¿En qué puedo ayudarte?", ["🔥 Ver más vendidos", "✨ Novedades", "❓ Ayuda"], null);
-      }
-    }
-  }
+function fetch_cat(c,cb){
+loading();
+fetch("/api/chatbot/products?category="+encodeURIComponent(c)+"&limit=4")
+.then(function(r){return r.json();})
+.then(function(d){hideLoading();cb(d.products||[]);})
+.catch(function(){hideLoading();cb([]);});
+}
 
-  // ==================== INPUT HANDLER ====================
-  function handleInput() {
-    var text = input.value.trim();
-    if (!text) return;
-    
-    input.value = "";
-    addUserMsg(text);
-    
-    var lower = text.toLowerCase();
-    
-    // Saludos
-    if (lower === "hola" || lower === "hey" || lower === "buenas") {
-      fetchProducts("popular", function(products) {
-        addBotMsg("¡Hola! 👋 ¿Qué buscas hoy?", ["🔥 Ver más vendidos", "✨ Novedades", "❓ Ayuda"], products.length > 0 ? products : null);
-      });
-      return;
-    }
-    
-    // FAQ keywords
-    if (lower.indexOf("envío") !== -1 || lower.indexOf("envio") !== -1) {
-      addBotMsg(FAQ.envios, ["🔥 Ver productos", "❓ Más ayuda"], null);
-      return;
-    }
-    if (lower.indexOf("devoluc") !== -1) {
-      addBotMsg(FAQ.devoluciones, ["🔥 Ver productos", "❓ Más ayuda"], null);
-      return;
-    }
-    if (lower.indexOf("pago") !== -1) {
-      addBotMsg(FAQ.pagos, ["🔥 Ver productos", "❓ Más ayuda"], null);
-      return;
-    }
-    if (lower.indexOf("talla") !== -1) {
-      addBotMsg(FAQ.tallas, ["🔥 Ver productos", "❓ Más ayuda"], null);
-      return;
-    }
-    if (lower.indexOf("contacto") !== -1 || lower.indexOf("teléfono") !== -1 || lower.indexOf("telefono") !== -1) {
-      addBotMsg(FAQ.contacto, ["🔥 Ver productos", "❓ Más ayuda"], null);
-      return;
-    }
-    if (lower.indexOf("ayuda") !== -1) {
-      addBotMsg("¿En qué puedo ayudarte?", ["📦 Envíos", "↩️ Devoluciones", "💳 Pagos", "📏 Tallas", "📞 Contacto"], null);
-      return;
-    }
-    
-    // Búsqueda de productos
-    searchProducts(text, function(products) {
-      if (products.length > 0) {
-        addBotMsg("Encontré esto para \"" + escape(text) + "\":", ["🔥 Ver más vendidos", "❓ Ayuda"], products);
-      } else {
-        addBotMsg("No encontré productos para \"" + escape(text) + "\". ¿Probamos otra cosa?", ["🔥 Ver más vendidos", "✨ Novedades", "❓ Ayuda"], null);
-      }
-    });
-  }
+function welcome(){
+setTimeout(function(){
+fetch_prods("popular",function(pr){
+botMsg("¡Hola! 👋 Soy tu asistente de FashionMarket.<br>¿Qué buscas hoy?",
+["🔥 Ver más vendidos","✨ Novedades","🔍 Buscar traje","❓ Ayuda"],
+pr.length>0?pr:null);
+});
+},300);
+}
 
-  function reset() {
-    messages.innerHTML = "";
-    currentChips = [];
-    welcome();
-  }
+function handleChip(c){
+userMsg(c);
+var l=c.toLowerCase();
 
-  // ==================== EVENTS ====================
-  fab.addEventListener("click", toggle);
-  closeBtn.addEventListener("click", toggle);
-  refreshBtn.addEventListener("click", reset);
-  sendBtn.addEventListener("click", handleInput);
-  input.addEventListener("keypress", function(e) {
-    if (e.key === "Enter") handleInput();
-  });
+if(l.indexOf("vendidos")!==-1||l.indexOf("popular")!==-1){
+fetch_prods("popular",function(pr){
+if(pr.length>0)botMsg("🔥 Nuestros más vendidos:",["✨ Novedades","🛒 Ver tienda","❓ Ayuda"],pr);
+else botMsg("No encontré productos. <a href='/tienda' style='color:#c9a227'>Ver tienda</a>",["✨ Novedades","❓ Ayuda"],null);
+});
+}
+else if(l.indexOf("novedades")!==-1||l.indexOf("nuevo")!==-1){
+fetch_prods("new",function(pr){
+if(pr.length>0)botMsg("✨ Las últimas novedades:",["🔥 Más vendidos","🛒 Ver tienda","❓ Ayuda"],pr);
+else botMsg("No hay novedades. <a href='/tienda' style='color:#c9a227'>Ver tienda</a>",["🔥 Más vendidos","❓ Ayuda"],null);
+});
+}
+else if(l.indexOf("traje")!==-1||l.indexOf("blazer")!==-1){
+fetch_cat("trajes",function(pr){
+if(pr.length>0)botMsg("👔 Nuestra selección de trajes:",["🔥 Más vendidos","❓ Ayuda"],pr);
+else botMsg("No hay trajes disponibles. <a href='/tienda' style='color:#c9a227'>Ver tienda</a>",["🔥 Más vendidos","❓ Ayuda"],null);
+});
+}
+else if(l.indexOf("camisa")!==-1){
+fetch_cat("camisas",function(pr){
+if(pr.length>0)botMsg("👕 Nuestras camisas:",["🔥 Más vendidos","❓ Ayuda"],pr);
+else botMsg("No hay camisas. <a href='/tienda' style='color:#c9a227'>Ver tienda</a>",["🔥 Más vendidos","❓ Ayuda"],null);
+});
+}
+else if(l.indexOf("tienda")!==-1){window.location.href="/tienda";}
+else if(l.indexOf("ayuda")!==-1){botMsg("¿En qué puedo ayudarte?",["📦 Envíos","↩️ Devoluciones","💳 Pagos","📏 Tallas","📞 Contacto"],null);}
+else if(l.indexOf("envío")!==-1||l.indexOf("envio")!==-1){botMsg(FAQ.envios,["🔥 Ver productos","❓ Más ayuda"],null);}
+else if(l.indexOf("devoluc")!==-1){botMsg(FAQ.devoluciones,["🔥 Ver productos","❓ Más ayuda"],null);}
+else if(l.indexOf("pago")!==-1){botMsg(FAQ.pagos,["🔥 Ver productos","❓ Más ayuda"],null);}
+else if(l.indexOf("talla")!==-1){botMsg(FAQ.tallas,["🔥 Ver productos","❓ Más ayuda"],null);}
+else if(l.indexOf("contacto")!==-1){botMsg(FAQ.contacto,["🔥 Ver productos","❓ Más ayuda"],null);}
+else{
+var q=c.replace(/[🔥✨🔍❓👔👕📦↩️💳📏📞🛒]/g,"").trim();
+if(q){
+search_prods(q,function(pr){
+if(pr.length>0)botMsg("Encontré esto para ti:",["🔥 Más vendidos","❓ Ayuda"],pr);
+else botMsg("No encontré productos. ¿Probamos otra cosa?",["🔥 Más vendidos","✨ Novedades","❓ Ayuda"],null);
+});
+}else{botMsg("¿En qué puedo ayudarte?",["🔥 Más vendidos","✨ Novedades","❓ Ayuda"],null);}
+}
+}
 
+function handleInput(){
+var t=input.value.trim();
+if(!t)return;
+input.value="";
+userMsg(t);
+var l=t.toLowerCase();
+
+if(l==="hola"||l==="hey"||l==="buenas"){
+fetch_prods("popular",function(pr){
+botMsg("¡Hola! 👋 ¿Qué buscas hoy?",["🔥 Más vendidos","✨ Novedades","❓ Ayuda"],pr.length>0?pr:null);
+});
+return;
+}
+if(l.indexOf("envío")!==-1||l.indexOf("envio")!==-1){botMsg(FAQ.envios,["🔥 Ver productos","❓ Más ayuda"],null);return;}
+if(l.indexOf("devoluc")!==-1){botMsg(FAQ.devoluciones,["🔥 Ver productos","❓ Más ayuda"],null);return;}
+if(l.indexOf("pago")!==-1){botMsg(FAQ.pagos,["🔥 Ver productos","❓ Más ayuda"],null);return;}
+if(l.indexOf("talla")!==-1){botMsg(FAQ.tallas,["🔥 Ver productos","❓ Más ayuda"],null);return;}
+if(l.indexOf("contacto")!==-1||l.indexOf("telefono")!==-1){botMsg(FAQ.contacto,["🔥 Ver productos","❓ Más ayuda"],null);return;}
+if(l.indexOf("ayuda")!==-1){botMsg("¿En qué puedo ayudarte?",["📦 Envíos","↩️ Devoluciones","💳 Pagos","📏 Tallas","📞 Contacto"],null);return;}
+
+search_prods(t,function(pr){
+if(pr.length>0)botMsg("Encontré esto para \""+esc(t)+"\":",["🔥 Más vendidos","❓ Ayuda"],pr);
+else botMsg("No encontré productos para \""+esc(t)+"\". ¿Probamos otra cosa?",["🔥 Más vendidos","✨ Novedades","❓ Ayuda"],null);
+});
+}
+
+function reset(){body.innerHTML="";chips=[];welcome();}
+
+fab.addEventListener("click",toggle);
+closeBtn.addEventListener("click",toggle);
+refreshBtn.addEventListener("click",reset);
+sendBtn.addEventListener("click",handleInput);
+input.addEventListener("keypress",function(e){if(e.key==="Enter")handleInput();});
 })();
 </script>
