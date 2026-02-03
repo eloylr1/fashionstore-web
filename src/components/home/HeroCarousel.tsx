@@ -114,8 +114,8 @@ export default function HeroCarousel() {
               index === currentSlide ? 'scale-105' : 'scale-100'
             }`}
           />
-          {/* Overlay gradient */}
-          <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/30 to-black/60" />
+          {/* Overlay gradient más oscuro para mejor contraste */}
+          <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/50 to-black/70" />
         </div>
       ))}
 
@@ -157,7 +157,7 @@ export default function HeroCarousel() {
             }`}
             style={{ 
               transitionDelay: '300ms',
-              textShadow: '0 4px 30px rgba(0,0,0,0.3)',
+              textShadow: '2px 2px 8px rgba(0,0,0,0.8), 0 0 40px rgba(0,0,0,0.5)',
               fontFamily: "'Playfair Display', 'Cormorant Garamond', Georgia, serif"
             }}
           >
@@ -172,8 +172,8 @@ export default function HeroCarousel() {
               }`}
               style={{ 
                 transitionDelay: '400ms',
-                color: '#c9a96e',
-                textShadow: '0 2px 20px rgba(0,0,0,0.2)',
+                color: '#f5d998',
+                textShadow: '2px 2px 8px rgba(0,0,0,0.8), 0 0 30px rgba(0,0,0,0.5)',
                 fontFamily: "'Playfair Display', 'Cormorant Garamond', Georgia, serif"
               }}
             >
