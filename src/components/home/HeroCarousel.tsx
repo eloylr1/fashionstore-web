@@ -115,7 +115,7 @@ export default function HeroCarousel() {
             }`}
           />
           {/* Overlay gradient más oscuro para mejor contraste */}
-          <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/50 to-black/70" />
+          <div className="absolute inset-0 bg-black/60" />
         </div>
       ))}
 
@@ -152,13 +152,15 @@ export default function HeroCarousel() {
 
           {/* Title */}
           <h1 
-            className={`font-serif text-6xl sm:text-7xl md:text-8xl lg:text-9xl font-light text-white leading-none mb-4 transition-all duration-700 ${
+            className={`font-serif text-6xl sm:text-7xl md:text-8xl lg:text-9xl font-medium leading-none mb-4 transition-all duration-700 ${
               isAnimating ? 'opacity-0 translate-y-8' : 'opacity-100 translate-y-0'
             }`}
             style={{ 
               transitionDelay: '300ms',
-              textShadow: '2px 2px 8px rgba(0,0,0,0.8), 0 0 40px rgba(0,0,0,0.5)',
-              fontFamily: "'Playfair Display', 'Cormorant Garamond', Georgia, serif"
+              color: '#ffffff',
+              textShadow: '0 0 20px rgba(0,0,0,0.9), 0 0 40px rgba(0,0,0,0.7), 2px 2px 4px rgba(0,0,0,1)',
+              fontFamily: "'Playfair Display', 'Cormorant Garamond', Georgia, serif",
+              WebkitTextStroke: '1px rgba(255,255,255,0.3)'
             }}
           >
             {slide.title}
@@ -232,7 +234,7 @@ export default function HeroCarousel() {
           setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length);
           setTimeout(() => setIsAnimating(false), 1000);
         }}
-        className="absolute left-6 top-1/2 -translate-y-1/2 z-30 w-12 h-12 flex items-center justify-center text-white/60 hover:text-white transition-colors duration-300 group"
+        className="absolute left-16 lg:left-24 top-1/2 -translate-y-1/2 z-30 w-12 h-12 flex items-center justify-center text-white/60 hover:text-white transition-colors duration-300 group"
         aria-label="Anterior"
       >
         <svg className="w-8 h-8 transition-transform group-hover:-translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -242,7 +244,7 @@ export default function HeroCarousel() {
 
       <button
         onClick={nextSlide}
-        className="absolute right-6 top-1/2 -translate-y-1/2 z-30 w-12 h-12 flex items-center justify-center text-white/60 hover:text-white transition-colors duration-300 group"
+        className="absolute right-16 lg:right-24 top-1/2 -translate-y-1/2 z-30 w-12 h-12 flex items-center justify-center text-white/60 hover:text-white transition-colors duration-300 group"
         aria-label="Siguiente"
       >
         <svg className="w-8 h-8 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
