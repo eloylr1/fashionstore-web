@@ -5,7 +5,7 @@
  * ═══════════════════════════════════════════════════════════════════════════
  */
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 
 interface HeroSlide {
   id: number;
@@ -60,7 +60,6 @@ export default function HeroCarousel() {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isVisible, setIsVisible] = useState(true);
   const [isPaused, setIsPaused] = useState(false);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Función para cambiar slide con animación
   const changeSlide = (newIndex: number) => {
@@ -79,29 +78,21 @@ export default function HeroCarousel() {
     }, 400);
   };
 
-  // Auto-advance slides
+  // Auto-advance slides cada 6 segundos
   useEffect(() => {
-    if (isPaused) {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-        timerRef.current = null;
-      }
-      return;
-    }
+    if (isPaused) return;
     
-    timerRef.current = setInterval(() => {
+    const autoAdvance = () => {
       setIsVisible(false);
       setTimeout(() => {
         setCurrentSlide((prev) => (prev + 1) % slides.length);
         setTimeout(() => setIsVisible(true), 100);
       }, 400);
-    }, 6000);
-
-    return () => {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-      }
     };
+
+    const timer = setInterval(autoAdvance, 6000);
+
+    return () => clearInterval(timer);
   }, [isPaused]);
 
   const slide = slides[currentSlide];
