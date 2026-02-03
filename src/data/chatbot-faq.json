@@ -1,0 +1,37 @@
+{
+  "shipping": {
+    "keywords": ["envío", "envio", "enviar", "entrega", "llegar", "llegará", "cuánto tarda", "tiempo envío", "gastos envío", "coste envío"],
+    "answer": "📦 **Envíos**: Gratis en pedidos +100€. Entrega en 2-4 días laborables en España. Envíos a Europa en 5-7 días.",
+    "link": "/ayuda#envios"
+  },
+  "returns": {
+    "keywords": ["devolución", "devolucion", "devolver", "cambio", "cambiar", "reembolso", "no me gusta", "no me queda", "talla mal"],
+    "answer": "🔄 **Devoluciones**: Tienes 30 días para devolver o cambiar. Gratis en tienda, 4,95€ por recogida a domicilio. Reembolso en 5-7 días.",
+    "link": "/ayuda#devoluciones"
+  },
+  "payment": {
+    "keywords": ["pago", "pagar", "tarjeta", "paypal", "bizum", "contrareembolso", "forma de pago", "métodos pago"],
+    "answer": "💳 **Pagos**: Aceptamos tarjeta (Visa/Mastercard), PayPal, Bizum y contrareembolso (+2€). Todo 100% seguro con encriptación SSL.",
+    "link": "/ayuda#pagos"
+  },
+  "sizes": {
+    "keywords": ["talla", "tallas", "guía tallas", "medidas", "qué talla", "cómo saber talla", "tallaje", "me queda", "sizing"],
+    "answer": "📏 **Guía de tallas**: Mide tu pecho y cintura. S(96-100cm), M(100-104cm), L(104-108cm), XL(108-112cm). Cada producto tiene su guía específica.",
+    "link": "/ayuda#tallas"
+  },
+  "contact": {
+    "keywords": ["contacto", "contactar", "teléfono", "email", "hablar", "atención cliente", "ayuda humana", "persona"],
+    "answer": "📞 **Contacto**: Email: hola@fashionmarket.com | WhatsApp: +34 612 345 678 (L-V 9-18h). Te respondemos en menos de 24h.",
+    "link": "/contacto"
+  },
+  "stock": {
+    "keywords": ["stock", "disponible", "hay", "queda", "agotado", "reponer", "cuando llega", "avisar"],
+    "answer": "📋 Si un producto está agotado, puedes activar la alerta de stock en su página. Te avisamos por email cuando vuelva.",
+    "link": null
+  },
+  "discount": {
+    "keywords": ["descuento", "oferta", "cupón", "código", "promoción", "rebajas", "sale", "outlet"],
+    "answer": "🏷️ Suscríbete a nuestra newsletter y consigue un 10% en tu primera compra. ¡Mira también nuestra sección de ofertas!",
+    "link": "/ofertas"
+  }
+}

@@ -12,6 +12,7 @@ import Footer from '../components/layout/Footer.astro';
 import CartSlideOver from '../components/islands/CartSlideOver';
 import CartNotification from '../components/cart/CartNotification';
 import CookieConsent from '../components/common/CookieConsent.astro';
+import ShopChatbot from '../components/chatbot/ShopChatbot.astro';
 
 interface Props {
   title: string;
@@ -78,6 +79,9 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site);
     
     <!-- Cart Notification Toast -->
     <CartNotification client:load />
+    
+    <!-- Chatbot Asistente de Compras -->
+    <ShopChatbot />
     
     <!-- Cookie Consent Banner -->
     <CookieConsent />

@@ -1,0 +1,816 @@
+---
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * FASHIONMARKET - Shop Chatbot Widget
+ * Widget flotante de chatbot sin IA externa
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
+
+// Importar datos
+import catalogData from '../../data/chatbot-catalog.json';
+import faqData from '../../data/chatbot-faq.json';
+---
+
+<!-- Botón flotante -->
+<button 
+  id="chatbot-toggle" 
+  class="chatbot-toggle"
+  aria-label="Abrir chat de ayuda"
+  aria-expanded="false"
+>
+  <svg class="chatbot-icon-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+  </svg>
+  <svg class="chatbot-icon-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <path d="M18 6L6 18M6 6l12 12"></path>
+  </svg>
+  <span class="chatbot-badge">1</span>
+</button>
+
+<!-- Panel del chat -->
+<div id="chatbot-panel" class="chatbot-panel" role="dialog" aria-label="Asistente de compras">
+  <!-- Header -->
+  <div class="chatbot-header">
+    <div class="chatbot-header-info">
+      <div class="chatbot-avatar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 3a3 3 0 1 1-3 3 3 3 0 0 1 3-3zm0 14a8 8 0 0 1-6-2.74A4 4 0 0 1 10 14h4a4 4 0 0 1 4 2.26A8 8 0 0 1 12 19z"></path>
+        </svg>
+      </div>
+      <div>
+        <span class="chatbot-title">Asistente FashionMarket</span>
+        <span class="chatbot-status">
+          <span class="chatbot-status-dot"></span>
+          Online
+        </span>
+      </div>
+    </div>
+    <button id="chatbot-close" class="chatbot-close" aria-label="Cerrar chat">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M18 6L6 18M6 6l12 12"></path>
+      </svg>
+    </button>
+  </div>
+  
+  <!-- Mensajes -->
+  <div id="chatbot-messages" class="chatbot-messages" role="log" aria-live="polite">
+    <!-- Los mensajes se insertan dinámicamente -->
+  </div>
+  
+  <!-- Input -->
+  <div class="chatbot-input-container">
+    <input 
+      type="text" 
+      id="chatbot-input" 
+      class="chatbot-input" 
+      placeholder="Escribe tu mensaje..."
+      aria-label="Escribe tu mensaje"
+      autocomplete="off"
+    />
+    <button id="chatbot-send" class="chatbot-send" aria-label="Enviar mensaje">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"></path>
+      </svg>
+    </button>
+  </div>
+</div>
+
+<style>
+  /* ═══════════════════════════════════════════════════════════════════════════
+     VARIABLES
+     ═══════════════════════════════════════════════════════════════════════════ */
+  :root {
+    --chatbot-primary: #0a1628;
+    --chatbot-secondary: #b8a067;
+    --chatbot-bg: #ffffff;
+    --chatbot-text: #1a1a1a;
+    --chatbot-text-light: #666666;
+    --chatbot-border: #e5e5e5;
+    --chatbot-user-bg: #0a1628;
+    --chatbot-user-text: #ffffff;
+    --chatbot-bot-bg: #f5f5f5;
+    --chatbot-shadow: 0 10px 40px rgba(0,0,0,0.2);
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════════════
+     BOTÓN FLOTANTE
+     ═══════════════════════════════════════════════════════════════════════════ */
+  .chatbot-toggle {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 9998;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: var(--chatbot-primary);
+    color: white;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .chatbot-toggle:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 25px rgba(0,0,0,0.4);
+  }
+
+  .chatbot-toggle:focus-visible {
+    outline: 3px solid var(--chatbot-secondary);
+    outline-offset: 2px;
+  }
+
+  .chatbot-toggle svg {
+    width: 28px;
+    height: 28px;
+    transition: all 0.3s ease;
+  }
+
+  .chatbot-icon-close {
+    display: none;
+  }
+
+  .chatbot-toggle.active .chatbot-icon-open {
+    display: none;
+  }
+
+  .chatbot-toggle.active .chatbot-icon-close {
+    display: block;
+  }
+
+  .chatbot-badge {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    background: var(--chatbot-secondary);
+    color: white;
+    font-size: 12px;
+    font-weight: 600;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: pulse 2s infinite;
+  }
+
+  .chatbot-toggle.active .chatbot-badge {
+    display: none;
+  }
+
+  @keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════════════
+     PANEL DEL CHAT
+     ═══════════════════════════════════════════════════════════════════════════ */
+  .chatbot-panel {
+    position: fixed;
+    bottom: 100px;
+    right: 24px;
+    z-index: 9999;
+    width: 380px;
+    max-width: calc(100vw - 48px);
+    height: 550px;
+    max-height: calc(100vh - 140px);
+    background: var(--chatbot-bg);
+    border-radius: 16px;
+    box-shadow: var(--chatbot-shadow);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(20px) scale(0.95);
+    transition: all 0.3s ease;
+  }
+
+  .chatbot-panel.open {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0) scale(1);
+  }
+
+  /* Responsive móvil */
+  @media (max-width: 480px) {
+    .chatbot-panel {
+      width: 90vw;
+      right: 5vw;
+      bottom: 90px;
+      height: calc(100vh - 120px);
+      max-height: none;
+      border-radius: 12px;
+    }
+
+    .chatbot-toggle {
+      bottom: 16px;
+      right: 16px;
+      width: 54px;
+      height: 54px;
+    }
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════════════
+     HEADER
+     ═══════════════════════════════════════════════════════════════════════════ */
+  .chatbot-header {
+    background: var(--chatbot-primary);
+    color: white;
+    padding: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+  }
+
+  .chatbot-header-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .chatbot-avatar {
+    width: 40px;
+    height: 40px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .chatbot-avatar svg {
+    width: 24px;
+    height: 24px;
+  }
+
+  .chatbot-title {
+    display: block;
+    font-weight: 600;
+    font-size: 15px;
+  }
+
+  .chatbot-status {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    opacity: 0.9;
+  }
+
+  .chatbot-status-dot {
+    width: 8px;
+    height: 8px;
+    background: #4ade80;
+    border-radius: 50%;
+  }
+
+  .chatbot-close {
+    background: none;
+    border: none;
+    color: white;
+    cursor: pointer;
+    padding: 8px;
+    opacity: 0.8;
+    transition: opacity 0.2s;
+  }
+
+  .chatbot-close:hover {
+    opacity: 1;
+  }
+
+  .chatbot-close svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════════════
+     MENSAJES
+     ═══════════════════════════════════════════════════════════════════════════ */
+  .chatbot-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .chatbot-message {
+    display: flex;
+    flex-direction: column;
+    max-width: 85%;
+  }
+
+  .chatbot-message-user {
+    align-self: flex-end;
+  }
+
+  .chatbot-message-bot {
+    align-self: flex-start;
+  }
+
+  .chatbot-bubble {
+    padding: 12px 16px;
+    border-radius: 16px;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  .chatbot-message-user .chatbot-bubble {
+    background: var(--chatbot-user-bg);
+    color: var(--chatbot-user-text);
+    border-bottom-right-radius: 4px;
+  }
+
+  .chatbot-message-bot .chatbot-bubble {
+    background: var(--chatbot-bot-bg);
+    color: var(--chatbot-text);
+    border-bottom-left-radius: 4px;
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════════════
+     PRODUCTOS
+     ═══════════════════════════════════════════════════════════════════════════ */
+  .chatbot-products {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 10px;
+  }
+
+  .chatbot-product-card {
+    background: white;
+    border: 1px solid var(--chatbot-border);
+    border-radius: 10px;
+    padding: 10px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .chatbot-product-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  .chatbot-product-name {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--chatbot-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .chatbot-product-price {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--chatbot-secondary);
+  }
+
+  .chatbot-product-btn {
+    background: var(--chatbot-primary);
+    color: white;
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    text-decoration: none;
+    transition: background 0.2s;
+    flex-shrink: 0;
+  }
+
+  .chatbot-product-btn:hover {
+    background: var(--chatbot-secondary);
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════════════
+     CHIPS
+     ═══════════════════════════════════════════════════════════════════════════ */
+  .chatbot-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 10px;
+  }
+
+  .chatbot-chip {
+    background: white;
+    border: 1px solid var(--chatbot-primary);
+    color: var(--chatbot-primary);
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .chatbot-chip:hover {
+    background: var(--chatbot-primary);
+    color: white;
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════════════
+     INPUT
+     ═══════════════════════════════════════════════════════════════════════════ */
+  .chatbot-input-container {
+    padding: 12px 16px;
+    border-top: 1px solid var(--chatbot-border);
+    display: flex;
+    gap: 10px;
+    background: white;
+    flex-shrink: 0;
+  }
+
+  .chatbot-input {
+    flex: 1;
+    border: 1px solid var(--chatbot-border);
+    border-radius: 24px;
+    padding: 10px 16px;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .chatbot-input:focus {
+    border-color: var(--chatbot-primary);
+  }
+
+  .chatbot-send {
+    width: 44px;
+    height: 44px;
+    background: var(--chatbot-primary);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+    flex-shrink: 0;
+  }
+
+  .chatbot-send:hover {
+    background: var(--chatbot-secondary);
+  }
+
+  .chatbot-send svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════════════
+     LINKS
+     ═══════════════════════════════════════════════════════════════════════════ */
+  .chatbot-bubble :global(.chatbot-link) {
+    color: var(--chatbot-secondary);
+    text-decoration: underline;
+    font-weight: 500;
+  }
+
+  .chatbot-bubble :global(.chatbot-link:hover) {
+    color: var(--chatbot-primary);
+  }
+</style>
+
+<script define:vars={{ catalogData, faqData }}>
+  // ═══════════════════════════════════════════════════════════════════════════
+  // CHATBOT ENGINE (inline para evitar problemas de importación)
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  const chatState = {
+    messages: [],
+    lastIntent: null,
+    filters: {},
+    awaitingResponse: null,
+    catalog: catalogData,
+    faq: faqData
+  };
+
+  // Diccionarios
+  const CATEGORY_SYNONYMS = {
+    'camiseta': ['camiseta', 'camisetas', 't-shirt', 'playera'],
+    'sudadera': ['sudadera', 'sudaderas', 'hoodie', 'buzo'],
+    'pantalon': ['pantalón', 'pantalon', 'pantalones', 'jogger', 'jeans', 'chino'],
+    'camisa': ['camisa', 'camisas'],
+    'blazer': ['blazer', 'americana', 'saco'],
+    'abrigo': ['abrigo', 'abrigos', 'parka'],
+    'chaqueta': ['chaqueta', 'bomber', 'cazadora'],
+    'polo': ['polo', 'polos'],
+    'traje': ['traje', 'trajes', 'suit']
+  };
+
+  const STYLE_KEYWORDS = {
+    'elegante': ['elegante', 'formal', 'clásico'],
+    'casual': ['casual', 'informal', 'diario'],
+    'urbano': ['urbano', 'street', 'streetwear'],
+    'deportivo': ['deportivo', 'gym', 'sport']
+  };
+
+  const OCCASION_KEYWORDS = {
+    'trabajo': ['trabajo', 'oficina', 'reunión'],
+    'evento': ['evento', 'fiesta', 'boda', 'salir'],
+    'invierno': ['invierno', 'frío', 'abrigar'],
+    'verano': ['verano', 'calor', 'fresco']
+  };
+
+  const COLOR_KEYWORDS = {
+    'negro': ['negro', 'negra', 'black'],
+    'blanco': ['blanco', 'blanca', 'white'],
+    'gris': ['gris', 'grey'],
+    'azul': ['azul', 'blue', 'marino'],
+    'verde': ['verde', 'green'],
+    'marrón': ['marrón', 'brown'],
+    'beige': ['beige', 'crema']
+  };
+
+  const PRICE_PATTERNS = [
+    { pattern: /menos de (\d+)/i, extract: (m) => parseInt(m[1]) },
+    { pattern: /hasta (\d+)/i, extract: (m) => parseInt(m[1]) },
+    { pattern: /máximo (\d+)/i, extract: (m) => parseInt(m[1]) },
+    { pattern: /barato/i, extract: () => 30 }
+  ];
+
+  const GREETING_KEYWORDS = ['hola', 'buenas', 'hey', 'buenos días', 'qué tal'];
+  const THANKS_KEYWORDS = ['gracias', 'genial', 'perfecto', 'vale', 'ok'];
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // FUNCIONES DEL ENGINE
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  function initChatbot() {
+    addBotMessage(
+      '¡Hola! 👋 Soy tu asistente de FashionMarket. ¿Qué buscas hoy?',
+      ['Ver novedades', 'Buscar por categoría', 'Ayuda']
+    );
+  }
+
+  function processMessage(userMessage) {
+    const text = userMessage.toLowerCase().trim();
+    addUserMessage(userMessage);
+
+    if (chatState.awaitingResponse) {
+      chatState.awaitingResponse = null;
+      return handleProductSearch(extractFilters(text));
+    }
+
+    // Detectar FAQ
+    for (const [key, faqItem] of Object.entries(chatState.faq)) {
+      if (faqItem.keywords.some(kw => text.includes(kw))) {
+        let msg = faqItem.answer;
+        if (faqItem.link) msg += ` <a href="${faqItem.link}" class="chatbot-link">Más info →</a>`;
+        return addBotMessage(msg, ['Tengo otra duda', 'Buscar productos']);
+      }
+    }
+
+    // Saludo
+    if (GREETING_KEYWORDS.some(g => text.includes(g))) {
+      return addBotMessage(
+        '¡Hola! 😊 ¿En qué puedo ayudarte? Puedo recomendarte ropa o resolver dudas.',
+        ['Ver novedades', 'Camisetas', 'Pantalones', 'Ayuda']
+      );
+    }
+
+    // Gracias
+    if (THANKS_KEYWORDS.some(t => text.includes(t))) {
+      return addBotMessage('¡De nada! 🙌 Aquí estoy si necesitas algo más.', ['Seguir comprando']);
+    }
+
+    // Ayuda
+    if (text.includes('ayuda') || text === '?') {
+      return addBotMessage(
+        '🛒 Buscar productos: "sudadera negra"\n📦 Envíos y devoluciones\n💳 Formas de pago\n📏 Guía de tallas',
+        ['Buscar ropa', 'Envíos', 'Tallas']
+      );
+    }
+
+    // Ver todo
+    if (text.includes('ver todo') || text.includes('catálogo') || text.includes('novedades')) {
+      const popular = getPopularProducts(3);
+      return addBotMessage('Estas son nuestras novedades más populares:', null, popular);
+    }
+
+    // Búsqueda de productos
+    const filters = extractFilters(text);
+    if (filters.category || filters.style || filters.occasion || filters.color || filters.maxPrice ||
+        text.includes('busco') || text.includes('quiero') || text.includes('necesito')) {
+      return handleProductSearch(filters);
+    }
+
+    // No entendido
+    const popular = getPopularProducts(2);
+    addBotMessage(
+      'No estoy seguro de entenderte. ¿Buscas alguna de estas prendas?',
+      ['Ver categorías', 'Envíos', 'Contacto'],
+      popular
+    );
+  }
+
+  function extractFilters(text) {
+    const filters = {};
+
+    for (const [cat, syns] of Object.entries(CATEGORY_SYNONYMS)) {
+      if (syns.some(s => text.includes(s))) { filters.category = cat; break; }
+    }
+
+    for (const [style, kws] of Object.entries(STYLE_KEYWORDS)) {
+      if (kws.some(k => text.includes(k))) { filters.style = style; break; }
+    }
+
+    for (const [occ, kws] of Object.entries(OCCASION_KEYWORDS)) {
+      if (kws.some(k => text.includes(k))) { filters.occasion = occ; break; }
+    }
+
+    for (const [color, kws] of Object.entries(COLOR_KEYWORDS)) {
+      if (kws.some(k => text.includes(k))) { filters.color = color; break; }
+    }
+
+    for (const { pattern, extract } of PRICE_PATTERNS) {
+      const m = text.match(pattern);
+      if (m) { filters.maxPrice = extract(m); break; }
+    }
+
+    const sizeMatch = text.match(/\b(xs|s|m|l|xl|xxl|\d{2})\b/i);
+    if (sizeMatch) filters.size = sizeMatch[1].toUpperCase();
+
+    return filters;
+  }
+
+  function handleProductSearch(filters) {
+    chatState.filters = { ...chatState.filters, ...filters };
+    let results = searchProducts(chatState.filters);
+
+    if (results.length === 0) {
+      chatState.filters = {};
+      const popular = getPopularProducts(3);
+      return addBotMessage('No encontré coincidencias exactas, pero estos son muy populares:', null, popular);
+    }
+
+    if (!chatState.filters.category && !chatState.filters.style && results.length > 4) {
+      chatState.awaitingResponse = 'category';
+      return addBotMessage('¿Qué tipo de prenda buscas?', ['Camisetas', 'Sudaderas', 'Pantalones', 'Camisas']);
+    }
+
+    const top = results.slice(0, 4);
+    const msg = top.length === 1 ? '¡Tengo justo lo que buscas!' : `Encontré ${results.length} opciones. Las mejores:`;
+    addBotMessage(msg, null, top);
+    chatState.filters = {};
+  }
+
+  function searchProducts(filters) {
+    let results = chatState.catalog.filter(p => p.inStock);
+
+    if (filters.category) results = results.filter(p => p.category === filters.category);
+    if (filters.color) results = results.filter(p => p.colors.some(c => c.toLowerCase().includes(filters.color)));
+    if (filters.maxPrice) results = results.filter(p => p.price <= filters.maxPrice);
+    if (filters.size) results = results.filter(p => p.sizes.some(s => s.toUpperCase() === filters.size));
+
+    results = results.map(p => {
+      let score = p.popularity;
+      if (filters.style && p.tags.includes(filters.style)) score += 30;
+      if (filters.occasion && p.tags.includes(filters.occasion)) score += 25;
+      return { ...p, score };
+    });
+
+    results.sort((a, b) => b.score - a.score);
+    return results;
+  }
+
+  function getPopularProducts(count) {
+    return [...chatState.catalog].filter(p => p.inStock).sort((a, b) => b.popularity - a.popularity).slice(0, count);
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // RENDERIZADO
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  function addUserMessage(text) {
+    chatState.messages.push({ type: 'user', text });
+    renderMessage('user', text);
+  }
+
+  function addBotMessage(text, chips, products) {
+    chatState.messages.push({ type: 'bot', text, chips, products });
+    renderMessage('bot', text, chips, products);
+  }
+
+  function renderMessage(type, text, chips, products) {
+    const container = document.getElementById('chatbot-messages');
+    if (!container) return;
+
+    const msgDiv = document.createElement('div');
+    msgDiv.className = `chatbot-message chatbot-message-${type}`;
+
+    const bubble = document.createElement('div');
+    bubble.className = 'chatbot-bubble';
+    bubble.innerHTML = text.replace(/\n/g, '<br>');
+    msgDiv.appendChild(bubble);
+
+    if (products && products.length) {
+      const prodDiv = document.createElement('div');
+      prodDiv.className = 'chatbot-products';
+      products.forEach(p => {
+        prodDiv.innerHTML += `
+          <div class="chatbot-product-card">
+            <div class="chatbot-product-info">
+              <span class="chatbot-product-name">${p.name}</span>
+              <span class="chatbot-product-price">${p.price.toFixed(2)}€</span>
+            </div>
+            <a href="${p.url}" class="chatbot-product-btn">Ver</a>
+          </div>
+        `;
+      });
+      msgDiv.appendChild(prodDiv);
+    }
+
+    if (chips && chips.length) {
+      const chipsDiv = document.createElement('div');
+      chipsDiv.className = 'chatbot-chips';
+      chips.forEach(chip => {
+        const btn = document.createElement('button');
+        btn.className = 'chatbot-chip';
+        btn.textContent = chip;
+        btn.onclick = () => {
+          document.getElementById('chatbot-input').value = chip;
+          sendMessage();
+        };
+        chipsDiv.appendChild(btn);
+      });
+      msgDiv.appendChild(chipsDiv);
+    }
+
+    container.appendChild(msgDiv);
+    container.scrollTop = container.scrollHeight;
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // UI CONTROL
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  function sendMessage() {
+    const input = document.getElementById('chatbot-input');
+    const text = input.value.trim();
+    if (!text) return;
+    input.value = '';
+    processMessage(text);
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const toggle = document.getElementById('chatbot-toggle');
+    const panel = document.getElementById('chatbot-panel');
+    const closeBtn = document.getElementById('chatbot-close');
+    const sendBtn = document.getElementById('chatbot-send');
+    const input = document.getElementById('chatbot-input');
+
+    let initialized = false;
+
+    function openChat() {
+      panel.classList.add('open');
+      toggle.classList.add('active');
+      toggle.setAttribute('aria-expanded', 'true');
+      input.focus();
+      if (!initialized) {
+        initChatbot();
+        initialized = true;
+      }
+    }
+
+    function closeChat() {
+      panel.classList.remove('open');
+      toggle.classList.remove('active');
+      toggle.setAttribute('aria-expanded', 'false');
+    }
+
+    toggle.addEventListener('click', () => {
+      if (panel.classList.contains('open')) closeChat();
+      else openChat();
+    });
+
+    closeBtn.addEventListener('click', closeChat);
+    sendBtn.addEventListener('click', sendMessage);
+
+    input.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') sendMessage();
+    });
+
+    // ESC para cerrar
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && panel.classList.contains('open')) closeChat();
+    });
+
+    // Exponer función global
+    window.sendChatMessage = sendMessage;
+  });
+</script>
