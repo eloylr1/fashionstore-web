@@ -1,734 +1,611 @@
 ---
 /**
- * ═══════════════════════════════════════════════════════════════════════════════
- * FASHIONMARKET CHATBOT - Diseño Interactivo Premium
- * ═══════════════════════════════════════════════════════════════════════════════
+ * FASHIONMARKET CHATBOT - Todo en uno
  */
 ---
 
-<!-- Widget Container -->
-<div id="chatbot-widget" class="cb-widget">
-  
-  <!-- Botón flotante -->
-  <button id="chatbot-fab" class="cb-fab" type="button" aria-label="Abrir chat" aria-expanded="false">
-    <svg class="cb-fab__icon cb-fab__icon--chat" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+<div id="cb-widget">
+  <button id="cb-fab" type="button" aria-label="Abrir chat" aria-expanded="false">
+    <svg id="cb-icon-chat" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
       <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
     </svg>
-    <svg class="cb-fab__icon cb-fab__icon--close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <svg id="cb-icon-close" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none">
       <line x1="18" y1="6" x2="6" y2="18"></line>
       <line x1="6" y1="6" x2="18" y2="18"></line>
     </svg>
   </button>
 
-  <!-- Panel del chat -->
-  <div id="chatbot-panel" class="cb-panel" aria-hidden="true">
+  <div id="cb-panel" style="display:none">
+    <div id="cb-header">
+      <div id="cb-avatar">🛍️</div>
+      <div id="cb-header-info">
+        <div id="cb-title">Asistente</div>
+        <div id="cb-status"><span id="cb-dot"></span> En línea</div>
+      </div>
+      <button id="cb-refresh" type="button" title="Reiniciar">↻</button>
+      <button id="cb-close-btn" type="button" title="Cerrar">✕</button>
+    </div>
     
-    <!-- Header -->
-    <header class="cb-header">
-      <button id="chatbot-back" class="cb-header__back" type="button" aria-label="Volver">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M19 12H5M12 19l-7-7 7-7"/>
-        </svg>
-      </button>
-      <div class="cb-header__avatar">
-        <svg viewBox="0 0 24 24" fill="currentColor">
-          <rect x="3" y="3" width="18" height="18" rx="3" fill="#c9a227"/>
-          <circle cx="9" cy="10" r="1.5" fill="#1a1a2e"/>
-          <circle cx="15" cy="10" r="1.5" fill="#1a1a2e"/>
-          <path d="M8 14h8" stroke="#1a1a2e" stroke-width="1.5" stroke-linecap="round"/>
-        </svg>
-      </div>
-      <div class="cb-header__info">
-        <h2 class="cb-header__title">Asistente</h2>
-        <span class="cb-header__status">En línea</span>
-      </div>
-      <div class="cb-header__actions">
-        <button id="chatbot-refresh" class="cb-header__btn" type="button" aria-label="Reiniciar">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M23 4v6h-6M1 20v-6h6"/>
-            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
-          </svg>
-        </button>
-        <button id="chatbot-menu" class="cb-header__btn" type="button" aria-label="Menú">
-          <svg viewBox="0 0 24 24" fill="currentColor">
-            <circle cx="12" cy="5" r="2"/>
-            <circle cx="12" cy="12" r="2"/>
-            <circle cx="12" cy="19" r="2"/>
-          </svg>
-        </button>
-      </div>
-    </header>
-
-    <!-- Mensajes -->
-    <main id="chatbot-messages" class="cb-messages">
-      <!-- Los mensajes se insertan dinámicamente -->
-    </main>
-
-    <!-- Input -->
-    <footer class="cb-footer">
-      <div class="cb-input-wrapper">
-        <span class="cb-input-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-          </svg>
-        </span>
-        <input type="text" id="chatbot-input" class="cb-input" placeholder="Escribe tu mensaje..." autocomplete="off"/>
-        <button type="button" id="chatbot-send" class="cb-send" aria-label="Enviar">
-          <svg viewBox="0 0 24 24" fill="currentColor">
-            <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
-          </svg>
-        </button>
-      </div>
-    </footer>
+    <div id="cb-messages"></div>
+    
+    <div id="cb-footer">
+      <input type="text" id="cb-input" placeholder="Escribe tu mensaje..." autocomplete="off">
+      <button id="cb-send" type="button">➤</button>
+    </div>
   </div>
 </div>
 
 <style>
-  /* ═══════════════════════════════════════════════════════════════════════════════
-     VARIABLES
-     ═══════════════════════════════════════════════════════════════════════════════ */
-  :root {
-    --cb-bg-dark: #1a1a2e;
-    --cb-bg-darker: #16162a;
-    --cb-bg-card: #252542;
-    --cb-accent: #c9a227;
-    --cb-accent-light: #e6c453;
-    --cb-text: #ffffff;
-    --cb-text-muted: #8b8ba3;
-    --cb-border: #2d2d4a;
-    --cb-success: #22c55e;
-  }
-
-  /* ═══════════════════════════════════════════════════════════════════════════════
-     WIDGET
-     ═══════════════════════════════════════════════════════════════════════════════ */
-  .cb-widget {
+  #cb-widget {
     position: fixed;
-    bottom: 24px;
-    right: 24px;
-    z-index: 9999;
-    font-family: system-ui, -apple-system, sans-serif;
+    bottom: 20px;
+    right: 20px;
+    z-index: 99999;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   }
 
-  /* ═══════════════════════════════════════════════════════════════════════════════
-     FAB
-     ═══════════════════════════════════════════════════════════════════════════════ */
-  .cb-fab {
+  #cb-fab {
     width: 60px;
     height: 60px;
     border-radius: 50%;
-    background: var(--cb-accent);
-    color: var(--cb-bg-dark);
+    background: linear-gradient(135deg, #c9a227 0%, #e6c453 100%);
+    color: #1a1a2e;
     border: none;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
     box-shadow: 0 4px 20px rgba(201, 162, 39, 0.4);
-    transition: all 0.3s ease;
-    position: relative;
+    transition: transform 0.2s, box-shadow 0.2s;
   }
 
-  .cb-fab:hover {
-    transform: scale(1.08);
+  #cb-fab:hover {
+    transform: scale(1.1);
     box-shadow: 0 6px 30px rgba(201, 162, 39, 0.5);
   }
 
-  .cb-fab__icon {
-    width: 28px;
-    height: 28px;
-    transition: all 0.3s ease;
-  }
-
-  .cb-fab__icon--close {
-    position: absolute;
-    opacity: 0;
-    transform: rotate(-90deg) scale(0.5);
-  }
-
-  .cb-fab[aria-expanded="true"] .cb-fab__icon--chat {
-    opacity: 0;
-    transform: rotate(90deg) scale(0.5);
-  }
-
-  .cb-fab[aria-expanded="true"] .cb-fab__icon--close {
-    opacity: 1;
-    transform: rotate(0) scale(1);
-  }
-
-  /* ═══════════════════════════════════════════════════════════════════════════════
-     PANEL
-     ═══════════════════════════════════════════════════════════════════════════════ */
-  .cb-panel {
+  #cb-panel {
     position: absolute;
     bottom: 75px;
     right: 0;
-    width: 400px;
-    height: 600px;
-    background: var(--cb-bg-dark);
+    width: 380px;
+    height: 550px;
+    background: #1a1a2e;
     border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
     display: flex;
     flex-direction: column;
-    overflow: hidden;
-    opacity: 0;
-    visibility: hidden;
-    transform: translateY(20px) scale(0.95);
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.5);
   }
 
-  .cb-panel[aria-hidden="false"] {
-    opacity: 1;
-    visibility: visible;
-    transform: translateY(0) scale(1);
-  }
-
-  /* ═══════════════════════════════════════════════════════════════════════════════
-     HEADER
-     ═══════════════════════════════════════════════════════════════════════════════ */
-  .cb-header {
-    background: var(--cb-bg-darker);
-    padding: 16px 20px;
+  #cb-header {
+    background: #12121f;
+    padding: 15px;
     display: flex;
     align-items: center;
     gap: 12px;
-    border-bottom: 1px solid var(--cb-border);
+    border-bottom: 1px solid #2d2d4a;
   }
 
-  .cb-header__back {
-    width: 36px;
-    height: 36px;
-    background: transparent;
-    border: none;
-    color: var(--cb-text);
-    cursor: pointer;
+  #cb-avatar {
+    width: 45px;
+    height: 45px;
+    background: #c9a227;
+    border-radius: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 8px;
-    transition: background 0.2s;
+    font-size: 24px;
   }
 
-  .cb-header__back:hover {
-    background: var(--cb-bg-card);
-  }
-
-  .cb-header__back svg {
-    width: 20px;
-    height: 20px;
-  }
-
-  .cb-header__avatar {
-    width: 44px;
-    height: 44px;
-    border-radius: 12px;
-    overflow: hidden;
-    flex-shrink: 0;
-  }
-
-  .cb-header__avatar svg {
-    width: 100%;
-    height: 100%;
-  }
-
-  .cb-header__info {
+  #cb-header-info {
     flex: 1;
   }
 
-  .cb-header__title {
+  #cb-title {
+    color: #fff;
     font-size: 17px;
     font-weight: 600;
-    color: var(--cb-text);
-    margin: 0;
   }
 
-  .cb-header__status {
+  #cb-status {
+    color: #22c55e;
     font-size: 13px;
-    color: var(--cb-success);
-  }
-
-  .cb-header__actions {
     display: flex;
-    gap: 8px;
+    align-items: center;
+    gap: 6px;
   }
 
-  .cb-header__btn {
+  #cb-dot {
+    width: 8px;
+    height: 8px;
+    background: #22c55e;
+    border-radius: 50%;
+    display: inline-block;
+  }
+
+  #cb-refresh, #cb-close-btn {
     width: 36px;
     height: 36px;
     background: transparent;
     border: none;
-    color: var(--cb-text-muted);
+    color: #8b8ba3;
+    font-size: 18px;
     cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
     border-radius: 8px;
-    transition: all 0.2s;
+    transition: background 0.2s, color 0.2s;
   }
 
-  .cb-header__btn:hover {
-    background: var(--cb-bg-card);
-    color: var(--cb-text);
+  #cb-refresh:hover, #cb-close-btn:hover {
+    background: #252542;
+    color: #fff;
   }
 
-  .cb-header__btn svg {
-    width: 20px;
-    height: 20px;
-  }
-
-  /* ═══════════════════════════════════════════════════════════════════════════════
-     MESSAGES
-     ═══════════════════════════════════════════════════════════════════════════════ */
-  .cb-messages {
+  #cb-messages {
     flex: 1;
     overflow-y: auto;
     padding: 20px;
     display: flex;
     flex-direction: column;
-    gap: 16px;
-    background: var(--cb-bg-dark);
+    gap: 15px;
   }
 
-  .cb-messages::-webkit-scrollbar {
-    width: 6px;
+  #cb-messages::-webkit-scrollbar {
+    width: 5px;
   }
 
-  .cb-messages::-webkit-scrollbar-thumb {
-    background: var(--cb-border);
+  #cb-messages::-webkit-scrollbar-thumb {
+    background: #2d2d4a;
     border-radius: 3px;
   }
 
-  /* Message */
   .cb-msg {
     max-width: 90%;
-    animation: msgSlide 0.3s ease;
+    animation: cbSlide 0.3s ease;
   }
 
-  @keyframes msgSlide {
+  @keyframes cbSlide {
     from { opacity: 0; transform: translateY(10px); }
     to { opacity: 1; transform: translateY(0); }
   }
 
-  .cb-msg--user {
+  .cb-msg-user {
     align-self: flex-end;
   }
 
-  .cb-msg--bot {
+  .cb-msg-bot {
     align-self: flex-start;
   }
 
-  .cb-msg__bubble {
-    padding: 14px 18px;
+  .cb-bubble {
+    padding: 12px 16px;
     border-radius: 18px;
     font-size: 15px;
     line-height: 1.5;
   }
 
-  .cb-msg--user .cb-msg__bubble {
-    background: var(--cb-accent);
-    color: var(--cb-bg-dark);
-    border-bottom-right-radius: 6px;
+  .cb-msg-user .cb-bubble {
+    background: #c9a227;
+    color: #1a1a2e;
+    border-bottom-right-radius: 4px;
   }
 
-  .cb-msg--bot .cb-msg__bubble {
-    background: var(--cb-bg-card);
-    color: var(--cb-text);
-    border-bottom-left-radius: 6px;
+  .cb-msg-bot .cb-bubble {
+    background: #252542;
+    color: #fff;
+    border-bottom-left-radius: 4px;
   }
 
-  /* ═══════════════════════════════════════════════════════════════════════════════
-     CHIPS - Botones interactivos con emojis
-     ═══════════════════════════════════════════════════════════════════════════════ */
   .cb-chips {
     display: flex;
     flex-wrap: wrap;
-    gap: 10px;
-    margin-top: 14px;
+    gap: 8px;
+    margin-top: 12px;
   }
 
   .cb-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    background: var(--cb-bg-card);
-    color: var(--cb-accent);
-    border: 1.5px solid var(--cb-accent);
+    background: #252542;
+    color: #c9a227;
+    border: 2px solid #c9a227;
     padding: 10px 16px;
     border-radius: 25px;
     font-size: 14px;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.2s;
     font-family: inherit;
-    white-space: nowrap;
+    display: inline-block;
   }
 
   .cb-chip:hover {
-    background: var(--cb-accent);
-    color: var(--cb-bg-dark);
+    background: #c9a227;
+    color: #1a1a2e;
     transform: translateY(-2px);
-    box-shadow: 0 4px 15px rgba(201, 162, 39, 0.3);
   }
 
-  .cb-chip:active {
-    transform: translateY(0);
-  }
-
-  /* ═══════════════════════════════════════════════════════════════════════════════
-     PRODUCTS GRID
-     ═══════════════════════════════════════════════════════════════════════════════ */
   .cb-products {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 12px;
-    margin-top: 14px;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 12px;
   }
 
   .cb-product {
-    background: var(--cb-bg-card);
-    border-radius: 16px;
+    background: #252542;
+    border-radius: 14px;
     overflow: hidden;
-    transition: all 0.2s ease;
-    cursor: pointer;
     text-decoration: none;
-    display: block;
+    transition: transform 0.2s, box-shadow 0.2s;
     position: relative;
   }
 
   .cb-product:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.3);
   }
 
-  .cb-product__badge {
+  .cb-badge {
     position: absolute;
-    top: 10px;
-    left: 10px;
-    background: var(--cb-accent);
-    color: var(--cb-bg-dark);
-    padding: 4px 10px;
-    border-radius: 6px;
+    top: 8px;
+    left: 8px;
+    background: #c9a227;
+    color: #1a1a2e;
+    padding: 3px 8px;
+    border-radius: 5px;
     font-size: 10px;
     font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
     z-index: 2;
   }
 
-  .cb-product__img {
+  .cb-product-img {
     width: 100%;
-    height: 100px;
-    background: var(--cb-border);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    position: relative;
-    overflow: hidden;
-  }
-
-  .cb-product__img img {
-    width: 100%;
-    height: 100%;
+    height: 90px;
     object-fit: cover;
-    transition: transform 0.3s ease;
+    background: #1a1a2e;
   }
 
-  .cb-product:hover .cb-product__img img {
-    transform: scale(1.05);
+  .cb-product-info {
+    padding: 10px;
   }
 
-  .cb-product__img-placeholder {
-    width: 40px;
-    height: 40px;
-    color: var(--cb-text-muted);
-    opacity: 0.5;
-  }
-
-  .cb-product__info {
-    padding: 12px;
-  }
-
-  .cb-product__name {
-    font-size: 13px;
+  .cb-product-name {
+    color: #fff;
+    font-size: 12px;
     font-weight: 600;
-    color: var(--cb-text);
     margin: 0 0 4px 0;
     line-height: 1.3;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
     overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
-  .cb-product__price {
-    font-size: 16px;
+  .cb-product-price {
+    color: #c9a227;
+    font-size: 15px;
     font-weight: 700;
-    color: var(--cb-accent);
     margin: 0;
   }
 
-  /* ═══════════════════════════════════════════════════════════════════════════════
-     FOOTER / INPUT
-     ═══════════════════════════════════════════════════════════════════════════════ */
-  .cb-footer {
-    padding: 16px 20px;
-    background: var(--cb-bg-darker);
-    border-top: 1px solid var(--cb-border);
-  }
-
-  .cb-input-wrapper {
+  #cb-footer {
+    padding: 15px;
+    background: #12121f;
+    border-top: 1px solid #2d2d4a;
     display: flex;
-    align-items: center;
-    gap: 12px;
-    background: var(--cb-bg-card);
-    border-radius: 30px;
-    padding: 6px 6px 6px 18px;
-    border: 1px solid var(--cb-border);
-    transition: border-color 0.2s;
+    gap: 10px;
   }
 
-  .cb-input-wrapper:focus-within {
-    border-color: var(--cb-accent);
-  }
-
-  .cb-input-icon {
-    color: var(--cb-text-muted);
-    flex-shrink: 0;
-  }
-
-  .cb-input-icon svg {
-    width: 20px;
-    height: 20px;
-  }
-
-  .cb-input {
+  #cb-input {
     flex: 1;
-    background: transparent;
-    border: none;
-    color: var(--cb-text);
+    background: #252542;
+    border: 1px solid #2d2d4a;
+    border-radius: 25px;
+    padding: 12px 18px;
+    color: #fff;
     font-size: 15px;
-    padding: 10px 0;
     font-family: inherit;
   }
 
-  .cb-input:focus {
+  #cb-input:focus {
     outline: none;
+    border-color: #c9a227;
   }
 
-  .cb-input::placeholder {
-    color: var(--cb-text-muted);
+  #cb-input::placeholder {
+    color: #8b8ba3;
   }
 
-  .cb-send {
-    width: 44px;
-    height: 44px;
-    background: var(--cb-accent);
-    color: var(--cb-bg-dark);
+  #cb-send {
+    width: 48px;
+    height: 48px;
+    background: #c9a227;
+    color: #1a1a2e;
     border: none;
     border-radius: 50%;
+    font-size: 20px;
     cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.2s;
-    flex-shrink: 0;
+    transition: background 0.2s, transform 0.2s;
   }
 
-  .cb-send:hover {
-    background: var(--cb-accent-light);
+  #cb-send:hover {
+    background: #e6c453;
     transform: scale(1.05);
   }
 
-  .cb-send svg {
-    width: 20px;
-    height: 20px;
-  }
-
-  /* ═══════════════════════════════════════════════════════════════════════════════
-     RESPONSIVE
-     ═══════════════════════════════════════════════════════════════════════════════ */
   @media (max-width: 480px) {
-    .cb-widget {
-      bottom: 16px;
-      right: 16px;
-    }
-
-    .cb-panel {
-      width: calc(100vw - 32px);
-      height: 75vh;
-      bottom: 70px;
-      right: 0;
-    }
-
-    .cb-fab {
-      width: 54px;
-      height: 54px;
-    }
-
-    .cb-products {
-      grid-template-columns: repeat(2, 1fr);
-    }
+    #cb-widget { bottom: 15px; right: 15px; }
+    #cb-panel { width: calc(100vw - 30px); height: 70vh; }
+    #cb-fab { width: 55px; height: 55px; }
   }
 </style>
 
-<script is:inline src="/js/chatbot.js"></script>
-
 <script is:inline>
-// @ts-nocheck
-(function() {
-  var fab = document.getElementById('chatbot-fab');
-  var panel = document.getElementById('chatbot-panel');
-  var backBtn = document.getElementById('chatbot-back');
-  var refreshBtn = document.getElementById('chatbot-refresh');
-  var input = document.getElementById('chatbot-input');
-  var sendBtn = document.getElementById('chatbot-send');
-  var messagesContainer = document.getElementById('chatbot-messages');
-  
-  if (!fab || !panel || !input || !sendBtn || !messagesContainer) return;
-  
-  var isOpen = false;
-  var initialized = false;
+(function(){
+  // ==================== CATÁLOGO ====================
+  var CATALOG = [
+    { id: 1, name: "Sudadera Oversize Premium", price: 49.99, badge: "NUEVO", img: "https://images.unsplash.com/photo-1556821840-3a63f95609a7?w=200&h=200&fit=crop", url: "/tienda", category: "sudadera", tags: ["urbano","casual"], colors: ["negro","gris"], popularity: 98 },
+    { id: 2, name: "Camiseta Básica Algodón", price: 19.99, badge: "TOP", img: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=200&h=200&fit=crop", url: "/tienda", category: "camiseta", tags: ["casual","básico"], colors: ["blanco","negro"], popularity: 95 },
+    { id: 3, name: "Blazer Azul Casual", price: 149.99, badge: "NUEVO", img: "https://images.unsplash.com/photo-1507679799987-c73779587ccf?w=200&h=200&fit=crop", url: "/tienda?categoria=trajes", category: "blazer", tags: ["elegante","formal"], colors: ["azul","negro"], popularity: 88 },
+    { id: 4, name: "Camisa Oxford Blanca", price: 59.99, badge: "TOP", img: "https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=200&h=200&fit=crop", url: "/tienda?categoria=camisas", category: "camisa", tags: ["formal","trabajo"], colors: ["blanco"], popularity: 85 },
+    { id: 5, name: "Jogger Deportivo Tech", price: 39.99, badge: "TOP", img: "https://images.unsplash.com/photo-1552902865-b72c031ac5ea?w=200&h=200&fit=crop", url: "/tienda?categoria=pantalones", category: "pantalon", tags: ["deportivo","gym"], colors: ["negro","gris"], popularity: 91 },
+    { id: 6, name: "Pantalón Chino Slim", price: 54.99, badge: null, img: "https://images.unsplash.com/photo-1473966968600-fa801b869a1a?w=200&h=200&fit=crop", url: "/tienda?categoria=pantalones", category: "pantalon", tags: ["casual","trabajo"], colors: ["beige","azul"], popularity: 82 },
+    { id: 7, name: "Abrigo Largo Premium", price: 189.99, badge: "PREMIUM", img: "https://images.unsplash.com/photo-1539533018447-63fcce2678e3?w=200&h=200&fit=crop", url: "/tienda", category: "abrigo", tags: ["elegante","invierno"], colors: ["negro","camel"], popularity: 79 },
+    { id: 8, name: "Traje Completo Modern", price: 279.99, badge: "PREMIUM", img: "https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=200&h=200&fit=crop", url: "/tienda?categoria=trajes", category: "traje", tags: ["formal","evento"], colors: ["negro","azul"], popularity: 74 },
+    { id: 9, name: "Polo Piqué Classic", price: 34.99, badge: null, img: "https://images.unsplash.com/photo-1586363104862-3a5e2ab60d99?w=200&h=200&fit=crop", url: "/tienda", category: "polo", tags: ["casual","verano"], colors: ["blanco","azul"], popularity: 76 },
+    { id: 10, name: "Sudadera Capucha Essential", price: 45.99, badge: "TOP", img: "https://images.unsplash.com/photo-1620799140408-edc6dcb6d633?w=200&h=200&fit=crop", url: "/tienda", category: "sudadera", tags: ["urbano","casual"], colors: ["gris","negro"], popularity: 93 },
+    { id: 11, name: "Bomber Jacket Retro", price: 89.99, badge: "TREND", img: "https://images.unsplash.com/photo-1591047139829-d91aecb6caea?w=200&h=200&fit=crop", url: "/tienda", category: "chaqueta", tags: ["urbano","retro"], colors: ["negro","verde"], popularity: 84 },
+    { id: 12, name: "Camiseta Graphic Urban", price: 29.99, badge: "NUEVO", img: "https://images.unsplash.com/photo-1503341504253-dff4815485f1?w=200&h=200&fit=crop", url: "/tienda", category: "camiseta", tags: ["urbano","streetwear"], colors: ["negro","blanco"], popularity: 89 }
+  ];
 
+  var FAQ = {
+    envios: "📦 <strong>Envíos:</strong> Gratis en pedidos +100€. Entrega 2-4 días en España.",
+    devoluciones: "🔄 <strong>Devoluciones:</strong> 30 días para devolver. Gratis en tienda.",
+    pagos: "💳 <strong>Pagos:</strong> Tarjeta, PayPal, Bizum. 100% seguro.",
+    tallas: "📏 <strong>Tallas:</strong> S (96-100cm), M (100-104cm), L (104-108cm), XL (108-112cm).",
+    contacto: "📞 <strong>Contacto:</strong> hola@fashionmarket.com | WhatsApp: +34 612 345 678"
+  };
+
+  // ==================== DOM ====================
+  var fab = document.getElementById('cb-fab');
+  var panel = document.getElementById('cb-panel');
+  var iconChat = document.getElementById('cb-icon-chat');
+  var iconClose = document.getElementById('cb-icon-close');
+  var refreshBtn = document.getElementById('cb-refresh');
+  var closeBtn = document.getElementById('cb-close-btn');
+  var input = document.getElementById('cb-input');
+  var sendBtn = document.getElementById('cb-send');
+  var messages = document.getElementById('cb-messages');
+
+  var isOpen = false;
+  var started = false;
+
+  // ==================== FUNCIONES ====================
   function openChat() {
     isOpen = true;
+    panel.style.display = 'flex';
+    iconChat.style.display = 'none';
+    iconClose.style.display = 'block';
     fab.setAttribute('aria-expanded', 'true');
-    panel.setAttribute('aria-hidden', 'false');
-    setTimeout(function() { input.focus(); }, 100);
-    
-    if (!initialized && window.ChatbotEngine) {
-      initialized = true;
-      var welcome = window.ChatbotEngine.getWelcomeMessage();
-      renderBotMessage(welcome.text, welcome.chips, welcome.products);
+    setTimeout(function(){ input.focus(); }, 100);
+    if (!started) {
+      started = true;
+      showWelcome();
     }
   }
-  
+
   function closeChat() {
     isOpen = false;
+    panel.style.display = 'none';
+    iconChat.style.display = 'block';
+    iconClose.style.display = 'none';
     fab.setAttribute('aria-expanded', 'false');
-    panel.setAttribute('aria-hidden', 'true');
   }
-  
+
   function toggleChat() {
     isOpen ? closeChat() : openChat();
   }
-  
+
   function resetChat() {
-    messagesContainer.innerHTML = '';
-    initialized = false;
-    if (window.ChatbotEngine) {
-      initialized = true;
-      var welcome = window.ChatbotEngine.getWelcomeMessage();
-      renderBotMessage(welcome.text, welcome.chips, welcome.products);
-    }
+    messages.innerHTML = '';
+    started = false;
+    showWelcome();
+    started = true;
   }
 
-  function escapeHtml(text) {
+  function escape(t) {
+    var d = document.createElement('div');
+    d.textContent = t;
+    return d.innerHTML;
+  }
+
+  function scrollDown() {
+    messages.scrollTop = messages.scrollHeight;
+  }
+
+  function addUserMsg(text) {
     var div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
+    div.className = 'cb-msg cb-msg-user';
+    div.innerHTML = '<div class="cb-bubble">' + escape(text) + '</div>';
+    messages.appendChild(div);
+    scrollDown();
   }
-  
-  function renderUserMessage(text) {
-    var msgEl = document.createElement('div');
-    msgEl.className = 'cb-msg cb-msg--user';
-    msgEl.innerHTML = '<div class="cb-msg__bubble">' + escapeHtml(text) + '</div>';
-    messagesContainer.appendChild(msgEl);
-    scrollToBottom();
-  }
-  
-  function renderBotMessage(text, chips, products) {
-    var msgEl = document.createElement('div');
-    msgEl.className = 'cb-msg cb-msg--bot';
+
+  function addBotMsg(text, chips, products) {
+    var div = document.createElement('div');
+    div.className = 'cb-msg cb-msg-bot';
     
-    var html = '<div class="cb-msg__bubble">' + text + '</div>';
+    var html = '<div class="cb-bubble">' + text + '</div>';
     
-    // Productos en grid
+    // Productos
     if (products && products.length > 0) {
       html += '<div class="cb-products">';
       for (var i = 0; i < products.length; i++) {
         var p = products[i];
-        var badgeHtml = p.badge ? '<span class="cb-product__badge">' + p.badge + '</span>' : '';
-        var imgHtml = p.image 
-          ? '<img src="' + p.image + '" alt="' + escapeHtml(p.name) + '" loading="lazy"/>'
-          : '<svg class="cb-product__img-placeholder" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20.38 3.46L16 2a4 4 0 01-8 0L3.62 3.46a2 2 0 00-1.34 2.23l.58 3.47a1 1 0 00.99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 002-2V10h2.15a1 1 0 00.99-.84l.58-3.47a2 2 0 00-1.34-2.23z"/></svg>';
-        
-        html += '<a href="' + p.url + '" class="cb-product">' +
-          badgeHtml +
-          '<div class="cb-product__img">' + imgHtml + '</div>' +
-          '<div class="cb-product__info">' +
-          '<p class="cb-product__name">' + escapeHtml(p.name) + '</p>' +
-          '<p class="cb-product__price">' + p.price.toFixed(0) + '€</p>' +
-          '</div></a>';
+        html += '<a href="' + p.url + '" class="cb-product">';
+        if (p.badge) html += '<span class="cb-badge">' + p.badge + '</span>';
+        html += '<img class="cb-product-img" src="' + p.img + '" alt="' + escape(p.name) + '" loading="lazy" onerror="this.style.display=\'none\'">';
+        html += '<div class="cb-product-info">';
+        html += '<p class="cb-product-name">' + escape(p.name) + '</p>';
+        html += '<p class="cb-product-price">' + p.price.toFixed(0) + '€</p>';
+        html += '</div></a>';
       }
       html += '</div>';
     }
     
-    // Chips interactivos
+    // Chips - CADA UNO ES UN BOTÓN SEPARADO
     if (chips && chips.length > 0) {
       html += '<div class="cb-chips">';
       for (var j = 0; j < chips.length; j++) {
-        var chipText = typeof chips[j] === 'object' ? chips[j].text : chips[j];
-        html += '<button type="button" class="cb-chip" data-chip="' + j + '">' + escapeHtml(chipText) + '</button>';
+        html += '<button type="button" class="cb-chip" data-idx="' + j + '">' + escape(chips[j]) + '</button>';
       }
       html += '</div>';
     }
     
-    msgEl.innerHTML = html;
-    messagesContainer.appendChild(msgEl);
+    div.innerHTML = html;
+    messages.appendChild(div);
     
-    // Event listeners para chips
-    var chipBtns = msgEl.querySelectorAll('.cb-chip');
-    for (var k = 0; k < chipBtns.length; k++) {
-      (function(idx) {
-        chipBtns[idx].addEventListener('click', function() {
-          var chipText = typeof chips[idx] === 'object' ? chips[idx].text : chips[idx];
-          handleUserInput(chipText);
-        });
+    // Click en chips
+    var btns = div.querySelectorAll('.cb-chip');
+    for (var k = 0; k < btns.length; k++) {
+      (function(idx){
+        btns[idx].onclick = function() {
+          processInput(chips[idx]);
+        };
       })(k);
     }
     
-    scrollToBottom();
-  }
-  
-  function scrollToBottom() {
-    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    scrollDown();
   }
 
-  function handleUserInput(text) {
-    if (!text || !text.trim()) return;
-    
-    var cleanText = text.trim();
-    renderUserMessage(cleanText);
-    
-    if (window.ChatbotEngine) {
-      var response = window.ChatbotEngine.processMessage(cleanText);
-      setTimeout(function() {
-        renderBotMessage(response.text, response.chips, response.products);
-      }, 400);
+  function showWelcome() {
+    addBotMsg(
+      "¡Hola! 👋 Soy tu asistente de FashionMarket. ¿Qué buscas hoy?",
+      ["🔥 Ver más vendidos", "✨ Novedades", "🎩 Buscar traje", "❓ Ayuda"],
+      null
+    );
+  }
+
+  function getPopular(n) {
+    var sorted = CATALOG.slice().sort(function(a,b){ return b.popularity - a.popularity; });
+    return sorted.slice(0, n || 4);
+  }
+
+  function getByCategory(cat, n) {
+    var res = [];
+    for (var i = 0; i < CATALOG.length && res.length < (n||4); i++) {
+      if (CATALOG[i].category === cat) res.push(CATALOG[i]);
     }
-  }
-  
-  function handleSend() {
-    var text = input.value;
-    input.value = '';
-    handleUserInput(text);
+    return res;
   }
 
-  // Event listeners
-  fab.addEventListener('click', toggleChat);
-  if (backBtn) backBtn.addEventListener('click', closeChat);
-  if (refreshBtn) refreshBtn.addEventListener('click', resetChat);
-  sendBtn.addEventListener('click', handleSend);
+  function getNew(n) {
+    var res = [];
+    for (var i = 0; i < CATALOG.length && res.length < (n||4); i++) {
+      if (CATALOG[i].badge === "NUEVO") res.push(CATALOG[i]);
+    }
+    return res;
+  }
+
+  function processInput(text) {
+    if (!text || !text.trim()) return;
+    var t = text.trim();
+    addUserMsg(t);
+
+    setTimeout(function(){
+      var lower = t.toLowerCase();
+      
+      // Más vendidos / populares
+      if (lower.indexOf('vendidos') >= 0 || lower.indexOf('populares') >= 0 || lower.indexOf('top') >= 0) {
+        addBotMsg("🔥 ¡Estos son nuestros más vendidos!", ["✨ Ver novedades", "🔍 Buscar por categoría"], getPopular(4));
+      }
+      // Novedades
+      else if (lower.indexOf('novedades') >= 0 || lower.indexOf('nuevo') >= 0) {
+        addBotMsg("✨ ¡Estas son las últimas novedades!", ["🔥 Ver más vendidos", "👔 Ver camisas"], getNew(4));
+      }
+      // Trajes
+      else if (lower.indexOf('traje') >= 0 || lower.indexOf('blazer') >= 0 || lower.indexOf('formal') >= 0) {
+        var trajes = getByCategory('traje', 2).concat(getByCategory('blazer', 2));
+        addBotMsg("🎩 Nuestra selección de trajes y blazers:", ["👔 Ver camisas", "🔥 Más vendidos"], trajes);
+      }
+      // Camisas
+      else if (lower.indexOf('camisa') >= 0) {
+        addBotMsg("👔 Nuestras mejores camisas:", ["🎩 Ver trajes", "🔥 Más vendidos"], getByCategory('camisa', 4));
+      }
+      // Pantalones
+      else if (lower.indexOf('pantalon') >= 0 || lower.indexOf('pantalón') >= 0 || lower.indexOf('jogger') >= 0) {
+        addBotMsg("👖 Pantalones para ti:", ["👔 Ver camisas", "🔥 Más vendidos"], getByCategory('pantalon', 4));
+      }
+      // Sudaderas
+      else if (lower.indexOf('sudadera') >= 0 || lower.indexOf('hoodie') >= 0) {
+        addBotMsg("🧥 Sudaderas cómodas:", ["🔥 Más vendidos", "✨ Novedades"], getByCategory('sudadera', 4));
+      }
+      // Camisetas
+      else if (lower.indexOf('camiseta') >= 0 || lower.indexOf('t-shirt') >= 0) {
+        addBotMsg("👕 Camisetas para el día a día:", ["🔥 Más vendidos", "✨ Novedades"], getByCategory('camiseta', 4));
+      }
+      // Ayuda
+      else if (lower.indexOf('ayuda') >= 0 || lower.indexOf('help') >= 0) {
+        addBotMsg("¿En qué puedo ayudarte? 👇", ["📦 Envíos", "🔄 Devoluciones", "📏 Guía de tallas", "💳 Pagos"], null);
+      }
+      // Envíos
+      else if (lower.indexOf('envío') >= 0 || lower.indexOf('envio') >= 0 || lower.indexOf('entrega') >= 0) {
+        addBotMsg(FAQ.envios, ["🔥 Ver productos", "❓ Más ayuda"], null);
+      }
+      // Devoluciones
+      else if (lower.indexOf('devoluc') >= 0 || lower.indexOf('cambio') >= 0) {
+        addBotMsg(FAQ.devoluciones, ["🔥 Ver productos", "❓ Más ayuda"], null);
+      }
+      // Tallas
+      else if (lower.indexOf('talla') >= 0 || lower.indexOf('medida') >= 0) {
+        addBotMsg(FAQ.tallas, ["🔥 Ver productos", "❓ Más ayuda"], null);
+      }
+      // Pagos
+      else if (lower.indexOf('pago') >= 0 || lower.indexOf('tarjeta') >= 0 || lower.indexOf('bizum') >= 0) {
+        addBotMsg(FAQ.pagos, ["🔥 Ver productos", "❓ Más ayuda"], null);
+      }
+      // Contacto
+      else if (lower.indexOf('contacto') >= 0 || lower.indexOf('email') >= 0 || lower.indexOf('whatsapp') >= 0) {
+        addBotMsg(FAQ.contacto, ["🔥 Ver productos", "❓ Más ayuda"], null);
+      }
+      // Hola
+      else if (lower.indexOf('hola') >= 0 || lower.indexOf('buenas') >= 0 || lower.indexOf('hey') >= 0) {
+        addBotMsg("¡Hola! 😊 ¿En qué puedo ayudarte hoy?", ["🔥 Ver más vendidos", "✨ Novedades", "❓ Ayuda"], null);
+      }
+      // Gracias
+      else if (lower.indexOf('gracias') >= 0 || lower.indexOf('genial') >= 0 || lower.indexOf('perfecto') >= 0) {
+        addBotMsg("¡De nada! 😊 ¿Hay algo más en lo que pueda ayudarte?", ["🔥 Ver más vendidos", "✨ Novedades"], null);
+      }
+      // Categoría / buscar
+      else if (lower.indexOf('categoría') >= 0 || lower.indexOf('categoria') >= 0 || lower.indexOf('buscar') >= 0) {
+        addBotMsg("¿Qué categoría te interesa? 👇", ["👕 Camisetas", "👔 Camisas", "🧥 Sudaderas", "👖 Pantalones", "🎩 Trajes"], null);
+      }
+      // Por defecto
+      else {
+        addBotMsg("No estoy seguro de entenderte. ¿Te ayudo con algo de esto?", ["🔥 Ver más vendidos", "✨ Novedades", "❓ Ayuda"], getPopular(2));
+      }
+    }, 400);
+  }
+
+  function handleSend() {
+    var t = input.value;
+    input.value = '';
+    processInput(t);
+  }
+
+  // ==================== EVENTS ====================
+  fab.onclick = toggleChat;
+  closeBtn.onclick = closeChat;
+  refreshBtn.onclick = resetChat;
+  sendBtn.onclick = handleSend;
   
-  input.addEventListener('keydown', function(e) {
+  input.onkeydown = function(e) {
     if (e.key === 'Enter') {
       e.preventDefault();
       handleSend();
     }
-  });
-  
-  document.addEventListener('keydown', function(e) {
+  };
+
+  document.onkeydown = function(e) {
     if (e.key === 'Escape' && isOpen) closeChat();
-  });
+  };
 })();
 </script>
