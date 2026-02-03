@@ -1,0 +1,37 @@
+{
+  "envios": {
+    "keywords": ["envío", "envio", "enviar", "entrega", "entregar", "llegar", "llegará", "cuánto tarda", "tiempo envío", "gastos envío", "coste envío", "shipping", "envíos"],
+    "answer": "📦 <strong>Envíos:</strong> Gratis en pedidos superiores a 100€. Entrega estándar en 2-4 días laborables en España peninsular. Envíos a Europa en 5-7 días (desde 4,95€).",
+    "link": "/envios"
+  },
+  "devoluciones": {
+    "keywords": ["devolución", "devolucion", "devolver", "cambio", "cambiar", "reembolso", "no me gusta", "no me queda", "talla mal", "devuelvo", "cambios"],
+    "answer": "🔄 <strong>Devoluciones:</strong> Dispones de 30 días para devolver o cambiar. Gratis si lo entregas en tienda. Por recogida a domicilio: 4,95€. Reembolso en 5-7 días hábiles tras recibir el artículo.",
+    "link": "/devoluciones"
+  },
+  "pagos": {
+    "keywords": ["pago", "pagar", "tarjeta", "paypal", "bizum", "contrareembolso", "forma de pago", "métodos pago", "formas de pago", "como pago"],
+    "answer": "💳 <strong>Métodos de pago:</strong> Tarjeta (Visa/Mastercard/Amex), PayPal, Bizum y contrareembolso (+2€). Todas las transacciones con encriptación SSL 100% segura.",
+    "link": "/pagos"
+  },
+  "tallas": {
+    "keywords": ["talla", "tallas", "guía tallas", "medidas", "qué talla", "cómo saber talla", "tallaje", "me queda", "sizing", "mido", "peso"],
+    "answer": "📏 <strong>Guía de tallas:</strong> Mide tu contorno de pecho: S (96-100cm), M (100-104cm), L (104-108cm), XL (108-112cm). Cada producto incluye su tabla específica. ¿Dudas entre dos? Te recomendamos la mayor.",
+    "link": "/guia-de-tallas"
+  },
+  "contacto": {
+    "keywords": ["contacto", "contactar", "teléfono", "telefono", "email", "hablar", "atención cliente", "ayuda humana", "persona", "llamar"],
+    "answer": "📞 <strong>Contacto:</strong> Email: hola@fashionmarket.com | WhatsApp: +34 612 345 678 (Lunes a Viernes 9-18h). Te respondemos en menos de 24h.",
+    "link": "/contacto"
+  },
+  "stock": {
+    "keywords": ["stock", "disponible", "hay", "queda", "agotado", "reponer", "cuando llega", "avisar", "disponibilidad"],
+    "answer": "📋 <strong>Disponibilidad:</strong> Si un artículo está agotado, activa la alerta de stock en su ficha. Te notificaremos por email en cuanto vuelva. También puedes escribirnos para consultar fecha estimada.",
+    "link": null
+  },
+  "descuentos": {
+    "keywords": ["descuento", "oferta", "cupón", "cupon", "código", "codigo", "promoción", "promocion", "rebajas", "sale", "outlet", "oferta"],
+    "answer": "🏷️ <strong>Descuentos:</strong> ¡Suscríbete a nuestra newsletter y consigue un 10% en tu primera compra! También tenemos sección de ofertas con descuentos de hasta el 50%.",
+    "link": "/ofertas"
+  }
+}
