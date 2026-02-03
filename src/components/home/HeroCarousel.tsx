@@ -5,7 +5,7 @@
  * ═══════════════════════════════════════════════════════════════════════════
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 interface HeroSlide {
   id: number;
@@ -15,7 +15,6 @@ interface HeroSlide {
   subtitle?: string;
   buttonText: string;
   buttonLink: string;
-  textPosition?: 'center' | 'left' | 'right';
 }
 
 const slides: HeroSlide[] = [
@@ -27,7 +26,6 @@ const slides: HeroSlide[] = [
     subtitle: 'Redefinida',
     buttonText: 'Ver Colección',
     buttonLink: '/tienda',
-    textPosition: 'center',
   },
   {
     id: 2,
@@ -37,7 +35,6 @@ const slides: HeroSlide[] = [
     subtitle: 'de Autor',
     buttonText: 'Explorar Trajes',
     buttonLink: '/categoria/trajes',
-    textPosition: 'center',
   },
   {
     id: 3,
@@ -47,7 +44,6 @@ const slides: HeroSlide[] = [
     subtitle: 'Premium',
     buttonText: 'Ver Camisas',
     buttonLink: '/categoria/camisas',
-    textPosition: 'center',
   },
   {
     id: 4,
@@ -57,39 +53,56 @@ const slides: HeroSlide[] = [
     subtitle: 'Luxury',
     buttonText: 'Descubrir',
     buttonLink: '/tienda',
-    textPosition: 'center',
   },
 ];
 
 export default function HeroCarousel() {
   const [currentSlide, setCurrentSlide] = useState(0);
-  const [isAnimating, setIsAnimating] = useState(false);
+  const [isVisible, setIsVisible] = useState(true);
   const [isPaused, setIsPaused] = useState(false);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  const nextSlide = useCallback(() => {
-    if (isAnimating) return;
-    setIsAnimating(true);
-    setCurrentSlide((prev) => (prev + 1) % slides.length);
-    setTimeout(() => setIsAnimating(false), 1000);
-  }, [isAnimating]);
-
-  const goToSlide = (index: number) => {
-    if (isAnimating || index === currentSlide) return;
-    setIsAnimating(true);
-    setCurrentSlide(index);
-    setTimeout(() => setIsAnimating(false), 1000);
+  // Función para cambiar slide con animación
+  const changeSlide = (newIndex: number) => {
+    if (newIndex === currentSlide) return;
+    
+    // Ocultar contenido actual
+    setIsVisible(false);
+    
+    // Después de la animación de salida, cambiar slide
+    setTimeout(() => {
+      setCurrentSlide(newIndex);
+      // Mostrar el nuevo contenido con delay
+      setTimeout(() => {
+        setIsVisible(true);
+      }, 100);
+    }, 400);
   };
 
   // Auto-advance slides
   useEffect(() => {
-    if (isPaused) return;
+    if (isPaused) {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+      return;
+    }
     
-    const timer = setInterval(() => {
-      nextSlide();
-    }, 6000); // Cambiar cada 6 segundos
+    timerRef.current = setInterval(() => {
+      setIsVisible(false);
+      setTimeout(() => {
+        setCurrentSlide((prev) => (prev + 1) % slides.length);
+        setTimeout(() => setIsVisible(true), 100);
+      }, 400);
+    }, 6000);
 
-    return () => clearInterval(timer);
-  }, [isPaused, nextSlide]);
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+    };
+  }, [isPaused]);
 
   const slide = slides[currentSlide];
 
@@ -111,11 +124,11 @@ export default function HeroCarousel() {
             src={s.image}
             alt={s.title}
             className={`w-full h-full object-cover transition-transform duration-[8000ms] ease-out ${
-              index === currentSlide ? 'scale-105' : 'scale-100'
+              index === currentSlide ? 'scale-110' : 'scale-100'
             }`}
           />
-          {/* Overlay gradient más oscuro para mejor contraste */}
-          <div className="absolute inset-0 bg-black/60" />
+          {/* Overlay oscuro para contraste */}
+          <div className="absolute inset-0 bg-black/55" />
         </div>
       ))}
 
@@ -123,10 +136,9 @@ export default function HeroCarousel() {
       <div className="relative z-20 h-full flex flex-col items-center justify-center px-4">
         {/* Collection label - Vertical text on left */}
         <div 
-          className={`absolute left-8 top-1/2 -translate-y-1/2 hidden lg:block transition-all duration-700 ${
-            isAnimating ? 'opacity-0 -translate-x-4' : 'opacity-100 translate-x-0'
+          className={`absolute left-8 top-1/2 -translate-y-1/2 hidden lg:block transition-all duration-500 ease-out ${
+            isVisible ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4'
           }`}
-          style={{ transitionDelay: '200ms' }}
         >
           <span 
             className="text-white/80 text-xs font-medium tracking-[0.4em] uppercase"
@@ -140,10 +152,9 @@ export default function HeroCarousel() {
         <div className="text-center max-w-4xl mx-auto">
           {/* Collection badge - Mobile */}
           <div 
-            className={`lg:hidden mb-6 transition-all duration-700 ${
-              isAnimating ? 'opacity-0 -translate-y-4' : 'opacity-100 translate-y-0'
+            className={`lg:hidden mb-6 transition-all duration-500 ease-out ${
+              isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-4'
             }`}
-            style={{ transitionDelay: '100ms' }}
           >
             <span className="inline-block px-4 py-2 bg-white/10 backdrop-blur-sm border border-white/20 text-white text-xs font-medium tracking-[0.3em] uppercase">
               {slide.collection}
@@ -152,15 +163,14 @@ export default function HeroCarousel() {
 
           {/* Title */}
           <h1 
-            className={`font-serif text-6xl sm:text-7xl md:text-8xl lg:text-9xl font-medium leading-none mb-4 transition-all duration-700 ${
-              isAnimating ? 'opacity-0 translate-y-8' : 'opacity-100 translate-y-0'
+            className={`font-serif text-6xl sm:text-7xl md:text-8xl lg:text-9xl font-medium leading-none mb-4 transition-all duration-500 ease-out ${
+              isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
             }`}
             style={{ 
-              transitionDelay: '300ms',
+              transitionDelay: isVisible ? '100ms' : '0ms',
               color: '#ffffff',
               textShadow: '0 0 20px rgba(0,0,0,0.9), 0 0 40px rgba(0,0,0,0.7), 2px 2px 4px rgba(0,0,0,1)',
               fontFamily: "'Playfair Display', 'Cormorant Garamond', Georgia, serif",
-              WebkitTextStroke: '1px rgba(255,255,255,0.3)'
             }}
           >
             {slide.title}
@@ -169,11 +179,11 @@ export default function HeroCarousel() {
           {/* Subtitle */}
           {slide.subtitle && (
             <h2 
-              className={`font-serif text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-light italic mb-10 transition-all duration-700 ${
-                isAnimating ? 'opacity-0 translate-y-8' : 'opacity-100 translate-y-0'
+              className={`font-serif text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-light italic mb-10 transition-all duration-500 ease-out ${
+                isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
               }`}
               style={{ 
-                transitionDelay: '400ms',
+                transitionDelay: isVisible ? '200ms' : '0ms',
                 color: '#f5d998',
                 textShadow: '2px 2px 8px rgba(0,0,0,0.8), 0 0 30px rgba(0,0,0,0.5)',
                 fontFamily: "'Playfair Display', 'Cormorant Garamond', Georgia, serif"
@@ -185,10 +195,10 @@ export default function HeroCarousel() {
 
           {/* CTA Button */}
           <div 
-            className={`transition-all duration-700 ${
-              isAnimating ? 'opacity-0 translate-y-8' : 'opacity-100 translate-y-0'
+            className={`transition-all duration-500 ease-out ${
+              isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
             }`}
-            style={{ transitionDelay: '500ms' }}
+            style={{ transitionDelay: isVisible ? '300ms' : '0ms' }}
           >
             <a
               href={slide.buttonLink}
@@ -205,35 +215,20 @@ export default function HeroCarousel() {
         {slides.map((_, index) => (
           <button
             key={index}
-            onClick={() => goToSlide(index)}
-            className={`relative w-2.5 h-2.5 rounded-full transition-all duration-300 ${
+            onClick={() => changeSlide(index)}
+            className={`relative h-2.5 rounded-full transition-all duration-300 ${
               index === currentSlide 
                 ? 'bg-white w-8' 
-                : 'bg-white/40 hover:bg-white/70'
+                : 'bg-white/40 hover:bg-white/70 w-2.5'
             }`}
             aria-label={`Ir a slide ${index + 1}`}
-          >
-            {/* Progress indicator for active slide */}
-            {index === currentSlide && !isPaused && (
-              <span 
-                className="absolute inset-0 rounded-full bg-white/30"
-                style={{
-                  animation: 'progress 6s linear forwards',
-                }}
-              />
-            )}
-          </button>
+          />
         ))}
       </div>
 
       {/* Arrow Navigation */}
       <button
-        onClick={() => {
-          if (isAnimating) return;
-          setIsAnimating(true);
-          setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length);
-          setTimeout(() => setIsAnimating(false), 1000);
-        }}
+        onClick={() => changeSlide((currentSlide - 1 + slides.length) % slides.length)}
         className="absolute left-16 lg:left-24 top-1/2 -translate-y-1/2 z-30 w-12 h-12 flex items-center justify-center text-white/60 hover:text-white transition-colors duration-300 group"
         aria-label="Anterior"
       >
@@ -243,7 +238,7 @@ export default function HeroCarousel() {
       </button>
 
       <button
-        onClick={nextSlide}
+        onClick={() => changeSlide((currentSlide + 1) % slides.length)}
         className="absolute right-16 lg:right-24 top-1/2 -translate-y-1/2 z-30 w-12 h-12 flex items-center justify-center text-white/60 hover:text-white transition-colors duration-300 group"
         aria-label="Siguiente"
       >
@@ -257,24 +252,18 @@ export default function HeroCarousel() {
         <div className="flex flex-col items-center gap-2 text-white/60">
           <span className="text-xs tracking-widest uppercase">Scroll</span>
           <div className="w-px h-12 bg-white/30 relative overflow-hidden">
-            <div className="absolute top-0 left-0 w-full h-1/2 bg-white animate-scroll-line" />
+            <div className="absolute top-0 left-0 w-full h-1/2 bg-white animate-pulse" 
+              style={{ animation: 'scrollLine 2s ease-in-out infinite' }} 
+            />
           </div>
         </div>
       </div>
 
-      {/* CSS Animation for progress */}
       <style>{`
-        @keyframes progress {
-          from { transform: scaleX(0); transform-origin: left; }
-          to { transform: scaleX(1); transform-origin: left; }
-        }
-        @keyframes scroll-line {
+        @keyframes scrollLine {
           0% { transform: translateY(-100%); }
-          50% { transform: translateY(100%); }
+          50% { transform: translateY(200%); }
           100% { transform: translateY(-100%); }
-        }
-        .animate-scroll-line {
-          animation: scroll-line 2s ease-in-out infinite;
         }
       `}</style>
     </section>
