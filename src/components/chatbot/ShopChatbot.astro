@@ -1,11 +1,11 @@
 ---
 /**
- * FASHIONMARKET CHATBOT - Todo en uno
+ * FASHIONMARKET CHATBOT - Productos reales + Mejor contraste
  */
 ---
 
 <div id="cb-widget">
-  <button id="cb-fab" type="button" aria-label="Abrir chat" aria-expanded="false">
+  <button id="cb-fab" type="button" aria-label="Abrir chat">
     <svg id="cb-icon-chat" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
       <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
     </svg>
@@ -48,20 +48,20 @@
     width: 60px;
     height: 60px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #c9a227 0%, #e6c453 100%);
+    background: linear-gradient(135deg, #c9a227 0%, #ddb84a 100%);
     color: #1a1a2e;
     border: none;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 4px 20px rgba(201, 162, 39, 0.4);
+    box-shadow: 0 4px 20px rgba(201, 162, 39, 0.5);
     transition: transform 0.2s, box-shadow 0.2s;
   }
 
   #cb-fab:hover {
     transform: scale(1.1);
-    box-shadow: 0 6px 30px rgba(201, 162, 39, 0.5);
+    box-shadow: 0 6px 30px rgba(201, 162, 39, 0.6);
   }
 
   #cb-panel {
@@ -70,7 +70,7 @@
     right: 0;
     width: 380px;
     height: 550px;
-    background: #1a1a2e;
+    background: #1e1e32;
     border-radius: 20px;
     overflow: hidden;
     box-shadow: 0 20px 60px rgba(0,0,0,0.5);
@@ -79,23 +79,23 @@
   }
 
   #cb-header {
-    background: #12121f;
-    padding: 15px;
+    background: #15152a;
+    padding: 16px;
     display: flex;
     align-items: center;
     gap: 12px;
-    border-bottom: 1px solid #2d2d4a;
+    border-bottom: 1px solid #3d3d5c;
   }
 
   #cb-avatar {
-    width: 45px;
-    height: 45px;
-    background: #c9a227;
-    border-radius: 12px;
+    width: 48px;
+    height: 48px;
+    background: linear-gradient(135deg, #c9a227 0%, #ddb84a 100%);
+    border-radius: 14px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 24px;
+    font-size: 26px;
   }
 
   #cb-header-info {
@@ -103,14 +103,16 @@
   }
 
   #cb-title {
-    color: #fff;
-    font-size: 17px;
-    font-weight: 600;
+    color: #ffffff;
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: -0.3px;
   }
 
   #cb-status {
-    color: #22c55e;
+    color: #4ade80;
     font-size: 13px;
+    font-weight: 500;
     display: flex;
     align-items: center;
     gap: 6px;
@@ -119,26 +121,32 @@
   #cb-dot {
     width: 8px;
     height: 8px;
-    background: #22c55e;
+    background: #4ade80;
     border-radius: 50%;
     display: inline-block;
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
   }
 
   #cb-refresh, #cb-close-btn {
-    width: 36px;
-    height: 36px;
-    background: transparent;
+    width: 38px;
+    height: 38px;
+    background: #2a2a48;
     border: none;
-    color: #8b8ba3;
+    color: #b8b8d0;
     font-size: 18px;
     cursor: pointer;
-    border-radius: 8px;
-    transition: background 0.2s, color 0.2s;
+    border-radius: 10px;
+    transition: all 0.2s;
   }
 
   #cb-refresh:hover, #cb-close-btn:hover {
-    background: #252542;
-    color: #fff;
+    background: #3d3d5c;
+    color: #ffffff;
   }
 
   #cb-messages {
@@ -147,20 +155,21 @@
     padding: 20px;
     display: flex;
     flex-direction: column;
-    gap: 15px;
+    gap: 16px;
+    background: #1e1e32;
   }
 
   #cb-messages::-webkit-scrollbar {
-    width: 5px;
+    width: 6px;
   }
 
   #cb-messages::-webkit-scrollbar-thumb {
-    background: #2d2d4a;
+    background: #3d3d5c;
     border-radius: 3px;
   }
 
   .cb-msg {
-    max-width: 90%;
+    max-width: 92%;
     animation: cbSlide 0.3s ease;
   }
 
@@ -178,101 +187,115 @@
   }
 
   .cb-bubble {
-    padding: 12px 16px;
-    border-radius: 18px;
+    padding: 14px 18px;
+    border-radius: 20px;
     font-size: 15px;
-    line-height: 1.5;
+    line-height: 1.6;
   }
 
   .cb-msg-user .cb-bubble {
-    background: #c9a227;
-    color: #1a1a2e;
-    border-bottom-right-radius: 4px;
+    background: linear-gradient(135deg, #c9a227 0%, #ddb84a 100%);
+    color: #1a1a1a;
+    font-weight: 500;
+    border-bottom-right-radius: 6px;
   }
 
   .cb-msg-bot .cb-bubble {
-    background: #252542;
-    color: #fff;
-    border-bottom-left-radius: 4px;
+    background: #2a2a48;
+    color: #f0f0f8;
+    border-bottom-left-radius: 6px;
+    border: 1px solid #3d3d5c;
   }
 
+  /* CHIPS - BOTONES SEPARADOS */
   .cb-chips {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-top: 12px;
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 10px !important;
+    margin-top: 14px !important;
+    padding: 0 !important;
   }
 
   .cb-chip {
-    background: #252542;
-    color: #c9a227;
-    border: 2px solid #c9a227;
-    padding: 10px 16px;
-    border-radius: 25px;
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s;
-    font-family: inherit;
-    display: inline-block;
+    display: inline-flex !important;
+    align-items: center !important;
+    background: #2a2a48 !important;
+    color: #f5d76e !important;
+    border: 2px solid #c9a227 !important;
+    padding: 10px 18px !important;
+    border-radius: 25px !important;
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    cursor: pointer !important;
+    transition: all 0.2s !important;
+    font-family: inherit !important;
+    white-space: nowrap !important;
+    text-decoration: none !important;
+    box-sizing: border-box !important;
   }
 
   .cb-chip:hover {
-    background: #c9a227;
-    color: #1a1a2e;
-    transform: translateY(-2px);
+    background: #c9a227 !important;
+    color: #1a1a1a !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 4px 12px rgba(201, 162, 39, 0.4) !important;
   }
 
+  /* PRODUCTOS - GRID */
   .cb-products {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 10px;
-    margin-top: 12px;
+    gap: 12px;
+    margin-top: 14px;
   }
 
   .cb-product {
-    background: #252542;
-    border-radius: 14px;
+    background: #2a2a48;
+    border-radius: 16px;
     overflow: hidden;
     text-decoration: none;
-    transition: transform 0.2s, box-shadow 0.2s;
+    transition: all 0.2s;
     position: relative;
+    border: 1px solid #3d3d5c;
   }
 
   .cb-product:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+    transform: translateY(-4px);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+    border-color: #c9a227;
   }
 
   .cb-badge {
     position: absolute;
-    top: 8px;
-    left: 8px;
-    background: #c9a227;
-    color: #1a1a2e;
-    padding: 3px 8px;
-    border-radius: 5px;
+    top: 10px;
+    left: 10px;
+    background: linear-gradient(135deg, #c9a227 0%, #ddb84a 100%);
+    color: #1a1a1a;
+    padding: 4px 10px;
+    border-radius: 8px;
     font-size: 10px;
-    font-weight: 700;
+    font-weight: 800;
+    letter-spacing: 0.5px;
     z-index: 2;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
   }
 
   .cb-product-img {
     width: 100%;
-    height: 90px;
+    height: 100px;
     object-fit: cover;
-    background: #1a1a2e;
+    background: #15152a;
   }
 
   .cb-product-info {
-    padding: 10px;
+    padding: 12px;
   }
 
   .cb-product-name {
-    color: #fff;
-    font-size: 12px;
+    color: #ffffff;
+    font-size: 13px;
     font-weight: 600;
-    margin: 0 0 4px 0;
+    margin: 0 0 6px 0;
     line-height: 1.3;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -280,27 +303,49 @@
   }
 
   .cb-product-price {
-    color: #c9a227;
-    font-size: 15px;
-    font-weight: 700;
+    color: #f5d76e;
+    font-size: 16px;
+    font-weight: 800;
     margin: 0;
   }
 
-  #cb-footer {
-    padding: 15px;
-    background: #12121f;
-    border-top: 1px solid #2d2d4a;
+  .cb-loading {
     display: flex;
-    gap: 10px;
+    gap: 6px;
+    padding: 10px 0;
+  }
+
+  .cb-loading span {
+    width: 8px;
+    height: 8px;
+    background: #c9a227;
+    border-radius: 50%;
+    animation: bounce 1.4s infinite ease-in-out both;
+  }
+
+  .cb-loading span:nth-child(1) { animation-delay: -0.32s; }
+  .cb-loading span:nth-child(2) { animation-delay: -0.16s; }
+
+  @keyframes bounce {
+    0%, 80%, 100% { transform: scale(0); }
+    40% { transform: scale(1); }
+  }
+
+  #cb-footer {
+    padding: 16px;
+    background: #15152a;
+    border-top: 1px solid #3d3d5c;
+    display: flex;
+    gap: 12px;
   }
 
   #cb-input {
     flex: 1;
-    background: #252542;
-    border: 1px solid #2d2d4a;
+    background: #2a2a48;
+    border: 2px solid #3d3d5c;
     border-radius: 25px;
-    padding: 12px 18px;
-    color: #fff;
+    padding: 14px 20px;
+    color: #ffffff;
     font-size: 15px;
     font-family: inherit;
   }
@@ -308,27 +353,29 @@
   #cb-input:focus {
     outline: none;
     border-color: #c9a227;
+    background: #33334f;
   }
 
   #cb-input::placeholder {
-    color: #8b8ba3;
+    color: #8888a8;
   }
 
   #cb-send {
-    width: 48px;
-    height: 48px;
-    background: #c9a227;
-    color: #1a1a2e;
+    width: 50px;
+    height: 50px;
+    background: linear-gradient(135deg, #c9a227 0%, #ddb84a 100%);
+    color: #1a1a1a;
     border: none;
     border-radius: 50%;
     font-size: 20px;
     cursor: pointer;
-    transition: background 0.2s, transform 0.2s;
+    transition: all 0.2s;
+    font-weight: bold;
   }
 
   #cb-send:hover {
-    background: #e6c453;
-    transform: scale(1.05);
+    transform: scale(1.08);
+    box-shadow: 0 4px 16px rgba(201, 162, 39, 0.5);
   }
 
   @media (max-width: 480px) {
@@ -340,272 +387,333 @@
 
 <script is:inline>
 (function(){
-  // ==================== CATÁLOGO ====================
-  var CATALOG = [
-    { id: 1, name: "Sudadera Oversize Premium", price: 49.99, badge: "NUEVO", img: "https://images.unsplash.com/photo-1556821840-3a63f95609a7?w=200&h=200&fit=crop", url: "/tienda", category: "sudadera", tags: ["urbano","casual"], colors: ["negro","gris"], popularity: 98 },
-    { id: 2, name: "Camiseta Básica Algodón", price: 19.99, badge: "TOP", img: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=200&h=200&fit=crop", url: "/tienda", category: "camiseta", tags: ["casual","básico"], colors: ["blanco","negro"], popularity: 95 },
-    { id: 3, name: "Blazer Azul Casual", price: 149.99, badge: "NUEVO", img: "https://images.unsplash.com/photo-1507679799987-c73779587ccf?w=200&h=200&fit=crop", url: "/tienda?categoria=trajes", category: "blazer", tags: ["elegante","formal"], colors: ["azul","negro"], popularity: 88 },
-    { id: 4, name: "Camisa Oxford Blanca", price: 59.99, badge: "TOP", img: "https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=200&h=200&fit=crop", url: "/tienda?categoria=camisas", category: "camisa", tags: ["formal","trabajo"], colors: ["blanco"], popularity: 85 },
-    { id: 5, name: "Jogger Deportivo Tech", price: 39.99, badge: "TOP", img: "https://images.unsplash.com/photo-1552902865-b72c031ac5ea?w=200&h=200&fit=crop", url: "/tienda?categoria=pantalones", category: "pantalon", tags: ["deportivo","gym"], colors: ["negro","gris"], popularity: 91 },
-    { id: 6, name: "Pantalón Chino Slim", price: 54.99, badge: null, img: "https://images.unsplash.com/photo-1473966968600-fa801b869a1a?w=200&h=200&fit=crop", url: "/tienda?categoria=pantalones", category: "pantalon", tags: ["casual","trabajo"], colors: ["beige","azul"], popularity: 82 },
-    { id: 7, name: "Abrigo Largo Premium", price: 189.99, badge: "PREMIUM", img: "https://images.unsplash.com/photo-1539533018447-63fcce2678e3?w=200&h=200&fit=crop", url: "/tienda", category: "abrigo", tags: ["elegante","invierno"], colors: ["negro","camel"], popularity: 79 },
-    { id: 8, name: "Traje Completo Modern", price: 279.99, badge: "PREMIUM", img: "https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=200&h=200&fit=crop", url: "/tienda?categoria=trajes", category: "traje", tags: ["formal","evento"], colors: ["negro","azul"], popularity: 74 },
-    { id: 9, name: "Polo Piqué Classic", price: 34.99, badge: null, img: "https://images.unsplash.com/photo-1586363104862-3a5e2ab60d99?w=200&h=200&fit=crop", url: "/tienda", category: "polo", tags: ["casual","verano"], colors: ["blanco","azul"], popularity: 76 },
-    { id: 10, name: "Sudadera Capucha Essential", price: 45.99, badge: "TOP", img: "https://images.unsplash.com/photo-1620799140408-edc6dcb6d633?w=200&h=200&fit=crop", url: "/tienda", category: "sudadera", tags: ["urbano","casual"], colors: ["gris","negro"], popularity: 93 },
-    { id: 11, name: "Bomber Jacket Retro", price: 89.99, badge: "TREND", img: "https://images.unsplash.com/photo-1591047139829-d91aecb6caea?w=200&h=200&fit=crop", url: "/tienda", category: "chaqueta", tags: ["urbano","retro"], colors: ["negro","verde"], popularity: 84 },
-    { id: 12, name: "Camiseta Graphic Urban", price: 29.99, badge: "NUEVO", img: "https://images.unsplash.com/photo-1503341504253-dff4815485f1?w=200&h=200&fit=crop", url: "/tienda", category: "camiseta", tags: ["urbano","streetwear"], colors: ["negro","blanco"], popularity: 89 }
-  ];
-
+  // ==================== FAQ ====================
   var FAQ = {
-    envios: "📦 <strong>Envíos:</strong> Gratis en pedidos +100€. Entrega 2-4 días en España.",
-    devoluciones: "🔄 <strong>Devoluciones:</strong> 30 días para devolver. Gratis en tienda.",
-    pagos: "💳 <strong>Pagos:</strong> Tarjeta, PayPal, Bizum. 100% seguro.",
-    tallas: "📏 <strong>Tallas:</strong> S (96-100cm), M (100-104cm), L (104-108cm), XL (108-112cm).",
-    contacto: "📞 <strong>Contacto:</strong> hola@fashionmarket.com | WhatsApp: +34 612 345 678"
+    envios: "📦 <strong>Envíos:</strong><br>• España peninsular: GRATIS a partir de 50€<br>• Entrega: 2-4 días laborables<br>• Baleares y Canarias: Consultar",
+    devoluciones: "↩️ <strong>Devoluciones:</strong><br>• 30 días para devolver<br>• El producto debe estar sin usar<br>• Devolución GRATIS en tienda",
+    pagos: "💳 <strong>Métodos de pago:</strong><br>• Tarjeta (Visa, Mastercard)<br>• PayPal<br>• Bizum<br>• Contrareembolso (+3€)",
+    tallas: "📏 <strong>Guía de tallas:</strong><br>Consulta la guía en cada producto. Si dudas entre dos tallas, te recomendamos la mayor.",
+    contacto: "📞 <strong>Contacto:</strong><br>• Email: info@fashionmarket.es<br>• WhatsApp: +34 612 345 678<br>• Horario: L-V 9:00-18:00"
   };
 
-  // ==================== DOM ====================
-  var fab = document.getElementById('cb-fab');
-  var panel = document.getElementById('cb-panel');
-  var iconChat = document.getElementById('cb-icon-chat');
-  var iconClose = document.getElementById('cb-icon-close');
-  var refreshBtn = document.getElementById('cb-refresh');
-  var closeBtn = document.getElementById('cb-close-btn');
-  var input = document.getElementById('cb-input');
-  var sendBtn = document.getElementById('cb-send');
-  var messages = document.getElementById('cb-messages');
+  // ==================== ELEMENTOS ====================
+  var fab = document.getElementById("cb-fab");
+  var panel = document.getElementById("cb-panel");
+  var iconChat = document.getElementById("cb-icon-chat");
+  var iconClose = document.getElementById("cb-icon-close");
+  var messages = document.getElementById("cb-messages");
+  var input = document.getElementById("cb-input");
+  var sendBtn = document.getElementById("cb-send");
+  var refreshBtn = document.getElementById("cb-refresh");
+  var closeBtn = document.getElementById("cb-close-btn");
+
+  if (!fab || !panel || !messages || !input) return;
 
   var isOpen = false;
-  var started = false;
+  var currentChips = [];
 
   // ==================== FUNCIONES ====================
-  function openChat() {
-    isOpen = true;
-    panel.style.display = 'flex';
-    iconChat.style.display = 'none';
-    iconClose.style.display = 'block';
-    fab.setAttribute('aria-expanded', 'true');
-    setTimeout(function(){ input.focus(); }, 100);
-    if (!started) {
-      started = true;
-      showWelcome();
+  function escape(str) {
+    if (!str) return "";
+    var div = document.createElement("div");
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  function toggle() {
+    isOpen = !isOpen;
+    panel.style.display = isOpen ? "flex" : "none";
+    iconChat.style.display = isOpen ? "none" : "block";
+    iconClose.style.display = isOpen ? "block" : "none";
+    if (isOpen && messages.children.length === 0) {
+      welcome();
     }
   }
 
-  function closeChat() {
-    isOpen = false;
-    panel.style.display = 'none';
-    iconChat.style.display = 'block';
-    iconClose.style.display = 'none';
-    fab.setAttribute('aria-expanded', 'false');
-  }
-
-  function toggleChat() {
-    isOpen ? closeChat() : openChat();
-  }
-
-  function resetChat() {
-    messages.innerHTML = '';
-    started = false;
-    showWelcome();
-    started = true;
-  }
-
-  function escape(t) {
-    var d = document.createElement('div');
-    d.textContent = t;
-    return d.innerHTML;
-  }
-
-  function scrollDown() {
+  function addUserMsg(text) {
+    var div = document.createElement("div");
+    div.className = "cb-msg cb-msg-user";
+    div.innerHTML = '<div class="cb-bubble">' + escape(text) + '</div>';
+    messages.appendChild(div);
     messages.scrollTop = messages.scrollHeight;
   }
 
-  function addUserMsg(text) {
-    var div = document.createElement('div');
-    div.className = 'cb-msg cb-msg-user';
-    div.innerHTML = '<div class="cb-bubble">' + escape(text) + '</div>';
-    messages.appendChild(div);
-    scrollDown();
-  }
-
   function addBotMsg(text, chips, products) {
-    var div = document.createElement('div');
-    div.className = 'cb-msg cb-msg-bot';
+    var div = document.createElement("div");
+    div.className = "cb-msg cb-msg-bot";
     
     var html = '<div class="cb-bubble">' + text + '</div>';
     
-    // Productos
-    if (products && products.length > 0) {
-      html += '<div class="cb-products">';
-      for (var i = 0; i < products.length; i++) {
-        var p = products[i];
-        html += '<a href="' + p.url + '" class="cb-product">';
-        if (p.badge) html += '<span class="cb-badge">' + p.badge + '</span>';
-        html += '<img class="cb-product-img" src="' + p.img + '" alt="' + escape(p.name) + '" loading="lazy" onerror="this.style.display=\'none\'">';
-        html += '<div class="cb-product-info">';
-        html += '<p class="cb-product-name">' + escape(p.name) + '</p>';
-        html += '<p class="cb-product-price">' + p.price.toFixed(0) + '€</p>';
-        html += '</div></a>';
+    // Chips como botones separados
+    if (chips && chips.length > 0) {
+      currentChips = chips;
+      html += '<div class="cb-chips">';
+      for (var i = 0; i < chips.length; i++) {
+        html += '<button type="button" class="cb-chip" data-chip-idx="' + i + '">' + escape(chips[i]) + '</button>';
       }
       html += '</div>';
     }
     
-    // Chips - CADA UNO ES UN BOTÓN SEPARADO
-    if (chips && chips.length > 0) {
-      html += '<div class="cb-chips">';
-      for (var j = 0; j < chips.length; j++) {
-        html += '<button type="button" class="cb-chip" data-idx="' + j + '">' + escape(chips[j]) + '</button>';
+    // Productos en grid
+    if (products && products.length > 0) {
+      html += '<div class="cb-products">';
+      for (var j = 0; j < products.length; j++) {
+        var p = products[j];
+        html += '<a href="' + escape(p.url) + '" class="cb-product">';
+        if (p.badge) {
+          html += '<span class="cb-badge">' + escape(p.badge) + '</span>';
+        }
+        if (p.img) {
+          html += '<img src="' + escape(p.img) + '" alt="' + escape(p.name) + '" class="cb-product-img" loading="lazy" onerror="this.style.display=\'none\'">';
+        } else {
+          html += '<div class="cb-product-img" style="display:flex;align-items:center;justify-content:center;color:#666;">📷</div>';
+        }
+        html += '<div class="cb-product-info">';
+        html += '<p class="cb-product-name">' + escape(p.name) + '</p>';
+        html += '<p class="cb-product-price">' + escape(p.price) + ' €</p>';
+        html += '</div></a>';
       }
       html += '</div>';
     }
     
     div.innerHTML = html;
     messages.appendChild(div);
+    messages.scrollTop = messages.scrollHeight;
+
+    // Event listeners para chips
+    var chipBtns = div.querySelectorAll(".cb-chip");
+    for (var k = 0; k < chipBtns.length; k++) {
+      chipBtns[k].addEventListener("click", function(e) {
+        var idx = parseInt(this.getAttribute("data-chip-idx"));
+        if (currentChips[idx]) {
+          handleChip(currentChips[idx]);
+        }
+      });
+    }
+  }
+
+  function showLoading() {
+    var div = document.createElement("div");
+    div.className = "cb-msg cb-msg-bot";
+    div.id = "cb-loading";
+    div.innerHTML = '<div class="cb-loading"><span></span><span></span><span></span></div>';
+    messages.appendChild(div);
+    messages.scrollTop = messages.scrollHeight;
+  }
+
+  function hideLoading() {
+    var loading = document.getElementById("cb-loading");
+    if (loading) loading.remove();
+  }
+
+  // Fetch productos reales
+  function fetchProducts(filter, callback) {
+    showLoading();
+    var url = "/api/chatbot/products?filter=" + (filter || "popular") + "&limit=4";
     
-    // Click en chips
-    var btns = div.querySelectorAll('.cb-chip');
-    for (var k = 0; k < btns.length; k++) {
-      (function(idx){
-        btns[idx].onclick = function() {
-          processInput(chips[idx]);
-        };
-      })(k);
+    fetch(url)
+      .then(function(res) { return res.json(); })
+      .then(function(data) {
+        hideLoading();
+        callback(data.products || []);
+      })
+      .catch(function() {
+        hideLoading();
+        callback([]);
+      });
+  }
+
+  function searchProducts(query, callback) {
+    showLoading();
+    var url = "/api/chatbot/products?q=" + encodeURIComponent(query) + "&limit=4";
+    
+    fetch(url)
+      .then(function(res) { return res.json(); })
+      .then(function(data) {
+        hideLoading();
+        callback(data.products || []);
+      })
+      .catch(function() {
+        hideLoading();
+        callback([]);
+      });
+  }
+
+  function fetchByCategory(cat, callback) {
+    showLoading();
+    var url = "/api/chatbot/products?category=" + encodeURIComponent(cat) + "&limit=4";
+    
+    fetch(url)
+      .then(function(res) { return res.json(); })
+      .then(function(data) {
+        hideLoading();
+        callback(data.products || []);
+      })
+      .catch(function() {
+        hideLoading();
+        callback([]);
+      });
+  }
+
+  // ==================== WELCOME ====================
+  function welcome() {
+    setTimeout(function() {
+      fetchProducts("popular", function(products) {
+        var text = "¡Hola! 👋 Soy tu asistente de FashionMarket. ¿Qué buscas hoy?";
+        var chips = ["🔥 Ver más vendidos", "✨ Novedades", "🔍 Buscar traje", "❓ Ayuda"];
+        addBotMsg(text, chips, products.length > 0 ? products : null);
+      });
+    }, 300);
+  }
+
+  // ==================== CHIP HANDLER ====================
+  function handleChip(chip) {
+    addUserMsg(chip);
+    
+    var lower = chip.toLowerCase();
+    
+    if (lower.indexOf("vendidos") !== -1 || lower.indexOf("popular") !== -1) {
+      fetchProducts("popular", function(products) {
+        if (products.length > 0) {
+          addBotMsg("🔥 Estos son nuestros más vendidos:", ["✨ Novedades", "🛒 Ver tienda", "❓ Ayuda"], products);
+        } else {
+          addBotMsg("No encontré productos destacados. <a href='/tienda' style='color:#c9a227'>Ver tienda</a>", ["✨ Novedades", "❓ Ayuda"], null);
+        }
+      });
+    }
+    else if (lower.indexOf("novedades") !== -1 || lower.indexOf("nuevo") !== -1) {
+      fetchProducts("new", function(products) {
+        if (products.length > 0) {
+          addBotMsg("✨ Las últimas novedades:", ["🔥 Ver más vendidos", "🛒 Ver tienda", "❓ Ayuda"], products);
+        } else {
+          addBotMsg("No hay novedades aún. <a href='/tienda' style='color:#c9a227'>Ver tienda</a>", ["🔥 Ver más vendidos", "❓ Ayuda"], null);
+        }
+      });
+    }
+    else if (lower.indexOf("traje") !== -1 || lower.indexOf("blazer") !== -1) {
+      fetchByCategory("trajes", function(products) {
+        if (products.length > 0) {
+          addBotMsg("👔 Nuestra selección de trajes:", ["🔥 Ver más vendidos", "❓ Ayuda"], products);
+        } else {
+          addBotMsg("No tenemos trajes disponibles. <a href='/tienda' style='color:#c9a227'>Ver toda la tienda</a>", ["🔥 Ver más vendidos", "❓ Ayuda"], null);
+        }
+      });
+    }
+    else if (lower.indexOf("camisa") !== -1) {
+      fetchByCategory("camisas", function(products) {
+        if (products.length > 0) {
+          addBotMsg("👕 Nuestras camisas:", ["🔥 Ver más vendidos", "❓ Ayuda"], products);
+        } else {
+          addBotMsg("No hay camisas disponibles. <a href='/tienda' style='color:#c9a227'>Ver tienda</a>", ["🔥 Ver más vendidos", "❓ Ayuda"], null);
+        }
+      });
+    }
+    else if (lower.indexOf("tienda") !== -1) {
+      window.location.href = "/tienda";
+    }
+    else if (lower.indexOf("ayuda") !== -1) {
+      addBotMsg("¿En qué puedo ayudarte?", ["📦 Envíos", "↩️ Devoluciones", "💳 Pagos", "📏 Tallas", "📞 Contacto"], null);
+    }
+    else if (lower.indexOf("envío") !== -1 || lower.indexOf("envio") !== -1) {
+      addBotMsg(FAQ.envios, ["🔥 Ver productos", "❓ Más ayuda"], null);
+    }
+    else if (lower.indexOf("devoluc") !== -1) {
+      addBotMsg(FAQ.devoluciones, ["🔥 Ver productos", "❓ Más ayuda"], null);
+    }
+    else if (lower.indexOf("pago") !== -1) {
+      addBotMsg(FAQ.pagos, ["🔥 Ver productos", "❓ Más ayuda"], null);
+    }
+    else if (lower.indexOf("talla") !== -1) {
+      addBotMsg(FAQ.tallas, ["🔥 Ver productos", "❓ Más ayuda"], null);
+    }
+    else if (lower.indexOf("contacto") !== -1) {
+      addBotMsg(FAQ.contacto, ["🔥 Ver productos", "❓ Más ayuda"], null);
+    }
+    else {
+      // Búsqueda genérica
+      var searchTerm = chip.replace(/[🔥✨🔍❓👔👕📦↩️💳📏📞🛒]/g, "").trim();
+      if (searchTerm) {
+        searchProducts(searchTerm, function(products) {
+          if (products.length > 0) {
+            addBotMsg("Encontré esto para ti:", ["🔥 Ver más vendidos", "❓ Ayuda"], products);
+          } else {
+            addBotMsg("No encontré productos. ¿Probamos otra búsqueda?", ["🔥 Ver más vendidos", "✨ Novedades", "❓ Ayuda"], null);
+          }
+        });
+      } else {
+        addBotMsg("¿En qué puedo ayudarte?", ["🔥 Ver más vendidos", "✨ Novedades", "❓ Ayuda"], null);
+      }
+    }
+  }
+
+  // ==================== INPUT HANDLER ====================
+  function handleInput() {
+    var text = input.value.trim();
+    if (!text) return;
+    
+    input.value = "";
+    addUserMsg(text);
+    
+    var lower = text.toLowerCase();
+    
+    // Saludos
+    if (lower === "hola" || lower === "hey" || lower === "buenas") {
+      fetchProducts("popular", function(products) {
+        addBotMsg("¡Hola! 👋 ¿Qué buscas hoy?", ["🔥 Ver más vendidos", "✨ Novedades", "❓ Ayuda"], products.length > 0 ? products : null);
+      });
+      return;
     }
     
-    scrollDown();
-  }
-
-  function showWelcome() {
-    addBotMsg(
-      "¡Hola! 👋 Soy tu asistente de FashionMarket. ¿Qué buscas hoy?",
-      ["🔥 Ver más vendidos", "✨ Novedades", "🎩 Buscar traje", "❓ Ayuda"],
-      null
-    );
-  }
-
-  function getPopular(n) {
-    var sorted = CATALOG.slice().sort(function(a,b){ return b.popularity - a.popularity; });
-    return sorted.slice(0, n || 4);
-  }
-
-  function getByCategory(cat, n) {
-    var res = [];
-    for (var i = 0; i < CATALOG.length && res.length < (n||4); i++) {
-      if (CATALOG[i].category === cat) res.push(CATALOG[i]);
+    // FAQ keywords
+    if (lower.indexOf("envío") !== -1 || lower.indexOf("envio") !== -1) {
+      addBotMsg(FAQ.envios, ["🔥 Ver productos", "❓ Más ayuda"], null);
+      return;
     }
-    return res;
-  }
-
-  function getNew(n) {
-    var res = [];
-    for (var i = 0; i < CATALOG.length && res.length < (n||4); i++) {
-      if (CATALOG[i].badge === "NUEVO") res.push(CATALOG[i]);
+    if (lower.indexOf("devoluc") !== -1) {
+      addBotMsg(FAQ.devoluciones, ["🔥 Ver productos", "❓ Más ayuda"], null);
+      return;
     }
-    return res;
+    if (lower.indexOf("pago") !== -1) {
+      addBotMsg(FAQ.pagos, ["🔥 Ver productos", "❓ Más ayuda"], null);
+      return;
+    }
+    if (lower.indexOf("talla") !== -1) {
+      addBotMsg(FAQ.tallas, ["🔥 Ver productos", "❓ Más ayuda"], null);
+      return;
+    }
+    if (lower.indexOf("contacto") !== -1 || lower.indexOf("teléfono") !== -1 || lower.indexOf("telefono") !== -1) {
+      addBotMsg(FAQ.contacto, ["🔥 Ver productos", "❓ Más ayuda"], null);
+      return;
+    }
+    if (lower.indexOf("ayuda") !== -1) {
+      addBotMsg("¿En qué puedo ayudarte?", ["📦 Envíos", "↩️ Devoluciones", "💳 Pagos", "📏 Tallas", "📞 Contacto"], null);
+      return;
+    }
+    
+    // Búsqueda de productos
+    searchProducts(text, function(products) {
+      if (products.length > 0) {
+        addBotMsg("Encontré esto para \"" + escape(text) + "\":", ["🔥 Ver más vendidos", "❓ Ayuda"], products);
+      } else {
+        addBotMsg("No encontré productos para \"" + escape(text) + "\". ¿Probamos otra cosa?", ["🔥 Ver más vendidos", "✨ Novedades", "❓ Ayuda"], null);
+      }
+    });
   }
 
-  function processInput(text) {
-    if (!text || !text.trim()) return;
-    var t = text.trim();
-    addUserMsg(t);
-
-    setTimeout(function(){
-      var lower = t.toLowerCase();
-      
-      // Más vendidos / populares
-      if (lower.indexOf('vendidos') >= 0 || lower.indexOf('populares') >= 0 || lower.indexOf('top') >= 0) {
-        addBotMsg("🔥 ¡Estos son nuestros más vendidos!", ["✨ Ver novedades", "🔍 Buscar por categoría"], getPopular(4));
-      }
-      // Novedades
-      else if (lower.indexOf('novedades') >= 0 || lower.indexOf('nuevo') >= 0) {
-        addBotMsg("✨ ¡Estas son las últimas novedades!", ["🔥 Ver más vendidos", "👔 Ver camisas"], getNew(4));
-      }
-      // Trajes
-      else if (lower.indexOf('traje') >= 0 || lower.indexOf('blazer') >= 0 || lower.indexOf('formal') >= 0) {
-        var trajes = getByCategory('traje', 2).concat(getByCategory('blazer', 2));
-        addBotMsg("🎩 Nuestra selección de trajes y blazers:", ["👔 Ver camisas", "🔥 Más vendidos"], trajes);
-      }
-      // Camisas
-      else if (lower.indexOf('camisa') >= 0) {
-        addBotMsg("👔 Nuestras mejores camisas:", ["🎩 Ver trajes", "🔥 Más vendidos"], getByCategory('camisa', 4));
-      }
-      // Pantalones
-      else if (lower.indexOf('pantalon') >= 0 || lower.indexOf('pantalón') >= 0 || lower.indexOf('jogger') >= 0) {
-        addBotMsg("👖 Pantalones para ti:", ["👔 Ver camisas", "🔥 Más vendidos"], getByCategory('pantalon', 4));
-      }
-      // Sudaderas
-      else if (lower.indexOf('sudadera') >= 0 || lower.indexOf('hoodie') >= 0) {
-        addBotMsg("🧥 Sudaderas cómodas:", ["🔥 Más vendidos", "✨ Novedades"], getByCategory('sudadera', 4));
-      }
-      // Camisetas
-      else if (lower.indexOf('camiseta') >= 0 || lower.indexOf('t-shirt') >= 0) {
-        addBotMsg("👕 Camisetas para el día a día:", ["🔥 Más vendidos", "✨ Novedades"], getByCategory('camiseta', 4));
-      }
-      // Ayuda
-      else if (lower.indexOf('ayuda') >= 0 || lower.indexOf('help') >= 0) {
-        addBotMsg("¿En qué puedo ayudarte? 👇", ["📦 Envíos", "🔄 Devoluciones", "📏 Guía de tallas", "💳 Pagos"], null);
-      }
-      // Envíos
-      else if (lower.indexOf('envío') >= 0 || lower.indexOf('envio') >= 0 || lower.indexOf('entrega') >= 0) {
-        addBotMsg(FAQ.envios, ["🔥 Ver productos", "❓ Más ayuda"], null);
-      }
-      // Devoluciones
-      else if (lower.indexOf('devoluc') >= 0 || lower.indexOf('cambio') >= 0) {
-        addBotMsg(FAQ.devoluciones, ["🔥 Ver productos", "❓ Más ayuda"], null);
-      }
-      // Tallas
-      else if (lower.indexOf('talla') >= 0 || lower.indexOf('medida') >= 0) {
-        addBotMsg(FAQ.tallas, ["🔥 Ver productos", "❓ Más ayuda"], null);
-      }
-      // Pagos
-      else if (lower.indexOf('pago') >= 0 || lower.indexOf('tarjeta') >= 0 || lower.indexOf('bizum') >= 0) {
-        addBotMsg(FAQ.pagos, ["🔥 Ver productos", "❓ Más ayuda"], null);
-      }
-      // Contacto
-      else if (lower.indexOf('contacto') >= 0 || lower.indexOf('email') >= 0 || lower.indexOf('whatsapp') >= 0) {
-        addBotMsg(FAQ.contacto, ["🔥 Ver productos", "❓ Más ayuda"], null);
-      }
-      // Hola
-      else if (lower.indexOf('hola') >= 0 || lower.indexOf('buenas') >= 0 || lower.indexOf('hey') >= 0) {
-        addBotMsg("¡Hola! 😊 ¿En qué puedo ayudarte hoy?", ["🔥 Ver más vendidos", "✨ Novedades", "❓ Ayuda"], null);
-      }
-      // Gracias
-      else if (lower.indexOf('gracias') >= 0 || lower.indexOf('genial') >= 0 || lower.indexOf('perfecto') >= 0) {
-        addBotMsg("¡De nada! 😊 ¿Hay algo más en lo que pueda ayudarte?", ["🔥 Ver más vendidos", "✨ Novedades"], null);
-      }
-      // Categoría / buscar
-      else if (lower.indexOf('categoría') >= 0 || lower.indexOf('categoria') >= 0 || lower.indexOf('buscar') >= 0) {
-        addBotMsg("¿Qué categoría te interesa? 👇", ["👕 Camisetas", "👔 Camisas", "🧥 Sudaderas", "👖 Pantalones", "🎩 Trajes"], null);
-      }
-      // Por defecto
-      else {
-        addBotMsg("No estoy seguro de entenderte. ¿Te ayudo con algo de esto?", ["🔥 Ver más vendidos", "✨ Novedades", "❓ Ayuda"], getPopular(2));
-      }
-    }, 400);
-  }
-
-  function handleSend() {
-    var t = input.value;
-    input.value = '';
-    processInput(t);
+  function reset() {
+    messages.innerHTML = "";
+    currentChips = [];
+    welcome();
   }
 
   // ==================== EVENTS ====================
-  fab.onclick = toggleChat;
-  closeBtn.onclick = closeChat;
-  refreshBtn.onclick = resetChat;
-  sendBtn.onclick = handleSend;
-  
-  input.onkeydown = function(e) {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      handleSend();
-    }
-  };
+  fab.addEventListener("click", toggle);
+  closeBtn.addEventListener("click", toggle);
+  refreshBtn.addEventListener("click", reset);
+  sendBtn.addEventListener("click", handleInput);
+  input.addEventListener("keypress", function(e) {
+    if (e.key === "Enter") handleInput();
+  });
 
-  document.onkeydown = function(e) {
-    if (e.key === 'Escape' && isOpen) closeChat();
-  };
 })();
 </script>
