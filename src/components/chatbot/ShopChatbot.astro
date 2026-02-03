@@ -9,6 +9,10 @@
 // Importar datos
 import catalogData from '../../data/chatbot-catalog.json';
 import faqData from '../../data/chatbot-faq.json';
+
+// Serializar para pasarlos al script
+const catalogJSON = JSON.stringify(catalogData);
+const faqJSON = JSON.stringify(faqData);
 ---
 
 <!-- Botón flotante -->
@@ -767,10 +771,14 @@ import faqData from '../../data/chatbot-faq.json';
   }
 </style>
 
-<script define:vars={{ catalogData, faqData }}>
+<script define:vars={{ catalogJSON, faqJSON }}>
   // ═══════════════════════════════════════════════════════════════════════════
   // CHATBOT ENGINE
   // ═══════════════════════════════════════════════════════════════════════════
+
+  // Parsear los datos
+  const catalogData = JSON.parse(catalogJSON);
+  const faqData = JSON.parse(faqJSON);
 
   const chatState = {
     messages: [],
