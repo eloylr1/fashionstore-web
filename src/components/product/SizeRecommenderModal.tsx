@@ -142,14 +142,14 @@ export default function SizeRecommenderModal({ availableSizes, onSelectSize }: S
             <div className="p-6">
               {!result ? (
                 <>
-                  <p className="text-sm text-charcoal-600 mb-5">
+                  <p className="text-sm text-gray-600 mb-5">
                     Introduce tu altura y peso para calcular la talla que mejor se ajusta a ti.
                   </p>
 
                   <div className="space-y-4">
                     {/* Altura */}
                     <div>
-                      <label htmlFor="height" className="block text-sm font-medium text-navy-900 mb-1.5">
+                      <label htmlFor="height" className="block text-sm font-medium text-gray-800 mb-1.5">
                         Altura (cm)
                       </label>
                       <input
@@ -160,13 +160,13 @@ export default function SizeRecommenderModal({ availableSizes, onSelectSize }: S
                         placeholder="Ej: 175"
                         min="100"
                         max="250"
-                        className="w-full px-4 py-3 border border-charcoal-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gold-matte focus:border-transparent transition-all"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-navy-900/20 focus:border-navy-900 transition-all text-gray-900 placeholder:text-gray-400"
                       />
                     </div>
 
                     {/* Peso */}
                     <div>
-                      <label htmlFor="weight" className="block text-sm font-medium text-navy-900 mb-1.5">
+                      <label htmlFor="weight" className="block text-sm font-medium text-gray-800 mb-1.5">
                         Peso (kg)
                       </label>
                       <input
@@ -177,7 +177,7 @@ export default function SizeRecommenderModal({ availableSizes, onSelectSize }: S
                         placeholder="Ej: 70"
                         min="30"
                         max="200"
-                        className="w-full px-4 py-3 border border-charcoal-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gold-matte focus:border-transparent transition-all"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-navy-900/20 focus:border-navy-900 transition-all text-gray-900 placeholder:text-gray-400"
                       />
                     </div>
 
@@ -198,7 +198,7 @@ export default function SizeRecommenderModal({ availableSizes, onSelectSize }: S
                     </button>
                   </div>
 
-                  <p className="mt-4 text-xs text-charcoal-400 text-center">
+                  <p className="mt-4 text-xs text-gray-500 text-center">
                     * Esta es una estimación orientativa basada en medidas estándar.
                   </p>
                 </>
