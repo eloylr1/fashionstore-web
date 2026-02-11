@@ -125,7 +125,7 @@ export default function SizeRecommenderModal({ availableSizes, onSelectSize }: S
                 <h2 id="size-modal-title" className="text-lg font-serif font-semibold text-white">
                   Recomendador de Talla
                 </h2>
-                <p className="text-sm text-white/70">Encuentra tu talla ideal</p>
+                <p className="text-sm text-amber-300">Encuentra tu talla ideal</p>
               </div>
               <button
                 onClick={closeModal}
