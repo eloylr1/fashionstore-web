@@ -122,10 +122,10 @@ export default function SizeRecommenderModal({ availableSizes, onSelectSize }: S
             {/* Header */}
             <div className="bg-gradient-to-r from-navy-900 to-navy-800 px-6 py-4 flex items-center justify-between">
               <div>
-                <h2 id="size-modal-title" className="text-lg font-serif font-semibold text-white">
+                <h2 id="size-modal-title" className="text-lg font-bold text-white">
                   Recomendador de Talla
                 </h2>
-                <p className="text-sm text-amber-300">Encuentra tu talla ideal</p>
+                <p className="text-sm text-amber-300 font-medium">Encuentra tu talla ideal</p>
               </div>
               <button
                 onClick={closeModal}
