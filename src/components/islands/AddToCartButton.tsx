@@ -2,10 +2,11 @@
  * ═══════════════════════════════════════════════════════════════════════════
  * FASHIONMARKET - AddToCartButton Component (Isla React)
  * Botón interactivo para añadir productos al carrito
+ * Con soporte de stock por talla y notificaciones de disponibilidad
  * ═══════════════════════════════════════════════════════════════════════════
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { addToCart, formatPrice } from '../../stores/cart';
 import SizeRecommenderModal from '../product/SizeRecommenderModal';
 import type { Product } from '../../lib/supabase/database.types';
@@ -14,14 +15,61 @@ interface AddToCartButtonProps {
   product: Product;
 }
 
+interface StockBySize {
+  [size: string]: number;
+}
+
 export default function AddToCartButton({ product }: AddToCartButtonProps) {
   const [selectedSize, setSelectedSize] = useState<string>('');
   const [selectedColor, setSelectedColor] = useState<string>('');
   const [quantity, setQuantity] = useState(1);
   const [isAdding, setIsAdding] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [stockBySize, setStockBySize] = useState<StockBySize>({});
+  const [loadingStock, setLoadingStock] = useState(true);
+  const [notifyEmail, setNotifyEmail] = useState('');
+  const [showNotifyForm, setShowNotifyForm] = useState(false);
+  const [notifyLoading, setNotifyLoading] = useState(false);
+  const [notifySuccess, setNotifySuccess] = useState(false);
 
   const hasColors = product.colors && product.colors.length > 0;
+
+  // Cargar stock por talla al montar el componente
+  useEffect(() => {
+    const fetchSizeStock = async () => {
+      try {
+        const response = await fetch(`/api/products/${product.id}/stock`);
+        if (response.ok) {
+          const data = await response.json();
+          setStockBySize(data.stockBySize || {});
+        } else {
+          // Fallback: usar stock global distribuido entre tallas
+          const fallbackStock: StockBySize = {};
+          product.sizes.forEach((size) => {
+            fallbackStock[size] = Math.floor(product.stock / product.sizes.length);
+          });
+          setStockBySize(fallbackStock);
+        }
+      } catch (err) {
+        console.error('Error cargando stock por talla:', err);
+        // Fallback
+        const fallbackStock: StockBySize = {};
+        product.sizes.forEach((size) => {
+          fallbackStock[size] = Math.floor(product.stock / product.sizes.length);
+        });
+        setStockBySize(fallbackStock);
+      } finally {
+        setLoadingStock(false);
+      }
+    };
+
+    fetchSizeStock();
+  }, [product.id, product.stock, product.sizes]);
+
+  // Obtener stock de la talla seleccionada
+  const selectedSizeStock = selectedSize ? (stockBySize[selectedSize] ?? 0) : product.stock;
+  const isSizeOutOfStock = selectedSize ? selectedSizeStock < 1 : false;
+  const isProductOutOfStock = product.stock < 1;
 
   const handleAddToCart = () => {
     // Validaciones
@@ -35,8 +83,8 @@ export default function AddToCartButton({ product }: AddToCartButtonProps) {
       return;
     }
 
-    if (product.stock < 1) {
-      setError('Producto sin stock');
+    if (isSizeOutOfStock) {
+      setShowNotifyForm(true);
       return;
     }
 
@@ -52,6 +100,34 @@ export default function AddToCartButton({ product }: AddToCartButtonProps) {
     }, 300);
   };
 
+  const handleNotifySubmit = async () => {
+    if (!notifyEmail || !selectedSize) return;
+
+    setNotifyLoading(true);
+    try {
+      const response = await fetch(`/api/products/${product.id}/notify-stock`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: notifyEmail, size: selectedSize }),
+      });
+
+      if (response.ok) {
+        setNotifySuccess(true);
+        setTimeout(() => {
+          setShowNotifyForm(false);
+          setNotifySuccess(false);
+          setNotifyEmail('');
+        }, 3000);
+      } else {
+        setError('No se pudo registrar la notificación');
+      }
+    } catch (err) {
+      setError('Error al registrar notificación');
+    } finally {
+      setNotifyLoading(false);
+    }
+  };
+
   const decreaseQuantity = () => {
     if (quantity > 1) {
       setQuantity(quantity - 1);
@@ -59,7 +135,7 @@ export default function AddToCartButton({ product }: AddToCartButtonProps) {
   };
 
   const increaseQuantity = () => {
-    if (quantity < product.stock) {
+    if (quantity < selectedSizeStock) {
       setQuantity(quantity + 1);
     }
   };
@@ -68,6 +144,8 @@ export default function AddToCartButton({ product }: AddToCartButtonProps) {
   const handleSizeRecommendation = (size: string) => {
     setSelectedSize(size);
     setError(null);
+    setQuantity(1);
+    setShowNotifyForm(false);
   };
 
   // Handler para seleccionar color y emitir evento para cambiar la imagen
@@ -83,7 +161,12 @@ export default function AddToCartButton({ product }: AddToCartButtonProps) {
     }
   };
 
-  const isOutOfStock = product.stock < 1;
+  // Función para obtener estado visual de cada talla
+  const getSizeStatus = (size: string) => {
+    if (loadingStock) return { available: true, stock: 0 };
+    const stock = stockBySize[size] ?? 0;
+    return { available: stock > 0, stock };
+  };
 
   return (
     <div className="space-y-6">
@@ -145,89 +228,148 @@ export default function AddToCartButton({ product }: AddToCartButtonProps) {
         </div>
         
         <div className="grid grid-cols-5 gap-2">
-          {product.sizes.map((size) => (
-            <button
-              key={size}
-              type="button"
-              onClick={() => {
-                setSelectedSize(size);
-                setError(null);
-              }}
-              className={`
-                py-3 text-sm font-medium border transition-all duration-200
-                ${selectedSize === size
-                  ? 'border-navy-900 bg-navy-900 text-white'
-                  : 'border-charcoal-200 text-charcoal-700 hover:border-charcoal-400'
-                }
-              `}
-            >
-              {size}
-            </button>
-          ))}
+          {product.sizes.map((size) => {
+            const status = getSizeStatus(size);
+            const isSelected = selectedSize === size;
+            const isDisabled = !loadingStock && !status.available;
+            
+            return (
+              <button
+                key={size}
+                type="button"
+                onClick={() => {
+                  setSelectedSize(size);
+                  setError(null);
+                  setQuantity(1);
+                  setShowNotifyForm(false);
+                }}
+                disabled={false} // Permitir seleccionar para mostrar opción de notificación
+                className={`
+                  relative py-3 text-sm font-medium border transition-all duration-200
+                  ${isSelected
+                    ? isDisabled
+                      ? 'border-charcoal-400 bg-charcoal-100 text-charcoal-600'
+                      : 'border-navy-900 bg-navy-900 text-white'
+                    : isDisabled
+                      ? 'border-charcoal-200 bg-charcoal-50 text-charcoal-400 cursor-pointer'
+                      : 'border-charcoal-200 text-charcoal-700 hover:border-charcoal-400'
+                  }
+                `}
+              >
+                {size}
+                {isDisabled && (
+                  <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                    <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500" title="Sin stock"></span>
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
+        
+        {/* Indicador de stock por talla */}
+        {selectedSize && !loadingStock && (
+          <p className={`mt-2 text-sm ${isSizeOutOfStock ? 'text-red-600' : selectedSizeStock <= 3 ? 'text-amber-600' : 'text-charcoal-500'}`}>
+            {isSizeOutOfStock 
+              ? `Talla ${selectedSize} sin stock` 
+              : selectedSizeStock <= 3 
+                ? `¡Solo quedan ${selectedSizeStock} unidades en talla ${selectedSize}!`
+                : `${selectedSizeStock} unidades disponibles en talla ${selectedSize}`
+            }
+          </p>
+        )}
         
         {error && (
           <p className="mt-2 text-sm text-error">{error}</p>
         )}
       </div>
 
-      {/* Selector de Cantidad */}
-      <div>
-        <label className="block text-sm font-medium text-charcoal-700 mb-3">
-          Cantidad
-        </label>
-        
-        <div className="flex items-center gap-4">
-          <div className="flex items-center border border-charcoal-200">
-            <button
-              type="button"
-              onClick={decreaseQuantity}
-              disabled={quantity <= 1}
-              className="w-12 h-12 flex items-center justify-center text-charcoal-600 hover:bg-charcoal-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              aria-label="Disminuir cantidad"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 12H4" />
+      {/* Formulario de notificación de stock */}
+      {showNotifyForm && selectedSize && isSizeOutOfStock && (
+        <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+          {notifySuccess ? (
+            <div className="flex items-center gap-2 text-green-700">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
               </svg>
-            </button>
-            
-            <span className="w-12 text-center font-medium text-charcoal-800">
-              {quantity}
-            </span>
-            
-            <button
-              type="button"
-              onClick={increaseQuantity}
-              disabled={quantity >= product.stock}
-              className="w-12 h-12 flex items-center justify-center text-charcoal-600 hover:bg-charcoal-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              aria-label="Aumentar cantidad"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
-              </svg>
-            </button>
-          </div>
-          
-          {/* Stock indicator */}
-          <span className={`text-sm ${product.stock <= 5 ? 'text-warning' : 'text-charcoal-500'}`}>
-            {isOutOfStock 
-              ? 'Sin stock'
-              : product.stock <= 5 
-                ? `¡Solo quedan ${product.stock}!`
-                : `${product.stock} disponibles`
-            }
-          </span>
+              <span>¡Te avisaremos cuando vuelva a estar disponible!</span>
+            </div>
+          ) : (
+            <>
+              <p className="text-sm text-amber-800 mb-3">
+                <strong>Talla {selectedSize} agotada.</strong> Déjanos tu email y te avisamos cuando vuelva a estar disponible:
+              </p>
+              <div className="flex gap-2">
+                <input
+                  type="email"
+                  value={notifyEmail}
+                  onChange={(e) => setNotifyEmail(e.target.value)}
+                  placeholder="tu@email.com"
+                  className="flex-1 px-3 py-2 text-sm border border-amber-300 rounded focus:outline-none focus:ring-2 focus:ring-amber-400"
+                />
+                <button
+                  type="button"
+                  onClick={handleNotifySubmit}
+                  disabled={!notifyEmail || notifyLoading}
+                  className="px-4 py-2 text-sm font-medium bg-amber-600 text-white rounded hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {notifyLoading ? 'Enviando...' : 'Avísame'}
+                </button>
+              </div>
+            </>
+          )}
         </div>
-      </div>
+      )}
+
+      {/* Selector de Cantidad */}
+      {!isSizeOutOfStock && (
+        <div>
+          <label className="block text-sm font-medium text-charcoal-700 mb-3">
+            Cantidad
+          </label>
+          
+          <div className="flex items-center gap-4">
+            <div className="flex items-center border border-charcoal-200">
+              <button
+                type="button"
+                onClick={decreaseQuantity}
+                disabled={quantity <= 1}
+                className="w-12 h-12 flex items-center justify-center text-charcoal-600 hover:bg-charcoal-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                aria-label="Disminuir cantidad"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 12H4" />
+                </svg>
+              </button>
+              
+              <span className="w-12 text-center font-medium text-charcoal-800">
+                {quantity}
+              </span>
+              
+              <button
+                type="button"
+                onClick={increaseQuantity}
+                disabled={quantity >= selectedSizeStock}
+                className="w-12 h-12 flex items-center justify-center text-charcoal-600 hover:bg-charcoal-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                aria-label="Aumentar cantidad"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Botón Añadir al Carrito */}
       <button
         type="button"
         onClick={handleAddToCart}
-        disabled={isOutOfStock || isAdding}
+        disabled={isProductOutOfStock || isAdding || (selectedSize && isSizeOutOfStock)}
         className={`
           w-full py-4 text-base font-medium tracking-wide transition-all duration-300
-          ${isOutOfStock
+          ${isProductOutOfStock || (selectedSize && isSizeOutOfStock)
             ? 'bg-charcoal-200 text-charcoal-500 cursor-not-allowed'
             : isAdding
               ? 'bg-navy-800 text-white cursor-wait'
@@ -243,8 +385,10 @@ export default function AddToCartButton({ product }: AddToCartButtonProps) {
             </svg>
             Añadiendo...
           </span>
-        ) : isOutOfStock ? (
-          'Agotado'
+        ) : isProductOutOfStock ? (
+          'Producto agotado'
+        ) : selectedSize && isSizeOutOfStock ? (
+          'Talla agotada'
         ) : (
           'Añadir al carrito'
         )}

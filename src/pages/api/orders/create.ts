@@ -132,7 +132,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       );
     }
 
-    // 1) Verificar stock disponible para todos los items
+    // 1) Verificar stock disponible para todos los items (por talla)
     const productIds = items.map(i => i.product_id);
     const { data: products, error: productError } = await supabase
       .from('products')
@@ -150,7 +150,20 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     // Crear mapa de productos para validación
     const productMap = new Map(products.map(p => [p.id, p]));
 
-    // Verificar stock
+    // Obtener stock por talla para los productos
+    const { data: sizeStockData } = await supabase
+      .from('product_size_stock')
+      .select('product_id, size, stock')
+      .in('product_id', productIds);
+
+    // Crear mapa de stock por producto y talla
+    const sizeStockMap = new Map<string, number>();
+    (sizeStockData || []).forEach((item: { product_id: string; size: string; stock: number }) => {
+      const key = `${item.product_id}_${item.size}`;
+      sizeStockMap.set(key, item.stock);
+    });
+
+    // Verificar stock por talla
     for (const item of items) {
       const product = productMap.get(item.product_id);
       if (!product) {
@@ -159,13 +172,33 @@ export const POST: APIRoute = async ({ request, cookies }) => {
           { status: 400, headers: { 'Content-Type': 'application/json' } }
         );
       }
-      if (product.stock < item.quantity) {
-        return new Response(
-          JSON.stringify({ 
-            error: `Stock insuficiente para ${product.name}. Disponible: ${product.stock}` 
-          }),
-          { status: 400, headers: { 'Content-Type': 'application/json' } }
-        );
+      
+      // Si el item tiene talla, verificar stock específico de la talla
+      if (item.size) {
+        const sizeKey = `${item.product_id}_${item.size}`;
+        const sizeStock = sizeStockMap.get(sizeKey);
+        
+        // Si no hay registro de stock por talla, usar stock global como fallback
+        const availableStock = sizeStock !== undefined ? sizeStock : product.stock;
+        
+        if (availableStock < item.quantity) {
+          return new Response(
+            JSON.stringify({ 
+              error: `Stock insuficiente para ${product.name} (Talla ${item.size}). Disponible: ${availableStock}` 
+            }),
+            { status: 400, headers: { 'Content-Type': 'application/json' } }
+          );
+        }
+      } else {
+        // Sin talla específica, verificar stock global
+        if (product.stock < item.quantity) {
+          return new Response(
+            JSON.stringify({ 
+              error: `Stock insuficiente para ${product.name}. Disponible: ${product.stock}` 
+            }),
+            { status: 400, headers: { 'Content-Type': 'application/json' } }
+          );
+        }
       }
     }
 
@@ -295,21 +328,62 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       );
     }
 
-    // 5) Reducir stock de cada producto
+    // 5) Reducir stock de cada producto (por talla si aplica)
     for (const item of items) {
-      const { error: stockError } = await supabase.rpc('decrement_stock', {
-        p_product_id: item.product_id,
-        p_quantity: item.quantity,
-      });
+      if (item.size) {
+        // Intentar reducir stock por talla
+        const { error: sizeStockError } = await supabase.rpc('decrement_size_stock', {
+          p_product_id: item.product_id,
+          p_size: item.size,
+          p_quantity: item.quantity,
+        });
 
-      // Si no existe la función RPC, hacerlo manualmente
-      if (stockError) {
-        const product = productMap.get(item.product_id);
-        if (product) {
-          await supabase
-            .from('products')
-            .update({ stock: product.stock - item.quantity })
-            .eq('id', item.product_id);
+        // Si la función de talla falla, intentar con stock global
+        if (sizeStockError) {
+          console.log('⚠️ decrement_size_stock no disponible, usando fallback');
+          // Intentar actualizar directamente la tabla de stock por talla
+          const sizeKey = `${item.product_id}_${item.size}`;
+          const currentStock = sizeStockMap.get(sizeKey);
+          
+          if (currentStock !== undefined) {
+            await supabase
+              .from('product_size_stock')
+              .update({ stock: currentStock - item.quantity })
+              .eq('product_id', item.product_id)
+              .eq('size', item.size);
+          }
+          
+          // También actualizar stock global como respaldo
+          const { error: stockError } = await supabase.rpc('decrement_stock', {
+            p_product_id: item.product_id,
+            p_quantity: item.quantity,
+          });
+
+          if (stockError) {
+            const product = productMap.get(item.product_id);
+            if (product) {
+              await supabase
+                .from('products')
+                .update({ stock: Math.max(0, product.stock - item.quantity) })
+                .eq('id', item.product_id);
+            }
+          }
+        }
+      } else {
+        // Sin talla, usar stock global
+        const { error: stockError } = await supabase.rpc('decrement_stock', {
+          p_product_id: item.product_id,
+          p_quantity: item.quantity,
+        });
+
+        if (stockError) {
+          const product = productMap.get(item.product_id);
+          if (product) {
+            await supabase
+              .from('products')
+              .update({ stock: Math.max(0, product.stock - item.quantity) })
+              .eq('id', item.product_id);
+          }
         }
       }
     }
