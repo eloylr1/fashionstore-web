@@ -175,19 +175,19 @@ export default function SizeStockManager({
 
   return (
     <div className="bg-white rounded-lg border border-charcoal-200 overflow-hidden">
-      {/* Header */}
-      <div className="bg-navy-900 text-white px-6 py-4">
+      {/* Header - Colores mejorados para visibilidad */}
+      <div className="bg-gradient-to-r from-navy-800 to-navy-900 px-6 py-4">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-lg font-semibold">Stock por Talla</h3>
-            <p className="text-sm text-navy-200 mt-1">
+            <h3 className="text-lg font-semibold text-white">Stock por Talla</h3>
+            <p className="text-sm text-gray-300 mt-1">
               Gestiona el inventario de cada talla individualmente
             </p>
           </div>
           <div className="flex items-center gap-4">
             <div className="text-right">
-              <p className="text-2xl font-bold">{totalStock}</p>
-              <p className="text-xs text-navy-200">unidades totales</p>
+              <p className="text-2xl font-bold text-white">{totalStock}</p>
+              <p className="text-xs text-gray-300">unidades totales</p>
             </div>
           </div>
         </div>

@@ -10,7 +10,7 @@ export const prerender = false;
 
 import AdminLayout from '../../../layouts/AdminLayout.astro';
 import ImageUploader from '../../../components/admin/ImageUploader';
-import SizeStockManager from '../../../components/admin/SizeStockManager';
+import VariantStockManager from '../../../components/admin/VariantStockManager';
 import { supabaseAdmin, isSupabaseAdminConfigured } from '../../../lib/supabase/server';
 
 const { id } = Astro.params;
@@ -268,11 +268,12 @@ if (!product) {
         </div>
       </div>
       
-      <!-- Stock por Talla -->
-      <SizeStockManager 
+      <!-- Stock por Variantes (Talla y Color) -->
+      <VariantStockManager 
         client:load 
         productId={product.id}
-        sizes={product.sizes || ['S', 'M', 'L', 'XL']}
+        sizes={product.sizes || []}
+        colors={product.colors || []}
         productName={product.name}
       />
       

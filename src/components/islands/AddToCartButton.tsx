@@ -19,6 +19,10 @@ interface StockBySize {
   [size: string]: number;
 }
 
+interface StockByVariant {
+  [key: string]: number; // "size_color" -> stock
+}
+
 export default function AddToCartButton({ product }: AddToCartButtonProps) {
   const [selectedSize, setSelectedSize] = useState<string>('');
   const [selectedColor, setSelectedColor] = useState<string>('');
@@ -26,6 +30,8 @@ export default function AddToCartButton({ product }: AddToCartButtonProps) {
   const [isAdding, setIsAdding] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [stockBySize, setStockBySize] = useState<StockBySize>({});
+  const [stockByVariant, setStockByVariant] = useState<StockByVariant>({});
+  const [hasVariantStock, setHasVariantStock] = useState(false);
   const [loadingStock, setLoadingStock] = useState(true);
   const [notifyEmail, setNotifyEmail] = useState('');
   const [showNotifyForm, setShowNotifyForm] = useState(false);
@@ -34,14 +40,16 @@ export default function AddToCartButton({ product }: AddToCartButtonProps) {
 
   const hasColors = product.colors && product.colors.length > 0;
 
-  // Cargar stock por talla al montar el componente
+  // Cargar stock por talla/variante al montar el componente
   useEffect(() => {
-    const fetchSizeStock = async () => {
+    const fetchStock = async () => {
       try {
         const response = await fetch(`/api/products/${product.id}/stock`);
         if (response.ok) {
           const data = await response.json();
           setStockBySize(data.stockBySize || {});
+          setStockByVariant(data.stockByVariant || {});
+          setHasVariantStock(data.hasColors || false);
         } else {
           // Fallback: usar stock global distribuido entre tallas
           const fallbackStock: StockBySize = {};
@@ -51,7 +59,7 @@ export default function AddToCartButton({ product }: AddToCartButtonProps) {
           setStockBySize(fallbackStock);
         }
       } catch (err) {
-        console.error('Error cargando stock por talla:', err);
+        console.error('Error cargando stock:', err);
         // Fallback
         const fallbackStock: StockBySize = {};
         product.sizes.forEach((size) => {
@@ -63,12 +71,28 @@ export default function AddToCartButton({ product }: AddToCartButtonProps) {
       }
     };
 
-    fetchSizeStock();
+    fetchStock();
   }, [product.id, product.stock, product.sizes]);
 
-  // Obtener stock de la talla seleccionada
-  const selectedSizeStock = selectedSize ? (stockBySize[selectedSize] ?? 0) : product.stock;
-  const isSizeOutOfStock = selectedSize ? selectedSizeStock < 1 : false;
+  // Función para obtener stock de una variante específica
+  const getVariantStock = (size: string, color?: string): number => {
+    if (hasVariantStock && hasColors && color) {
+      // Stock por variante completa (talla + color)
+      const key = `${size}_${color}`;
+      return stockByVariant[key] ?? 0;
+    }
+    // Fallback a stock por talla
+    return stockBySize[size] ?? 0;
+  };
+
+  // Stock de la variante seleccionada
+  const selectedVariantStock = selectedSize 
+    ? getVariantStock(selectedSize, hasColors ? selectedColor : undefined)
+    : product.stock;
+  
+  const isVariantOutOfStock = selectedSize 
+    ? ((hasColors && !selectedColor) ? false : selectedVariantStock < 1)
+    : false;
   const isProductOutOfStock = product.stock < 1;
 
   const handleAddToCart = () => {
@@ -83,7 +107,7 @@ export default function AddToCartButton({ product }: AddToCartButtonProps) {
       return;
     }
 
-    if (isSizeOutOfStock) {
+    if (isVariantOutOfStock) {
       setShowNotifyForm(true);
       return;
     }
@@ -108,7 +132,11 @@ export default function AddToCartButton({ product }: AddToCartButtonProps) {
       const response = await fetch(`/api/products/${product.id}/notify-stock`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: notifyEmail, size: selectedSize }),
+        body: JSON.stringify({ 
+          email: notifyEmail, 
+          size: selectedSize,
+          color: hasColors ? selectedColor : null 
+        }),
       });
 
       if (response.ok) {
@@ -135,7 +163,7 @@ export default function AddToCartButton({ product }: AddToCartButtonProps) {
   };
 
   const increaseQuantity = () => {
-    if (quantity < selectedSizeStock) {
+    if (quantity < selectedVariantStock) {
       setQuantity(quantity + 1);
     }
   };
@@ -164,8 +192,34 @@ export default function AddToCartButton({ product }: AddToCartButtonProps) {
   // Función para obtener estado visual de cada talla
   const getSizeStatus = (size: string) => {
     if (loadingStock) return { available: true, stock: 0 };
+    
+    // Si hay colores y uno está seleccionado, verificar stock de esa variante
+    if (hasVariantStock && hasColors && selectedColor) {
+      const variantStock = getVariantStock(size, selectedColor);
+      return { available: variantStock > 0, stock: variantStock };
+    }
+    
+    // Fallback a stock por talla
     const stock = stockBySize[size] ?? 0;
     return { available: stock > 0, stock };
+  };
+
+  // Función para obtener estado visual de cada color
+  const getColorStatus = (color: string) => {
+    if (loadingStock) return { available: true, stock: 0 };
+    
+    // Si hay una talla seleccionada, verificar stock de esa variante
+    if (hasVariantStock && selectedSize) {
+      const variantStock = getVariantStock(selectedSize, color);
+      return { available: variantStock > 0, stock: variantStock };
+    }
+    
+    // Sin talla seleccionada, sumar el stock de todas las tallas para ese color
+    let totalColorStock = 0;
+    product.sizes.forEach(size => {
+      totalColorStock += getVariantStock(size, color);
+    });
+    return { available: totalColorStock > 0, stock: totalColorStock };
   };
 
   return (
@@ -185,22 +239,36 @@ export default function AddToCartButton({ product }: AddToCartButtonProps) {
             Color
           </label>
           <div className="flex flex-wrap gap-2">
-            {product.colors.map((color, index) => (
-              <button
-                key={color}
-                type="button"
-                onClick={() => handleColorSelect(color, index)}
-                className={`
-                  px-4 py-2.5 text-sm font-medium border transition-all duration-200
-                  ${selectedColor === color
-                    ? 'border-navy-900 bg-navy-900 text-white'
-                    : 'border-charcoal-200 text-charcoal-700 hover:border-charcoal-400'
-                  }
-                `}
-              >
-                {color}
-              </button>
-            ))}
+            {product.colors.map((color, index) => {
+              const colorStatus = getColorStatus(color);
+              const isColorOutOfStock = !loadingStock && !colorStatus.available;
+              
+              return (
+                <button
+                  key={color}
+                  type="button"
+                  onClick={() => handleColorSelect(color, index)}
+                  className={`
+                    relative px-4 py-2.5 text-sm font-medium border transition-all duration-200
+                    ${selectedColor === color
+                      ? isColorOutOfStock
+                        ? 'border-charcoal-400 bg-charcoal-100 text-charcoal-600'
+                        : 'border-navy-900 bg-navy-900 text-white'
+                      : isColorOutOfStock
+                        ? 'border-charcoal-200 bg-charcoal-50 text-charcoal-400'
+                        : 'border-charcoal-200 text-charcoal-700 hover:border-charcoal-400'
+                    }
+                  `}
+                >
+                  {color}
+                  {isColorOutOfStock && (
+                    <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                      <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500" title="Sin stock"></span>
+                    </span>
+                  )}
+                </button>
+              );
+            })}
           </div>
         </div>
       )}
@@ -267,14 +335,16 @@ export default function AddToCartButton({ product }: AddToCartButtonProps) {
           })}
         </div>
         
-        {/* Indicador de stock por talla */}
-        {selectedSize && !loadingStock && (
-          <p className={`mt-2 text-sm ${isSizeOutOfStock ? 'text-red-600' : selectedSizeStock <= 3 ? 'text-amber-600' : 'text-charcoal-500'}`}>
-            {isSizeOutOfStock 
-              ? `Talla ${selectedSize} sin stock` 
-              : selectedSizeStock <= 3 
-                ? `¡Solo quedan ${selectedSizeStock} unidades en talla ${selectedSize}!`
-                : `${selectedSizeStock} unidades disponibles en talla ${selectedSize}`
+        {/* Indicador de stock por variante */}
+        {selectedSize && (!hasColors || selectedColor) && !loadingStock && (
+          <p className={`mt-2 text-sm ${isVariantOutOfStock ? 'text-red-600' : selectedVariantStock <= 3 ? 'text-amber-600' : 'text-charcoal-500'}`}>
+            {isVariantOutOfStock 
+              ? hasColors && selectedColor
+                ? `${selectedSize} / ${selectedColor} sin stock` 
+                : `Talla ${selectedSize} sin stock`
+              : selectedVariantStock <= 3 
+                ? `¡Solo quedan ${selectedVariantStock} unidades!`
+                : `${selectedVariantStock} unidades disponibles`
             }
           </p>
         )}
@@ -285,7 +355,7 @@ export default function AddToCartButton({ product }: AddToCartButtonProps) {
       </div>
 
       {/* Formulario de notificación de stock */}
-      {showNotifyForm && selectedSize && isSizeOutOfStock && (
+      {showNotifyForm && selectedSize && (!hasColors || selectedColor) && isVariantOutOfStock && (
         <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
           {notifySuccess ? (
             <div className="flex items-center gap-2 text-green-700">
@@ -297,7 +367,12 @@ export default function AddToCartButton({ product }: AddToCartButtonProps) {
           ) : (
             <>
               <p className="text-sm text-amber-800 mb-3">
-                <strong>Talla {selectedSize} agotada.</strong> Déjanos tu email y te avisamos cuando vuelva a estar disponible:
+                <strong>
+                  {hasColors && selectedColor 
+                    ? `${selectedSize} / ${selectedColor} agotada.`
+                    : `Talla ${selectedSize} agotada.`
+                  }
+                </strong> Déjanos tu email y te avisamos cuando vuelva a estar disponible:
               </p>
               <div className="flex gap-2">
                 <input
@@ -322,7 +397,7 @@ export default function AddToCartButton({ product }: AddToCartButtonProps) {
       )}
 
       {/* Selector de Cantidad */}
-      {!isSizeOutOfStock && (
+      {!isVariantOutOfStock && (
         <div>
           <label className="block text-sm font-medium text-charcoal-700 mb-3">
             Cantidad
@@ -349,7 +424,7 @@ export default function AddToCartButton({ product }: AddToCartButtonProps) {
               <button
                 type="button"
                 onClick={increaseQuantity}
-                disabled={quantity >= selectedSizeStock}
+                disabled={quantity >= selectedVariantStock}
                 className="w-12 h-12 flex items-center justify-center text-charcoal-600 hover:bg-charcoal-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 aria-label="Aumentar cantidad"
               >
@@ -366,10 +441,10 @@ export default function AddToCartButton({ product }: AddToCartButtonProps) {
       <button
         type="button"
         onClick={handleAddToCart}
-        disabled={isProductOutOfStock || isAdding || (selectedSize && isSizeOutOfStock)}
+        disabled={isProductOutOfStock || isAdding || (selectedSize && (!hasColors || selectedColor) && isVariantOutOfStock)}
         className={`
           w-full py-4 text-base font-medium tracking-wide transition-all duration-300
-          ${isProductOutOfStock || (selectedSize && isSizeOutOfStock)
+          ${isProductOutOfStock || (selectedSize && (!hasColors || selectedColor) && isVariantOutOfStock)
             ? 'bg-charcoal-200 text-charcoal-500 cursor-not-allowed'
             : isAdding
               ? 'bg-navy-800 text-white cursor-wait'
@@ -387,8 +462,8 @@ export default function AddToCartButton({ product }: AddToCartButtonProps) {
           </span>
         ) : isProductOutOfStock ? (
           'Producto agotado'
-        ) : selectedSize && isSizeOutOfStock ? (
-          'Talla agotada'
+        ) : selectedSize && (!hasColors || selectedColor) && isVariantOutOfStock ? (
+          hasColors && selectedColor ? 'Variante agotada' : 'Talla agotada'
         ) : (
           'Añadir al carrito'
         )}

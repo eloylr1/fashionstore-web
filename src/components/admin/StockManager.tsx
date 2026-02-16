@@ -1,11 +1,18 @@
 /**
  * ═══════════════════════════════════════════════════════════════════════════
  * FASHIONMARKET - Stock Manager Component
- * Componente para gestionar el stock de productos
+ * Componente para gestionar el stock de productos con soporte de variantes
+ * (talla + color)
  * ═══════════════════════════════════════════════════════════════════════════
  */
 
 import { useState, useEffect } from 'react';
+
+interface VariantStock {
+  size: string | null;
+  color: string | null;
+  stock: number;
+}
 
 interface Product {
   id: string;
@@ -14,7 +21,15 @@ interface Product {
   sku: string;
   images: string[];
   price: number;
+  sizes?: string[];
+  colors?: string[];
   category?: { name: string };
+}
+
+interface ExpandedProduct {
+  variants: VariantStock[];
+  pendingNotifications: Record<string, number>;
+  loading: boolean;
 }
 
 export default function StockManager() {
@@ -25,6 +40,8 @@ export default function StockManager() {
   const [search, setSearch] = useState('');
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [editingStock, setEditingStock] = useState<{ [key: string]: string }>({});
+  const [expandedProducts, setExpandedProducts] = useState<Record<string, ExpandedProduct>>({});
+  const [editingVariantStock, setEditingVariantStock] = useState<Record<string, string>>({});
 
   useEffect(() => {
     loadProducts();
@@ -32,7 +49,7 @@ export default function StockManager() {
 
   const loadProducts = async () => {
     try {
-      const res = await fetch('/api/admin/products?fields=id,name,stock,sku,images,price,category');
+      const res = await fetch('/api/admin/products?fields=id,name,stock,sku,images,price,sizes,colors,category');
       if (res.ok) {
         const data = await res.json();
         setProducts(data.products || []);
@@ -47,6 +64,90 @@ export default function StockManager() {
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 3000);
+  };
+
+  // Cargar stock de variantes para un producto expandido
+  const loadVariantStock = async (productId: string) => {
+    setExpandedProducts(prev => ({
+      ...prev,
+      [productId]: { variants: [], pendingNotifications: {}, loading: true }
+    }));
+
+    try {
+      const res = await fetch(`/api/admin/products/${productId}/stock`);
+      if (res.ok) {
+        const data = await res.json();
+        setExpandedProducts(prev => ({
+          ...prev,
+          [productId]: {
+            variants: data.stockByVariant || [],
+            pendingNotifications: data.pendingNotifications || {},
+            loading: false
+          }
+        }));
+      }
+    } catch (error) {
+      console.error('Error loading variant stock:', error);
+      setExpandedProducts(prev => ({
+        ...prev,
+        [productId]: { variants: [], pendingNotifications: {}, loading: false }
+      }));
+    }
+  };
+
+  // Toggle expandir producto
+  const toggleExpand = (productId: string) => {
+    if (expandedProducts[productId]) {
+      setExpandedProducts(prev => {
+        const newState = { ...prev };
+        delete newState[productId];
+        return newState;
+      });
+    } else {
+      loadVariantStock(productId);
+    }
+  };
+
+  // Actualizar stock de una variante específica
+  const updateVariantStock = async (productId: string, size: string | null, color: string | null, newStock: number) => {
+    setSaving(`${productId}_${size || '_'}_${color || '_'}`);
+    try {
+      const res = await fetch(`/api/admin/products/${productId}/stock`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          updates: [{ size, color, stock: newStock }]
+        }),
+      });
+
+      if (res.ok) {
+        const result = await res.json();
+        
+        // Actualizar stock total del producto
+        setProducts(products.map(p => 
+          p.id === productId ? { ...p, stock: result.totalStock } : p
+        ));
+
+        // Recargar variantes
+        await loadVariantStock(productId);
+        
+        showToast(`Stock actualizado${result.notificationsSent > 0 ? `. ${result.notificationsSent} notificaciones enviadas.` : ''}`);
+        
+        // Limpiar edición
+        const editKey = `${productId}_${size || '_'}_${color || '_'}`;
+        setEditingVariantStock(prev => {
+          const newState = { ...prev };
+          delete newState[editKey];
+          return newState;
+        });
+      } else {
+        showToast('Error al actualizar', 'error');
+      }
+    } catch (error) {
+      showToast('Error de conexión', 'error');
+    } finally {
+      setSaving(null);
+    }
   };
 
   const updateStock = async (productId: string, newStock: number) => {
@@ -109,6 +210,49 @@ export default function StockManager() {
   const adjustStock = (productId: string, currentStock: number, delta: number) => {
     const newStock = Math.max(0, currentStock + delta);
     updateStock(productId, newStock);
+  };
+
+  // Helpers para variantes
+  const getVariantKey = (productId: string, size: string | null, color: string | null) => 
+    `${productId}_${size || '_'}_${color || '_'}`;
+
+  const hasVariants = (product: Product) => 
+    (product.sizes && product.sizes.length > 0) || (product.colors && product.colors.length > 0);
+
+  const getVariantStock = (productId: string, size: string | null, color: string | null): number => {
+    const expanded = expandedProducts[productId];
+    if (!expanded) return 0;
+    const variant = expanded.variants.find(v => v.size === size && v.color === color);
+    return variant?.stock || 0;
+  };
+
+  const handleVariantStockChange = (key: string, value: string) => {
+    setEditingVariantStock(prev => ({ ...prev, [key]: value }));
+  };
+
+  const handleVariantStockBlur = (productId: string, size: string | null, color: string | null) => {
+    const key = getVariantKey(productId, size, color);
+    const newStockStr = editingVariantStock[key];
+    if (newStockStr !== undefined) {
+      const newStock = parseInt(newStockStr);
+      const currentStock = getVariantStock(productId, size, color);
+      if (!isNaN(newStock) && newStock !== currentStock && newStock >= 0) {
+        updateVariantStock(productId, size, color, newStock);
+      } else {
+        setEditingVariantStock(prev => {
+          const newState = { ...prev };
+          delete newState[key];
+          return newState;
+        });
+      }
+    }
+  };
+
+  const getPendingCount = (productId: string, size: string | null, color: string | null): number => {
+    const expanded = expandedProducts[productId];
+    if (!expanded) return 0;
+    const key = `${size || '_'}_${color || '_'}`;
+    return expanded.pendingNotifications[key] || 0;
   };
 
   // Filtrar productos
@@ -201,22 +345,43 @@ export default function StockManager() {
         <table className="w-full">
           <thead className="bg-charcoal-50 border-b border-charcoal-100">
             <tr>
+              <th className="px-2 py-3 w-10"></th>
               <th className="px-4 py-3 text-left text-xs font-medium text-charcoal-500 uppercase">Producto</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-charcoal-500 uppercase">SKU</th>
-              <th className="px-4 py-3 text-center text-xs font-medium text-charcoal-500 uppercase">Stock</th>
+              <th className="px-4 py-3 text-center text-xs font-medium text-charcoal-500 uppercase">Variantes</th>
+              <th className="px-4 py-3 text-center text-xs font-medium text-charcoal-500 uppercase">Stock Total</th>
               <th className="px-4 py-3 text-center text-xs font-medium text-charcoal-500 uppercase">Ajuste rápido</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-charcoal-100">
             {filteredProducts.length === 0 ? (
               <tr>
-                <td colSpan={4} className="px-4 py-8 text-center text-charcoal-500">
+                <td colSpan={6} className="px-4 py-8 text-center text-charcoal-500">
                   No se encontraron productos
                 </td>
               </tr>
             ) : (
               filteredProducts.map((product) => (
+                <>
                 <tr key={product.id} className="hover:bg-charcoal-50">
+                  <td className="px-2 py-3">
+                    {hasVariants(product) && (
+                      <button
+                        onClick={() => toggleExpand(product.id)}
+                        className="p-1 hover:bg-charcoal-100 rounded transition-colors"
+                        title={expandedProducts[product.id] ? 'Contraer' : 'Ver stock por variantes'}
+                      >
+                        <svg 
+                          className={`w-5 h-5 text-charcoal-500 transition-transform ${expandedProducts[product.id] ? 'rotate-90' : ''}`} 
+                          fill="none" 
+                          stroke="currentColor" 
+                          viewBox="0 0 24 24"
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </button>
+                    )}
+                  </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
                       {product.images?.[0] ? (
@@ -240,6 +405,24 @@ export default function StockManager() {
                   </td>
                   <td className="px-4 py-3 text-sm text-charcoal-600">
                     {product.sku || '-'}
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    {hasVariants(product) ? (
+                      <div className="flex items-center justify-center gap-2 text-xs">
+                        {product.sizes && product.sizes.length > 0 && (
+                          <span className="bg-charcoal-100 px-2 py-0.5 rounded">
+                            {product.sizes.length} tallas
+                          </span>
+                        )}
+                        {product.colors && product.colors.length > 0 && (
+                          <span className="bg-charcoal-100 px-2 py-0.5 rounded">
+                            {product.colors.length} colores
+                          </span>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-charcoal-400 text-sm">-</span>
+                    )}
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-center">
@@ -294,6 +477,166 @@ export default function StockManager() {
                     </div>
                   </td>
                 </tr>
+                {/* Filas expandidas de variantes */}
+                {expandedProducts[product.id] && (
+                  expandedProducts[product.id].loading ? (
+                    <tr key={`${product.id}-loading`} className="bg-charcoal-50">
+                      <td colSpan={6} className="px-8 py-4 text-center">
+                        <div className="flex items-center justify-center gap-2 text-charcoal-500">
+                          <div className="w-4 h-4 border-2 border-navy-600 border-t-transparent rounded-full animate-spin"></div>
+                          Cargando variantes...
+                        </div>
+                      </td>
+                    </tr>
+                  ) : (
+                    <>
+                      {/* Mostrar variantes en una subtabla */}
+                      <tr key={`${product.id}-variants`} className="bg-charcoal-50/50">
+                        <td></td>
+                        <td colSpan={5} className="px-4 py-3">
+                          <div className="bg-white border border-charcoal-200 rounded-lg overflow-hidden">
+                            <div className="bg-navy-50 px-4 py-2 border-b border-charcoal-200">
+                              <h4 className="text-sm font-medium text-navy-900">Stock por Variante</h4>
+                            </div>
+                            <div className="p-4">
+                              {/* Grid de variantes */}
+                              {product.sizes && product.sizes.length > 0 && product.colors && product.colors.length > 0 ? (
+                                // Matriz talla x color
+                                <div className="overflow-x-auto">
+                                  <table className="w-full text-sm">
+                                    <thead>
+                                      <tr>
+                                        <th className="px-3 py-2 text-left text-xs font-medium text-charcoal-500 bg-charcoal-50">Talla / Color</th>
+                                        {product.colors.map(color => (
+                                          <th key={color} className="px-3 py-2 text-center text-xs font-medium text-charcoal-500 bg-charcoal-50">{color}</th>
+                                        ))}
+                                      </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-charcoal-100">
+                                      {product.sizes.map(size => (
+                                        <tr key={size}>
+                                          <td className="px-3 py-2 font-medium text-charcoal-700 bg-charcoal-50">{size}</td>
+                                          {product.colors!.map(color => {
+                                            const key = getVariantKey(product.id, size, color);
+                                            const stock = getVariantStock(product.id, size, color);
+                                            const pending = getPendingCount(product.id, size, color);
+                                            const isSaving = saving === key;
+                                            return (
+                                              <td key={color} className="px-3 py-2 text-center relative">
+                                                <div className="flex items-center justify-center gap-1">
+                                                  <input
+                                                    type="number"
+                                                    min="0"
+                                                    value={editingVariantStock[key] !== undefined ? editingVariantStock[key] : stock}
+                                                    onChange={(e) => handleVariantStockChange(key, e.target.value)}
+                                                    onBlur={() => handleVariantStockBlur(product.id, size, color)}
+                                                    onKeyDown={(e) => e.key === 'Enter' && handleVariantStockBlur(product.id, size, color)}
+                                                    className={`w-16 text-center px-2 py-1 border rounded text-sm ${
+                                                      stock === 0 
+                                                        ? 'border-red-300 bg-red-50 text-red-700' 
+                                                        : stock <= 5 
+                                                          ? 'border-amber-300 bg-amber-50 text-amber-700'
+                                                          : 'border-charcoal-200'
+                                                    } ${isSaving ? 'opacity-50' : ''}`}
+                                                    disabled={isSaving}
+                                                  />
+                                                  {pending > 0 && (
+                                                    <span className="absolute -top-1 -right-1 bg-blue-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center" title={`${pending} esperando stock`}>
+                                                      {pending}
+                                                    </span>
+                                                  )}
+                                                </div>
+                                              </td>
+                                            );
+                                          })}
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              ) : product.sizes && product.sizes.length > 0 ? (
+                                // Solo tallas
+                                <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-3">
+                                  {product.sizes.map(size => {
+                                    const key = getVariantKey(product.id, size, null);
+                                    const stock = getVariantStock(product.id, size, null);
+                                    const pending = getPendingCount(product.id, size, null);
+                                    const isSaving = saving === key;
+                                    return (
+                                      <div key={size} className="relative">
+                                        <label className="text-xs text-charcoal-500 block mb-1">{size}</label>
+                                        <input
+                                          type="number"
+                                          min="0"
+                                          value={editingVariantStock[key] !== undefined ? editingVariantStock[key] : stock}
+                                          onChange={(e) => handleVariantStockChange(key, e.target.value)}
+                                          onBlur={() => handleVariantStockBlur(product.id, size, null)}
+                                          onKeyDown={(e) => e.key === 'Enter' && handleVariantStockBlur(product.id, size, null)}
+                                          className={`w-full text-center px-2 py-1 border rounded text-sm ${
+                                            stock === 0 
+                                              ? 'border-red-300 bg-red-50 text-red-700' 
+                                              : stock <= 5 
+                                                ? 'border-amber-300 bg-amber-50 text-amber-700'
+                                                : 'border-charcoal-200'
+                                          } ${isSaving ? 'opacity-50' : ''}`}
+                                          disabled={isSaving}
+                                        />
+                                        {pending > 0 && (
+                                          <span className="absolute -top-1 -right-1 bg-blue-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center" title={`${pending} esperando stock`}>
+                                            {pending}
+                                          </span>
+                                        )}
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              ) : product.colors && product.colors.length > 0 ? (
+                                // Solo colores
+                                <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-3">
+                                  {product.colors.map(color => {
+                                    const key = getVariantKey(product.id, null, color);
+                                    const stock = getVariantStock(product.id, null, color);
+                                    const pending = getPendingCount(product.id, null, color);
+                                    const isSaving = saving === key;
+                                    return (
+                                      <div key={color} className="relative">
+                                        <label className="text-xs text-charcoal-500 block mb-1">{color}</label>
+                                        <input
+                                          type="number"
+                                          min="0"
+                                          value={editingVariantStock[key] !== undefined ? editingVariantStock[key] : stock}
+                                          onChange={(e) => handleVariantStockChange(key, e.target.value)}
+                                          onBlur={() => handleVariantStockBlur(product.id, null, color)}
+                                          onKeyDown={(e) => e.key === 'Enter' && handleVariantStockBlur(product.id, null, color)}
+                                          className={`w-full text-center px-2 py-1 border rounded text-sm ${
+                                            stock === 0 
+                                              ? 'border-red-300 bg-red-50 text-red-700' 
+                                              : stock <= 5 
+                                                ? 'border-amber-300 bg-amber-50 text-amber-700'
+                                                : 'border-charcoal-200'
+                                          } ${isSaving ? 'opacity-50' : ''}`}
+                                          disabled={isSaving}
+                                        />
+                                        {pending > 0 && (
+                                          <span className="absolute -top-1 -right-1 bg-blue-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center" title={`${pending} esperando stock`}>
+                                            {pending}
+                                          </span>
+                                        )}
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              ) : (
+                                <p className="text-charcoal-500 text-sm">Sin variantes</p>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    </>
+                  )
+                )}
+                </>
               ))
             )}
           </tbody>

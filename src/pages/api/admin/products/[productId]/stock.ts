@@ -1,7 +1,7 @@
 /**
  * ═══════════════════════════════════════════════════════════════════════════
- * FASHIONMARKET - API Admin: Actualizar Stock por Talla
- * Endpoint para que el admin actualice el stock de tallas específicas
+ * FASHIONMARKET - API Admin: Actualizar Stock por Variante (Talla + Color)
+ * Endpoint para que el admin actualice el stock de variantes específicas
  * ═══════════════════════════════════════════════════════════════════════════
  */
 
@@ -13,14 +13,30 @@ const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL || '';
 const supabaseServiceKey = import.meta.env.SUPABASE_SERVICE_ROLE_KEY || '';
 const siteUrl = import.meta.env.SITE_URL || 'http://localhost:4322';
 
-interface StockUpdate {
-  size: string;
+interface VariantStockUpdate {
+  size: string | null;
+  color: string | null;
   stock: number;
 }
 
 interface UpdateStockRequest {
-  updates: StockUpdate[];
+  updates: VariantStockUpdate[];
 }
+
+// Función auxiliar para obtener la tabla de stock correcta
+const getStockTable = async (supabase: any): Promise<string> => {
+  // Verificar si existe product_variant_stock
+  const { data: variantTable } = await supabase
+    .from('product_variant_stock')
+    .select('id')
+    .limit(1);
+  
+  if (variantTable !== null) {
+    return 'product_variant_stock';
+  }
+  
+  return 'product_size_stock';
+};
 
 export const GET: APIRoute = async ({ params }) => {
   const { productId } = params;
@@ -37,10 +53,10 @@ export const GET: APIRoute = async ({ params }) => {
       auth: { autoRefreshToken: false, persistSession: false },
     });
 
-    // Obtener producto con sus tallas
+    // Obtener producto con sus tallas y colores
     const { data: product } = await supabase
       .from('products')
-      .select('id, name, sizes, stock')
+      .select('id, name, sizes, colors, stock')
       .eq('id', productId)
       .single();
 
@@ -51,35 +67,44 @@ export const GET: APIRoute = async ({ params }) => {
       );
     }
 
-    // Obtener stock actual por talla
+    const stockTable = await getStockTable(supabase);
+
+    // Obtener stock actual por variante
     const { data: stockData } = await supabase
-      .from('product_size_stock')
-      .select('size, stock')
+      .from(stockTable)
+      .select('size, color, stock')
       .eq('product_id', productId);
 
-    // Crear mapa de stock
-    const stockMap: Record<string, number> = {};
-    (stockData || []).forEach((item: { size: string; stock: number }) => {
-      stockMap[item.size] = item.stock;
-    });
-
-    // Asegurar que todas las tallas del producto tengan entrada
-    const sizes = product.sizes || [];
-    const stockBySize = sizes.map((size: string) => ({
-      size,
-      stock: stockMap[size] || 0
+    // Crear mapa de stock por variante
+    const stockByVariant = (stockData || []).map((item: { size: string | null; color: string | null; stock: number }) => ({
+      size: item.size,
+      color: item.color || null,
+      stock: item.stock
     }));
 
-    // Obtener notificaciones pendientes por talla
+    // También crear stockBySize para compatibilidad
+    const stockBySize: { size: string; stock: number }[] = [];
+    const sizeStockMap: Record<string, number> = {};
+    (stockData || []).forEach((item: { size: string | null; stock: number }) => {
+      if (item.size) {
+        sizeStockMap[item.size] = (sizeStockMap[item.size] || 0) + item.stock;
+      }
+    });
+    Object.entries(sizeStockMap).forEach(([size, stock]) => {
+      stockBySize.push({ size, stock });
+    });
+
+    // Obtener notificaciones pendientes por variante
     const { data: notifications } = await supabase
       .from('stock_notifications')
-      .select('size, email')
+      .select('size, color, email')
       .eq('product_id', productId)
       .eq('notified', false);
 
-    const notificationsBySize: Record<string, number> = {};
-    (notifications || []).forEach((n: { size: string }) => {
-      notificationsBySize[n.size] = (notificationsBySize[n.size] || 0) + 1;
+    const pendingNotifications: Record<string, number> = {};
+    (notifications || []).forEach((n: { size: string | null; color: string | null }) => {
+      const key = `${n.size || '_'}_${n.color || '_'}`;
+      pendingNotifications[key] = (pendingNotifications[key] || 0) + 1;
     });
 
     return new Response(
@@ -87,11 +112,13 @@ export const GET: APIRoute = async ({ params }) => {
         product: {
           id: product.id,
           name: product.name,
-          sizes: product.sizes,
+          sizes: product.sizes || [],
+          colors: product.colors || [],
           totalStock: product.stock
         },
+        stockByVariant,
         stockBySize,
-        pendingNotifications: notificationsBySize
+        pendingNotifications
       }),
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     );
@@ -143,33 +170,55 @@ export const PUT: APIRoute = async ({ params, request }) => {
       );
     }
 
-    const emailsToNotify: { email: string; size: string }[] = [];
+    const stockTable = await getStockTable(supabase);
+    const emailsToNotify: { email: string; size: string | null; color: string | null }[] = [];
 
     // Procesar cada actualización
     for (const update of updates) {
-      const { size, stock } = update;
+      const { size, color, stock } = update;
       
       if (typeof stock !== 'number' || stock < 0) continue;
 
-      // Obtener stock anterior
-      const { data: oldStockData } = await supabase
-        .from('product_size_stock')
+      // Construir condición de búsqueda
+      let query = supabase
+        .from(stockTable)
         .select('stock')
-        .eq('product_id', productId)
-        .eq('size', size)
-        .single();
+        .eq('product_id', productId);
 
+      if (size) {
+        query = query.eq('size', size);
+      } else {
+        query = query.is('size', null);
+      }
+
+      if (stockTable === 'product_variant_stock') {
+        if (color) {
+          query = query.eq('color', color);
+        } else {
+          query = query.is('color', null);
+        }
+      }
+
+      const { data: oldStockData } = await query.single();
       const oldStock = oldStockData?.stock || 0;
 
       // Actualizar o insertar stock
+      const upsertData: any = {
+        product_id: productId,
+        size: size || null,
+        stock
+      };
+
+      if (stockTable === 'product_variant_stock') {
+        upsertData.color = color || null;
+      }
+
       const { error } = await supabase
-        .from('product_size_stock')
-        .upsert({
-          product_id: productId,
-          size,
-          stock
-        }, {
-          onConflict: 'product_id,size'
+        .from(stockTable)
+        .upsert(upsertData, {
+          onConflict: stockTable === 'product_variant_stock' 
+            ? 'product_id,size,color' 
+            : 'product_id,size'
         });
 
       if (error) {
@@ -179,12 +228,25 @@ export const PUT: APIRoute = async ({ params, request }) => {
 
       // Si el stock pasó de 0 a > 0, obtener notificaciones pendientes
       if (oldStock === 0 && stock > 0) {
-        const { data: notifications } = await supabase
+        let notifQuery = supabase
           .from('stock_notifications')
           .select('id, email')
           .eq('product_id', productId)
-          .eq('size', size)
           .eq('notified', false);
+
+        if (size) {
+          notifQuery = notifQuery.eq('size', size);
+        } else {
+          notifQuery = notifQuery.is('size', null);
+        }
+
+        if (color) {
+          notifQuery = notifQuery.eq('color', color);
+        } else {
+          notifQuery = notifQuery.is('color', null);
+        }
+
+        const { data: notifications } = await notifQuery;
 
         if (notifications && notifications.length > 0) {
           // Marcar como notificados
@@ -196,7 +258,7 @@ export const PUT: APIRoute = async ({ params, request }) => {
 
           // Agregar a lista de emails a enviar
           notifications.forEach((n: { email: string }) => {
-            emailsToNotify.push({ email: n.email, size });
+            emailsToNotify.push({ email: n.email, size, color });
           });
         }
       }
@@ -204,7 +266,7 @@ export const PUT: APIRoute = async ({ params, request }) => {
 
     // Actualizar stock total del producto
     const { data: totalStockData } = await supabase
-      .from('product_size_stock')
+      .from(stockTable)
       .select('stock')
       .eq('product_id', productId);
 
@@ -219,8 +281,13 @@ export const PUT: APIRoute = async ({ params, request }) => {
 
     // Enviar notificaciones por email
     let notificationsSent = 0;
-    for (const { email, size } of emailsToNotify) {
+    for (const { email, size, color } of emailsToNotify) {
       try {
+        const variantText = [
+          size ? `Talla ${size}` : null,
+          color ? `Color ${color}` : null
+        ].filter(Boolean).join(' - ') || 'tu selección';
+
         await sendEmail({
           to: email,
           subject: `¡${product.name} vuelve a estar disponible!`,
@@ -238,9 +305,8 @@ export const PUT: APIRoute = async ({ params, request }) => {
                 .product-card { display: flex; gap: 20px; background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; }
                 .product-image { width: 120px; height: 120px; object-fit: cover; border-radius: 4px; background: #e9ecef; }
                 .product-info h2 { margin: 0 0 10px; color: #1a2b4a; font-size: 18px; }
-                .size-badge { display: inline-block; background: #28a745; color: white; padding: 4px 12px; border-radius: 4px; font-size: 14px; margin-top: 10px; }
+                .variant-badge { display: inline-block; background: #28a745; color: white; padding: 4px 12px; border-radius: 4px; font-size: 14px; margin-top: 10px; }
                 .cta-button { display: inline-block; background: #1a2b4a; color: white; text-decoration: none; padding: 14px 28px; border-radius: 4px; font-weight: 600; margin: 20px 0; }
-                .cta-button:hover { background: #2d4066; }
                 .footer { text-align: center; padding: 20px; color: #6c757d; font-size: 12px; }
               </style>
             </head>
@@ -251,14 +317,14 @@ export const PUT: APIRoute = async ({ params, request }) => {
                 </div>
                 <div class="content">
                   <p>Hola,</p>
-                  <p>El producto que estabas esperando ya está disponible en tu talla:</p>
+                  <p>El producto que estabas esperando ya está disponible:</p>
                   
                   <div class="product-card">
                     <img src="${product.images?.[0] || `${siteUrl}/placeholder-product.jpg`}" alt="${product.name}" class="product-image">
                     <div class="product-info">
                       <h2>${product.name}</h2>
-                      <p>Tu talla está disponible:</p>
-                      <span class="size-badge">Talla ${size}</span>
+                      <p>Tu variante está disponible:</p>
+                      <span class="variant-badge">${variantText}</span>
                     </div>
                   </div>
                   

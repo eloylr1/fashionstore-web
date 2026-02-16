@@ -1,7 +1,7 @@
 /**
  * ═══════════════════════════════════════════════════════════════════════════
  * FASHIONMARKET - API: Notificar Stock
- * Endpoint para suscribirse a notificaciones de stock
+ * Endpoint para suscribirse a notificaciones de stock (talla + color)
  * ═══════════════════════════════════════════════════════════════════════════
  */
 
@@ -14,6 +14,7 @@ const supabaseServiceKey = import.meta.env.SUPABASE_SERVICE_ROLE_KEY || '';
 interface NotifyRequest {
   email: string;
   size: string;
+  color?: string | null;
 }
 
 export const POST: APIRoute = async ({ params, request, cookies }) => {
@@ -28,7 +29,7 @@ export const POST: APIRoute = async ({ params, request, cookies }) => {
 
   try {
     const body: NotifyRequest = await request.json();
-    const { email, size } = body;
+    const { email, size, color } = body;
 
     if (!email || !size) {
       return new Response(
@@ -81,17 +82,24 @@ export const POST: APIRoute = async ({ params, request, cookies }) => {
       );
     }
 
-    // Insertar suscripción
+    // Insertar suscripción (con color si existe)
+    const subscriptionData: any = {
+      product_id: productId,
+      size,
+      email,
+      user_id: userId,
+      notified: false
+    };
+    
+    // Añadir color si existe
+    if (color) {
+      subscriptionData.color = color;
+    }
+
     const { error } = await supabase
       .from('stock_notifications')
-      .upsert({
-        product_id: productId,
-        size,
-        email,
-        user_id: userId,
-        notified: false
-      }, {
-        onConflict: 'product_id,size,email'
+      .upsert(subscriptionData, {
+        onConflict: color ? 'product_id,size,color,email' : 'product_id,size,email'
       });
 
     if (error) {
@@ -102,10 +110,11 @@ export const POST: APIRoute = async ({ params, request, cookies }) => {
       );
     }
 
+    const variantText = color ? `${size} / ${color}` : `talla ${size}`;
     return new Response(
       JSON.stringify({ 
         success: true,
-        message: `Te avisaremos cuando la talla ${size} esté disponible`
+        message: `Te avisaremos cuando ${variantText} esté disponible`
       }),
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     );

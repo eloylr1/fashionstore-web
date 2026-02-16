@@ -1,7 +1,7 @@
 /**
  * ═══════════════════════════════════════════════════════════════════════════
- * FASHIONMARKET - API: Stock por Talla
- * Endpoint para obtener el stock de cada talla de un producto
+ * FASHIONMARKET - API: Stock por Variante (Talla + Color)
+ * Endpoint para obtener el stock de cada variante de un producto
  * ═══════════════════════════════════════════════════════════════════════════
  */
 
@@ -10,6 +10,21 @@ import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL || '';
 const supabaseAnonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY || '';
+
+// Función para detectar qué tabla de stock usar
+const getStockTable = async (supabase: any): Promise<string> => {
+  // Intentar primero con product_variant_stock (nueva tabla)
+  const { data: variantTable } = await supabase
+    .from('product_variant_stock')
+    .select('id')
+    .limit(1);
+  
+  if (variantTable !== null) {
+    return 'product_variant_stock';
+  }
+  
+  return 'product_size_stock';
+};
 
 export const GET: APIRoute = async ({ params }) => {
   const { productId } = params;
@@ -23,11 +38,12 @@ export const GET: APIRoute = async ({ params }) => {
 
   try {
     const supabase = createClient(supabaseUrl, supabaseAnonKey);
+    const stockTable = await getStockTable(supabase);
 
-    // Obtener stock de todas las tallas del producto
+    // Obtener stock de todas las variantes del producto
     const { data: stockData, error } = await supabase
-      .from('product_size_stock')
-      .select('size, stock')
+      .from(stockTable as any)
+      .select('size, color, stock')
       .eq('product_id', productId)
       .order('size');
 
@@ -39,21 +55,46 @@ export const GET: APIRoute = async ({ params }) => {
       );
     }
 
-    // Convertir a objeto para acceso rápido
+    // Procesar datos
+    interface StockItem {
+      size: string | null;
+      color: string | null;
+      stock: number;
+    }
+    
     const stockBySize: Record<string, number> = {};
+    const stockByVariant: Record<string, number> = {}; // "size_color" -> stock
     let totalStock = 0;
     
-    (stockData || []).forEach((item: { size: string; stock: number }) => {
-      stockBySize[item.size] = item.stock;
+    const stockItems = (stockData || []) as StockItem[];
+    stockItems.forEach((item) => {
+      // Agregar al total por talla (compatibilidad)
+      if (item.size) {
+        stockBySize[item.size] = (stockBySize[item.size] || 0) + item.stock;
+      }
+      
+      // Agregar al mapa de variantes
+      const variantKey = `${item.size || '_'}_${item.color || '_'}`;
+      stockByVariant[variantKey] = item.stock;
+      
       totalStock += item.stock;
     });
+
+    // Items con formato normalizado
+    const items = stockItems.map((item) => ({
+      size: item.size,
+      color: item.color || null,
+      stock: item.stock
+    }));
 
     return new Response(
       JSON.stringify({ 
         productId,
-        stockBySize,
+        stockBySize,      // Compatibilidad con versiones anteriores
+        stockByVariant,   // Nuevo: "S_Azul" -> 5
         totalStock,
-        items: stockData || []
+        items,            // Array completo de variantes
+        hasColors: stockTable === 'product_variant_stock'
       }),
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     );
