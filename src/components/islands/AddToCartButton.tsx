@@ -376,65 +376,6 @@ export default function AddToCartButton({ product }: AddToCartButtonProps) {
         )}
       </div>
 
-      {/* Formulario de notificación de stock - solo para usuarios logueados */}
-      {selectedSize && (!hasColors || selectedColor) && isVariantOutOfStock && (
-        <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
-          {!isLoggedIn ? (
-            <div className="text-center">
-              <p className="text-sm text-amber-800 mb-3">
-                <strong>
-                  {hasColors && selectedColor 
-                    ? `${selectedSize} / ${selectedColor} agotada.`
-                    : `Talla ${selectedSize} agotada.`
-                  }
-                </strong>
-              </p>
-              <a 
-                href="/login" 
-                className="inline-block px-4 py-2 text-sm font-medium bg-navy-900 text-white rounded hover:bg-navy-800 transition-colors"
-              >
-                Inicia sesión para recibir aviso
-              </a>
-            </div>
-          ) : notifySuccess ? (
-            <div className="flex items-center gap-2 text-green-700">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-              </svg>
-              <span>¡Te avisaremos cuando vuelva a estar disponible!</span>
-            </div>
-          ) : (
-            <>
-              <p className="text-sm text-amber-800 mb-3">
-                <strong>
-                  {hasColors && selectedColor 
-                    ? `${selectedSize} / ${selectedColor} agotada.`
-                    : `Talla ${selectedSize} agotada.`
-                  }
-                </strong> Déjanos tu email y te avisamos cuando vuelva a estar disponible:
-              </p>
-              <div className="flex gap-2">
-                <input
-                  type="email"
-                  value={notifyEmail}
-                  onChange={(e) => setNotifyEmail(e.target.value)}
-                  placeholder="tu@email.com"
-                  className="flex-1 px-3 py-2 text-sm border border-amber-300 rounded focus:outline-none focus:ring-2 focus:ring-amber-400"
-                />
-                <button
-                  type="button"
-                  onClick={handleNotifySubmit}
-                  disabled={!notifyEmail || notifyLoading}
-                  className="px-4 py-2 text-sm font-medium bg-amber-600 text-white rounded hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {notifyLoading ? 'Enviando...' : 'Avísame'}
-                </button>
-              </div>
-            </>
-          )}
-        </div>
-      )}
-
       {/* Selector de Cantidad */}
       {!isVariantOutOfStock && (
         <div>
@@ -507,6 +448,55 @@ export default function AddToCartButton({ product }: AddToCartButtonProps) {
           'Añadir al carrito'
         )}
       </button>
+
+      {/* Formulario de notificación de stock - aparece después del botón cuando está agotado */}
+      {selectedSize && (!hasColors || selectedColor) && isVariantOutOfStock && (
+        <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg mt-4">
+          {!isLoggedIn ? (
+            <div className="text-center">
+              <p className="text-sm text-amber-800 mb-3">
+                ¿Quieres que te avisemos cuando vuelva a estar disponible?
+              </p>
+              <a 
+                href="/login" 
+                className="inline-block px-4 py-2 text-sm font-medium bg-navy-900 text-white rounded hover:bg-navy-800 transition-colors"
+              >
+                Inicia sesión para recibir aviso
+              </a>
+            </div>
+          ) : notifySuccess ? (
+            <div className="flex items-center justify-center gap-2 text-green-700">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+              </svg>
+              <span>¡Te avisaremos cuando vuelva a estar disponible!</span>
+            </div>
+          ) : (
+            <>
+              <p className="text-sm text-amber-800 mb-3">
+                Déjanos tu email y te avisamos cuando vuelva a estar disponible:
+              </p>
+              <div className="flex gap-2">
+                <input
+                  type="email"
+                  value={notifyEmail}
+                  onChange={(e) => setNotifyEmail(e.target.value)}
+                  placeholder="tu@email.com"
+                  className="flex-1 px-3 py-2 text-sm border border-amber-300 rounded focus:outline-none focus:ring-2 focus:ring-amber-400"
+                />
+                <button
+                  type="button"
+                  onClick={handleNotifySubmit}
+                  disabled={!notifyEmail || notifyLoading}
+                  className="px-4 py-2 text-sm font-medium bg-amber-600 text-white rounded hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {notifyLoading ? 'Enviando...' : 'Avísame'}
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      )}
 
       {/* Información adicional */}
       <div className="pt-4 border-t border-charcoal-100 space-y-3">
