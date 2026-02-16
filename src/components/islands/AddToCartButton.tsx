@@ -151,7 +151,8 @@ export default function AddToCartButton({ product }: AddToCartButtonProps) {
   };
 
   const handleNotifySubmit = async () => {
-    if (!notifyEmail || !selectedSize) return;
+    const emailToUse = userEmail || notifyEmail;
+    if (!emailToUse || !selectedSize) return;
 
     setNotifyLoading(true);
     try {
@@ -159,7 +160,7 @@ export default function AddToCartButton({ product }: AddToCartButtonProps) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          email: notifyEmail, 
+          email: emailToUse, 
           size: selectedSize,
           color: hasColors ? selectedColor : null 
         }),
@@ -169,7 +170,7 @@ export default function AddToCartButton({ product }: AddToCartButtonProps) {
         setNotifySuccess(true);
         setTimeout(() => {
           setNotifySuccess(false);
-        }, 3000);
+        }, 5000);
       } else {
         setError('No se pudo registrar la notificación');
       }
@@ -465,43 +466,43 @@ export default function AddToCartButton({ product }: AddToCartButtonProps) {
               </a>
             </div>
           ) : notifySuccess ? (
-            <div className="flex items-center justify-center gap-2 text-green-700">
+            <div className="flex items-center justify-center gap-2 text-green-700 py-2">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
               </svg>
-              <span>¡Te avisaremos cuando vuelva a estar disponible!</span>
+              <span className="font-medium">¡Te avisaremos cuando vuelva a estar disponible!</span>
             </div>
           ) : (
-            <>
-              <p className="text-sm text-amber-800 mb-3">
-                Déjanos tu email y te avisamos cuando vuelva a estar disponible:
-              </p>
-              <div className="flex gap-2">
+            <div className="flex items-center justify-between gap-4">
+              <label className="flex items-center gap-3 cursor-pointer flex-1">
                 <input
-                  type="email"
-                  value={notifyEmail}
-                  onChange={(e) => setNotifyEmail(e.target.value)}
-                  placeholder="tu@email.com"
-                  className="flex-1 px-3 py-2 text-sm border border-amber-300 rounded focus:outline-none focus:ring-2 focus:ring-amber-400"
+                  type="checkbox"
+                  checked={true}
+                  readOnly
+                  className="w-5 h-5 rounded border-amber-400 text-amber-600 focus:ring-amber-500"
                 />
-                <button
-                  type="button"
-                  onClick={handleNotifySubmit}
-                  disabled={!notifyEmail || notifyLoading}
-                  className="px-4 py-2 text-sm font-medium bg-amber-600 text-white rounded hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {notifyLoading ? 'Enviando...' : 'Avísame'}
-                </button>
-              </div>
-            </>
+                <span className="text-sm text-amber-900">
+                  Avisarme a <strong>{userEmail}</strong>
+                </span>
+              </label>
+              <button
+                type="button"
+                onClick={handleNotifySubmit}
+                disabled={notifyLoading}
+                className="px-5 py-2.5 text-sm font-medium bg-amber-600 text-white rounded-lg hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {notifyLoading ? (
+                  <span className="flex items-center gap-2">
+                    <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Enviando...
+                  </span>
+                ) : 'Avísame'}
+              </button>
+            </div>
           )}
-        </div>
-      )}
-
-      {/* DEBUG - Quitar después de probar */}
-      {selectedSize && selectedColor && (
-        <div className="text-xs text-gray-400 mt-2">
-          Debug: Stock variante = {selectedVariantStock}, isOutOfStock = {isVariantOutOfStock ? 'true' : 'false'}, isLoggedIn = {isLoggedIn ? 'true' : 'false'}
         </div>
       )}
 
