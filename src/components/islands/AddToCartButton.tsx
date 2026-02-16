@@ -450,7 +450,7 @@ export default function AddToCartButton({ product }: AddToCartButtonProps) {
       </button>
 
       {/* Formulario de notificación de stock - aparece después del botón cuando está agotado */}
-      {selectedSize && (!hasColors || selectedColor) && isVariantOutOfStock && (
+      {selectedSize && (!hasColors || selectedColor) && selectedVariantStock < 1 && (
         <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg mt-4">
           {!isLoggedIn ? (
             <div className="text-center">
@@ -495,6 +495,13 @@ export default function AddToCartButton({ product }: AddToCartButtonProps) {
               </div>
             </>
           )}
+        </div>
+      )}
+
+      {/* DEBUG - Quitar después de probar */}
+      {selectedSize && selectedColor && (
+        <div className="text-xs text-gray-400 mt-2">
+          Debug: Stock variante = {selectedVariantStock}, isOutOfStock = {isVariantOutOfStock ? 'true' : 'false'}, isLoggedIn = {isLoggedIn ? 'true' : 'false'}
         </div>
       )}
 
