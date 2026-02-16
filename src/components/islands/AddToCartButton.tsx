@@ -34,11 +34,33 @@ export default function AddToCartButton({ product }: AddToCartButtonProps) {
   const [hasVariantStock, setHasVariantStock] = useState(false);
   const [loadingStock, setLoadingStock] = useState(true);
   const [notifyEmail, setNotifyEmail] = useState('');
-  const [showNotifyForm, setShowNotifyForm] = useState(false);
   const [notifyLoading, setNotifyLoading] = useState(false);
   const [notifySuccess, setNotifySuccess] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [userEmail, setUserEmail] = useState('');
 
   const hasColors = product.colors && product.colors.length > 0;
+
+  // Verificar si el usuario está logueado
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const response = await fetch('/api/auth/session');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.isLoggedIn && data.user) {
+            setIsLoggedIn(true);
+            setUserEmail(data.user.email || '');
+            setNotifyEmail(data.user.email || '');
+          }
+        }
+      } catch (err) {
+        // No logueado
+        setIsLoggedIn(false);
+      }
+    };
+    checkAuth();
+  }, []);
 
   // Cargar stock por talla/variante al montar el componente
   useEffect(() => {
@@ -108,7 +130,11 @@ export default function AddToCartButton({ product }: AddToCartButtonProps) {
     }
 
     if (isVariantOutOfStock) {
-      setShowNotifyForm(true);
+      // Si está logueado, el formulario se muestra automáticamente
+      // Si no está logueado, mostrar error
+      if (!isLoggedIn) {
+        setError('Producto sin stock. Inicia sesión para recibir notificación cuando vuelva.');
+      }
       return;
     }
 
@@ -142,9 +168,7 @@ export default function AddToCartButton({ product }: AddToCartButtonProps) {
       if (response.ok) {
         setNotifySuccess(true);
         setTimeout(() => {
-          setShowNotifyForm(false);
           setNotifySuccess(false);
-          setNotifyEmail('');
         }, 3000);
       } else {
         setError('No se pudo registrar la notificación');
@@ -173,7 +197,6 @@ export default function AddToCartButton({ product }: AddToCartButtonProps) {
     setSelectedSize(size);
     setError(null);
     setQuantity(1);
-    setShowNotifyForm(false);
   };
 
   // Handler para seleccionar color y emitir evento para cambiar la imagen
@@ -309,7 +332,6 @@ export default function AddToCartButton({ product }: AddToCartButtonProps) {
                   setSelectedSize(size);
                   setError(null);
                   setQuantity(1);
-                  setShowNotifyForm(false);
                 }}
                 disabled={false} // Permitir seleccionar para mostrar opción de notificación
                 className={`
@@ -354,8 +376,8 @@ export default function AddToCartButton({ product }: AddToCartButtonProps) {
         )}
       </div>
 
-      {/* Formulario de notificación de stock */}
-      {showNotifyForm && selectedSize && (!hasColors || selectedColor) && isVariantOutOfStock && (
+      {/* Formulario de notificación de stock - solo para usuarios logueados */}
+      {isLoggedIn && selectedSize && (!hasColors || selectedColor) && isVariantOutOfStock && (
         <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
           {notifySuccess ? (
             <div className="flex items-center gap-2 text-green-700">
