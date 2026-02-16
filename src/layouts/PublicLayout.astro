@@ -10,7 +10,6 @@ import BaseLayout from './BaseLayout.astro';
 import Header from '../components/layout/Header.astro';
 import Footer from '../components/layout/Footer.astro';
 import CartSlideOver from '../components/islands/CartSlideOver';
-import ShopChatbot from '../components/chatbot/ShopChatbot.astro';
 
 interface Props {
   title: string;
@@ -35,9 +34,6 @@ const { title, description, image } = Astro.props;
   
   <!-- Cart Slide Over (Isla React) -->
   <CartSlideOver client:load />
-  
-  <!-- Chatbot Asistente -->
-  <ShopChatbot />
   
   <!-- Script para inicializar el carrito -->
   <script>
