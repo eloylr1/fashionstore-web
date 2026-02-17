@@ -859,19 +859,19 @@ export async function sendNewsletterWelcomeEmail(data: NewsletterWelcomeData): P
         <div style="position: absolute; bottom: 20px; right: 20px; width: 40px; height: 40px; border: 2px solid rgba(201,162,39,0.3); border-radius: 50%;"></div>
         
         <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #c9a227 0%, #e6c75a 100%); border-radius: 50%; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 20px rgba(201,162,39,0.4);">
-          <span style="font-size: 40px; line-height: 80px;">🎉</span>
+          <span style="font-size: 32px; font-weight: 700; color: #1e3a5f; line-height: 80px;">FM</span>
         </div>
-        <h2 style="color: white; font-size: 28px; margin: 0 0 12px; font-weight: 700;">¡Bienvenido a la Familia!</h2>
+        <h2 style="color: white; font-size: 28px; margin: 0 0 12px; font-weight: 700;">Bienvenido a FashionMarket</h2>
         <p style="color: rgba(255,255,255,0.9); margin: 0; font-size: 16px; line-height: 1.5;">
-          Gracias por unirte a nuestra comunidad de estilo
+          Gracias por suscribirte a nuestro boletín
         </p>
       </div>
 
       <!-- Contenido principal -->
       <div style="padding: 40px 32px;">
         <p style="color: #374151; font-size: 16px; line-height: 1.7; margin: 0 0 24px; text-align: center;">
-          Estamos encantados de que formes parte de <strong style="color: #1e3a5f;">FashionMarket</strong>. 
-          Como nuevo miembro, te hemos preparado algo especial para tu primera compra.
+          Gracias por suscribirte al boletín de <strong style="color: #1e3a5f;">FashionMarket</strong>. 
+          Como muestra de agradecimiento, te ofrecemos un descuento exclusivo para tu primera compra.
         </p>
 
         <!-- Código de descuento -->
@@ -902,7 +902,7 @@ export async function sendNewsletterWelcomeEmail(data: NewsletterWelcomeData): P
             <table style="width: 100%;">
               <tr>
                 <td style="width: 40px; vertical-align: top;">
-                  <span style="font-size: 24px;">🛍️</span>
+                  <div style="width: 28px; height: 28px; background: #1e3a5f; border-radius: 50%; text-align: center; line-height: 28px; color: #c9a227; font-weight: 600;">1</div>
                 </td>
                 <td style="vertical-align: top;">
                   <p style="color: #1e3a5f; font-weight: 600; margin: 0 0 4px;">Acceso anticipado</p>
@@ -916,7 +916,7 @@ export async function sendNewsletterWelcomeEmail(data: NewsletterWelcomeData): P
             <table style="width: 100%;">
               <tr>
                 <td style="width: 40px; vertical-align: top;">
-                  <span style="font-size: 24px;">💰</span>
+                  <div style="width: 28px; height: 28px; background: #1e3a5f; border-radius: 50%; text-align: center; line-height: 28px; color: #c9a227; font-weight: 600;">2</div>
                 </td>
                 <td style="vertical-align: top;">
                   <p style="color: #1e3a5f; font-weight: 600; margin: 0 0 4px;">Ofertas exclusivas</p>
@@ -930,7 +930,7 @@ export async function sendNewsletterWelcomeEmail(data: NewsletterWelcomeData): P
             <table style="width: 100%;">
               <tr>
                 <td style="width: 40px; vertical-align: top;">
-                  <span style="font-size: 24px;">✨</span>
+                  <div style="width: 28px; height: 28px; background: #1e3a5f; border-radius: 50%; text-align: center; line-height: 28px; color: #c9a227; font-weight: 600;">3</div>
                 </td>
                 <td style="vertical-align: top;">
                   <p style="color: #1e3a5f; font-weight: 600; margin: 0 0 4px;">Consejos de estilo</p>
@@ -983,7 +983,7 @@ export async function sendNewsletterWelcomeEmail(data: NewsletterWelcomeData): P
 
   return sendEmail({
     to: data.email,
-    subject: '🎉 ¡Bienvenido a FashionMarket! Tu código de descuento está aquí',
+    subject: 'Bienvenido a FashionMarket - Tu código de descuento exclusivo',
     html,
   });
 }
