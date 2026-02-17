@@ -15,7 +15,7 @@ export default function CartButton() {
     <button
       type="button"
       onClick={openCart}
-      className="relative p-2 text-charcoal-600 hover:text-navy-900 transition-colors"
+      className="relative p-2 hover:opacity-80 transition-opacity"
       aria-label={`Carrito (${count} productos)`}
     >
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
