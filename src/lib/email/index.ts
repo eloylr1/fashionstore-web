@@ -858,9 +858,13 @@ export async function sendNewsletterWelcomeEmail(data: NewsletterWelcomeData): P
         <div style="position: absolute; top: 20px; left: 20px; width: 60px; height: 60px; border: 2px solid rgba(201,162,39,0.3); border-radius: 50%;"></div>
         <div style="position: absolute; bottom: 20px; right: 20px; width: 40px; height: 40px; border: 2px solid rgba(201,162,39,0.3); border-radius: 50%;"></div>
         
-        <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #c9a227 0%, #e6c75a 100%); border-radius: 50%; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 20px rgba(201,162,39,0.4);">
-          <span style="font-size: 32px; font-weight: 700; color: #1e3a5f; line-height: 80px;">FM</span>
-        </div>
+        <table cellpadding="0" cellspacing="0" border="0" style="margin: 0 auto 20px;">
+          <tr>
+            <td style="width: 80px; height: 80px; background: linear-gradient(135deg, #c9a227 0%, #e6c75a 100%); border-radius: 50%; text-align: center; vertical-align: middle; box-shadow: 0 4px 20px rgba(201,162,39,0.4);">
+              <span style="font-size: 32px; font-weight: 700; color: #1e3a5f;">FM</span>
+            </td>
+          </tr>
+        </table>
         <h2 style="color: white; font-size: 28px; margin: 0 0 12px; font-weight: 700;">Bienvenido a FashionMarket</h2>
         <p style="color: rgba(255,255,255,0.9); margin: 0; font-size: 16px; line-height: 1.5;">
           Gracias por suscribirte a nuestro boletín

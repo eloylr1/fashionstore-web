@@ -454,10 +454,18 @@ import HeroCarousel from '../components/home/HeroCarousel';
         if (emailInput) emailInput.value = '';
         // Ocultar formulario
         form.innerHTML = `
-          <div class="text-center py-4">
-            <p style="color: #4ade80; font-size: 16px; margin-bottom: 8px;">✓ ¡Gracias por suscribirte!</p>
-            <p style="color: #b8a067; font-size: 20px; font-weight: 600;">Tu código: ${data.promo_code}</p>
-            <p style="color: #a8a8a8; font-size: 14px; margin-top: 8px;">Revisa tu email para más detalles</p>
+          <div class="text-center py-6">
+            <div style="width: 56px; height: 56px; background: linear-gradient(135deg, #1e3a5f, #2d5a8f); border-radius: 50%; margin: 0 auto 16px; display: flex; align-items: center; justify-content: center;">
+              <svg style="width: 28px; height: 28px; color: #c9a227;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+              </svg>
+            </div>
+            <p style="color: #ffffff; font-size: 18px; font-weight: 600; margin-bottom: 16px;">Suscripción completada</p>
+            <div style="background: rgba(201, 162, 39, 0.15); border: 1px solid rgba(201, 162, 39, 0.3); border-radius: 8px; padding: 16px; margin-bottom: 12px;">
+              <p style="color: #a8a8a8; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px;">Tu código de descuento</p>
+              <p style="color: #c9a227; font-size: 24px; font-weight: 700; letter-spacing: 2px;">${data.promo_code}</p>
+            </div>
+            <p style="color: #6b7280; font-size: 13px;">Hemos enviado los detalles a tu correo</p>
           </div>
         `;
       } else {
