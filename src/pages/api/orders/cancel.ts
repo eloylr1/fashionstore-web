@@ -101,7 +101,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
         .single();
       
       // Obtener la nota de crédito creada por la RPC
-      const { data: creditNote } = await serviceClient
+      let { data: creditNote } = await serviceClient
         .from('credit_notes')
         .select('*')
         .eq('order_id', order_id)
@@ -115,6 +115,58 @@ export const POST: APIRoute = async ({ request, cookies }) => {
         .select('email, full_name')
         .eq('id', sessionData.user.id)
         .single();
+
+      // Si la RPC no creó la nota de crédito, crearla manualmente
+      if (!creditNote && orderData) {
+        console.log('Nota de crédito no encontrada, creando manualmente...');
+        const year = new Date().getFullYear();
+        const { count } = await serviceClient
+          .from('credit_notes')
+          .select('*', { count: 'exact', head: true })
+          .like('credit_note_number', `NC-${year}-%`);
+        
+        const creditNoteNumber = `NC-${year}-${String((count || 0) + 1).padStart(6, '0')}`;
+        
+        const creditNoteItems = (orderData.order_items || []).map((item: any) => ({
+          name: item.product_name,
+          quantity: item.quantity,
+          unit_price: item.price,
+          total: item.price * item.quantity,
+          size: item.size,
+          color: item.color,
+        }));
+
+        const customerEmail = originalInvoice?.customer_email || orderData.guest_email || profile?.email || '';
+        const customerName = originalInvoice?.customer_name || orderData.shipping_name || profile?.full_name || 'Cliente';
+
+        const { data: newCreditNote } = await serviceClient
+          .from('credit_notes')
+          .insert({
+            order_id,
+            original_invoice_id: originalInvoice?.id || null,
+            credit_note_number: creditNoteNumber,
+            user_id: orderData.user_id || sessionData.user.id,
+            customer_name: customerName,
+            customer_email: customerEmail,
+            customer_nif: originalInvoice?.customer_nif || null,
+            customer_address: originalInvoice?.customer_address || null,
+            subtotal: -Math.abs(originalInvoice?.subtotal || orderData.subtotal || 0),
+            tax_rate: originalInvoice?.tax_rate || 21,
+            tax_amount: -Math.abs(originalInvoice?.tax_amount || orderData.tax || 0),
+            total: -Math.abs(originalInvoice?.total || orderData.total || 0),
+            reason: 'Cancelación de pedido por el cliente',
+            refund_method: 'Devolución a método de pago original',
+            items: creditNoteItems,
+            status: 'pending',
+          })
+          .select()
+          .single();
+
+        if (newCreditNote) {
+          creditNote = newCreditNote;
+          console.log('Nota de crédito creada manualmente:', creditNoteNumber);
+        }
+      }
 
       // Enviar email si tenemos los datos necesarios
       if (creditNote && orderData) {

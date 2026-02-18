@@ -273,7 +273,7 @@ export async function sendOrderConfirmationEmail(data: OrderData): Promise<Email
           <tr>
             <td style="width: 50%; vertical-align: top;">
               <p style="color: #6b7280; font-size: 12px; margin: 0 0 8px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">
-                📦 Dirección de envío
+                Dirección de envío
               </p>
               <p style="color: #1e3a5f; font-size: 14px; margin: 0; line-height: 1.6;">
                 ${data.shippingAddress.full_name || data.customerName}<br>
@@ -285,7 +285,7 @@ export async function sendOrderConfirmationEmail(data: OrderData): Promise<Email
             </td>
             <td style="width: 50%; vertical-align: top; text-align: right;">
               <p style="color: #6b7280; font-size: 12px; margin: 0 0 8px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">
-                🚚 Método de envío
+                Método de envío
               </p>
               <p style="color: #1e3a5f; font-size: 14px; margin: 0; font-weight: 600;">${shippingMethodText}</p>
               <p style="color: #059669; font-size: 13px; margin: 4px 0 0;">
@@ -366,7 +366,7 @@ export async function sendOrderConfirmationEmail(data: OrderData): Promise<Email
         <table style="width: 100%;">
           <tr>
             <td style="width: 50px; vertical-align: top;">
-              <span style="font-size: 32px;">💵</span>
+              <span style="font-size: 32px; color: #92400e;">$</span>
             </td>
             <td>
               <h4 style="margin: 0 0 8px; color: #92400e; font-size: 16px;">Pago a la entrega</h4>
@@ -383,7 +383,7 @@ export async function sendOrderConfirmationEmail(data: OrderData): Promise<Email
       ${data.paymentMethod === 'transfer' && data.bankDetails ? `
       <!-- Datos bancarios para transferencia -->
       <div style="margin: 0 40px 32px; padding: 24px; background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%); border-radius: 12px; border-left: 4px solid #3b82f6;">
-        <h4 style="margin: 0 0 16px; color: #1e40af; font-size: 16px;">🏦 Datos para la transferencia</h4>
+        <h4 style="margin: 0 0 16px; color: #1e40af; font-size: 16px;">Datos para la transferencia</h4>
         <table style="width: 100%;">
           <tr>
             <td style="color: #6b7280; padding: 8px 0; font-size: 14px; width: 120px;">Banco:</td>
@@ -403,7 +403,7 @@ export async function sendOrderConfirmationEmail(data: OrderData): Promise<Email
           </tr>
         </table>
         <p style="margin: 16px 0 0; color: #1e40af; font-size: 13px; font-style: italic; padding-top: 12px; border-top: 1px solid rgba(59,130,246,0.3);">
-          ⚠️ Incluye el número de pedido como concepto. Tu pedido se procesará una vez confirmemos la transferencia.
+          Importante: Incluye el número de pedido como concepto. Tu pedido se procesará una vez confirmemos la transferencia.
         </p>
       </div>
       ` : ''}
@@ -412,7 +412,7 @@ export async function sendOrderConfirmationEmail(data: OrderData): Promise<Email
       <div style="padding: 0 40px 40px; text-align: center;">
         <a href="${trackingUrl}" 
            style="display: inline-block; background: linear-gradient(135deg, #1e3a5f 0%, #2d5a8f 100%); color: white; text-decoration: none; padding: 18px 48px; border-radius: 12px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 14px rgba(30,58,95,0.3); transition: transform 0.2s;">
-          📦 Ver Seguimiento del Pedido
+          Ver Seguimiento del Pedido
         </a>
         <p style="margin: 16px 0 0; color: #6b7280; font-size: 13px;">
           Recibirás actualizaciones por email cuando tu pedido sea enviado
@@ -449,7 +449,7 @@ export async function sendOrderConfirmationEmail(data: OrderData): Promise<Email
 
   return sendEmail({
     to: data.customerEmail,
-    subject: `📦 Factura ${data.invoiceNumber} - Pedido ${data.orderNumber} confirmado`,
+    subject: `Factura ${data.invoiceNumber} - Pedido ${data.orderNumber} confirmado`,
     html,
     attachments,
   });
@@ -467,34 +467,34 @@ export async function sendOrderStatusEmail(
 ): Promise<EmailResult> {
   const statusInfo: Record<string, { icon: string; title: string; message: string }> = {
     processing: {
-      icon: '📦',
+      icon: '',
       title: 'Tu pedido está siendo preparado',
       message: 'Estamos preparando tu pedido con mucho cuidado. Te avisaremos cuando se envíe.'
     },
     shipped: {
-      icon: '🚚',
-      title: '¡Tu pedido ha sido enviado!',
+      icon: '',
+      title: 'Tu pedido ha sido enviado',
       message: 'Tu pedido ya está en camino. Puedes seguir el envío con el número de seguimiento.'
     },
     delivered: {
-      icon: '✅',
-      title: '¡Pedido entregado!',
+      icon: '',
+      title: 'Pedido entregado',
       message: 'Tu pedido ha sido entregado. Esperamos que disfrutes tu compra.'
     },
     cancelled: {
-      icon: '❌',
+      icon: '',
       title: 'Pedido cancelado',
       message: 'Tu pedido ha sido cancelado. Si tienes dudas, contacta con nosotros.'
     },
     refunded: {
-      icon: '💰',
+      icon: '',
       title: 'Reembolso procesado',
       message: 'Hemos procesado el reembolso de tu pedido. Puede tardar 5-10 días en aparecer en tu cuenta.'
     }
   };
 
   const info = statusInfo[newStatus] || {
-    icon: '📋',
+    icon: '',
     title: 'Actualización de pedido',
     message: 'El estado de tu pedido ha cambiado.'
   };
