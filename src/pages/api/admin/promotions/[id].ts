@@ -8,15 +8,7 @@
 export const prerender = false;
 
 import type { APIRoute } from 'astro';
-import { createClient } from '@supabase/supabase-js';
-
-const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL || '';
-const supabaseServiceKey = import.meta.env.SUPABASE_SERVICE_ROLE_KEY || import.meta.env.PUBLIC_SUPABASE_ANON_KEY || '';
-
-const getSupabase = () => {
-  if (!supabaseUrl || !supabaseServiceKey) return null;
-  return createClient(supabaseUrl, supabaseServiceKey);
-};
+import { supabaseAdmin, verifyAdminSecure } from '../../../../lib/supabase/server';
 
 const corsHeaders = {
   'Content-Type': 'application/json',
@@ -35,21 +27,11 @@ export const OPTIONS: APIRoute = async () => {
 
 // GET - Obtener un código específico
 export const GET: APIRoute = async ({ params, cookies }) => {
-  const userRole = cookies.get('user-role')?.value?.toLowerCase();
-  if (userRole !== 'admin') {
-    return new Response(JSON.stringify({ error: 'No autorizado' }), {
-      status: 401,
-      headers: corsHeaders
-    });
-  }
+  // Verificación segura de admin
+  const auth = await verifyAdminSecure(cookies);
+  if (!auth.isAdmin) return auth.error!;
 
-  const supabase = getSupabase();
-  if (!supabase) {
-    return new Response(JSON.stringify({ error: 'Supabase no configurado' }), {
-      status: 500,
-      headers: corsHeaders
-    });
-  }
+  const supabase = supabaseAdmin!;
 
   try {
     const { id } = params;
@@ -73,7 +55,6 @@ export const GET: APIRoute = async ({ params, cookies }) => {
       headers: corsHeaders
     });
   } catch (error) {
-    console.error('Error fetching discount code:', error);
     return new Response(JSON.stringify({ error: 'Error al obtener el código' }), {
       status: 500,
       headers: corsHeaders
@@ -83,21 +64,11 @@ export const GET: APIRoute = async ({ params, cookies }) => {
 
 // PATCH - Actualizar código (toggle active, etc)
 export const PATCH: APIRoute = async ({ params, request, cookies }) => {
-  const userRole = cookies.get('user-role')?.value?.toLowerCase();
-  if (userRole !== 'admin') {
-    return new Response(JSON.stringify({ error: 'No autorizado' }), {
-      status: 401,
-      headers: corsHeaders
-    });
-  }
+  // Verificación segura de admin
+  const auth = await verifyAdminSecure(cookies);
+  if (!auth.isAdmin) return auth.error!;
 
-  const supabase = getSupabase();
-  if (!supabase) {
-    return new Response(JSON.stringify({ error: 'Supabase no configurado' }), {
-      status: 500,
-      headers: corsHeaders
-    });
-  }
+  const supabase = supabaseAdmin!;
 
   try {
     const { id } = params;
@@ -144,21 +115,11 @@ export const PATCH: APIRoute = async ({ params, request, cookies }) => {
 
 // DELETE - Eliminar código
 export const DELETE: APIRoute = async ({ params, cookies }) => {
-  const userRole = cookies.get('user-role')?.value?.toLowerCase();
-  if (userRole !== 'admin') {
-    return new Response(JSON.stringify({ error: 'No autorizado' }), {
-      status: 401,
-      headers: corsHeaders
-    });
-  }
+  // Verificación segura de admin
+  const auth = await verifyAdminSecure(cookies);
+  if (!auth.isAdmin) return auth.error!;
 
-  const supabase = getSupabase();
-  if (!supabase) {
-    return new Response(JSON.stringify({ error: 'Supabase no configurado' }), {
-      status: 500,
-      headers: corsHeaders
-    });
-  }
+  const supabase = supabaseAdmin!;
 
   try {
     const { id } = params;

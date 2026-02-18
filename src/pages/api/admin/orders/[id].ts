@@ -8,34 +8,15 @@
 export const prerender = false;
 
 import type { APIRoute } from 'astro';
-import { createClient } from '@supabase/supabase-js';
-
-const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL || '';
-const supabaseAnonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY || '';
-
-// Cliente sin tipos estrictos para operaciones admin
-const getSupabase = () => {
-  if (!supabaseUrl || !supabaseAnonKey) return null;
-  return createClient(supabaseUrl, supabaseAnonKey);
-};
+import { supabaseAdmin, verifyAdminSecure } from '../../../../lib/supabase/server';
 
 // GET - Obtener un pedido
 export const GET: APIRoute = async ({ params, cookies }) => {
-  const userRole = cookies.get('user-role')?.value;
-  if (userRole !== 'admin') {
-    return new Response(JSON.stringify({ error: 'No autorizado' }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json' }
-    });
-  }
+  // Verificación segura de admin
+  const auth = await verifyAdminSecure(cookies);
+  if (!auth.isAdmin) return auth.error!;
 
-  const supabase = getSupabase();
-  if (!supabase) {
-    return new Response(JSON.stringify({ error: 'Supabase no configurado' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
-  }
+  const supabase = supabaseAdmin!;
 
   try {
     const { id } = params;
@@ -74,21 +55,11 @@ export const GET: APIRoute = async ({ params, cookies }) => {
 
 // PATCH - Actualizar estado del pedido
 export const PATCH: APIRoute = async ({ params, request, cookies }) => {
-  const userRole = cookies.get('user-role')?.value;
-  if (userRole !== 'admin') {
-    return new Response(JSON.stringify({ error: 'No autorizado' }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json' }
-    });
-  }
+  // Verificación segura de admin
+  const auth = await verifyAdminSecure(cookies);
+  if (!auth.isAdmin) return auth.error!;
 
-  const supabase = getSupabase();
-  if (!supabase) {
-    return new Response(JSON.stringify({ error: 'Supabase no configurado' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
-  }
+  const supabase = supabaseAdmin!;
 
   try {
     const { id } = params;

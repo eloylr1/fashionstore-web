@@ -8,28 +8,7 @@
 export const prerender = false;
 
 import type { APIRoute } from 'astro';
-import { createClient } from '@supabase/supabase-js';
-
-const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL || '';
-// IMPORTANTE: Usar SUPABASE_SERVICE_ROLE_KEY para operaciones admin (permisos completos)
-const supabaseServiceKey = import.meta.env.SUPABASE_SERVICE_ROLE_KEY || '';
-
-// Cliente con service role para operaciones admin
-const getSupabaseAdmin = () => {
-  if (!supabaseUrl || !supabaseServiceKey) {
-    console.error('Supabase credentials missing:', { 
-      hasUrl: !!supabaseUrl, 
-      hasServiceKey: !!supabaseServiceKey 
-    });
-    return null;
-  }
-  return createClient(supabaseUrl, supabaseServiceKey, {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false
-    }
-  });
-};
+import { supabaseAdmin, verifyAdminSecure } from '../../../../lib/supabase/server';
 
 // Función helper para respuestas JSON
 const jsonResponse = (data: any, status: number = 200) => {
@@ -41,18 +20,11 @@ const jsonResponse = (data: any, status: number = 200) => {
 
 // GET - Obtener una categoría
 export const GET: APIRoute = async ({ params, cookies }) => {
-  const userRole = cookies.get('user-role')?.value?.toLowerCase();
-  if (userRole !== 'admin') {
-    return jsonResponse({ error: 'No autorizado', code: 'UNAUTHORIZED' }, 401);
-  }
+  // Verificación segura de admin
+  const auth = await verifyAdminSecure(cookies);
+  if (!auth.isAdmin) return auth.error!;
 
-  const supabase = getSupabaseAdmin();
-  if (!supabase) {
-    return jsonResponse({ 
-      error: 'Error de configuración del servidor. Contacta al administrador.', 
-      code: 'CONFIG_ERROR' 
-    }, 500);
-  }
+  const supabase = supabaseAdmin!;
 
   try {
     const { id } = params;
@@ -66,36 +38,24 @@ export const GET: APIRoute = async ({ params, cookies }) => {
       .eq('id', id)
       .single();
 
-    if (error) {
-      console.error('Error fetching category:', error);
-      throw error;
-    }
+    if (error) throw error;
 
     return jsonResponse(data);
   } catch (error: any) {
-    console.error('Error fetching category:', error);
     return jsonResponse({ 
       error: 'Categoría no encontrada', 
-      code: 'NOT_FOUND',
-      details: error?.message 
+      code: 'NOT_FOUND'
     }, 404);
   }
 };
 
 // PUT - Actualizar una categoría
 export const PUT: APIRoute = async ({ params, request, cookies }) => {
-  const userRole = cookies.get('user-role')?.value?.toLowerCase();
-  if (userRole !== 'admin') {
-    return jsonResponse({ error: 'No autorizado', code: 'UNAUTHORIZED' }, 401);
-  }
+  // Verificación segura de admin
+  const auth = await verifyAdminSecure(cookies);
+  if (!auth.isAdmin) return auth.error!;
 
-  const supabase = getSupabaseAdmin();
-  if (!supabase) {
-    return jsonResponse({ 
-      error: 'Error de configuración del servidor. Verifica que SUPABASE_SERVICE_ROLE_KEY esté configurado.', 
-      code: 'CONFIG_ERROR' 
-    }, 500);
-  }
+  const supabase = supabaseAdmin!;
 
   try {
     const { id } = params;
@@ -136,36 +96,24 @@ export const PUT: APIRoute = async ({ params, request, cookies }) => {
       .select()
       .single();
 
-    if (error) {
-      console.error('Supabase update error:', error);
-      throw error;
-    }
+    if (error) throw error;
 
     return jsonResponse(data);
   } catch (error: any) {
-    console.error('Error updating category:', error);
     return jsonResponse({ 
-      error: 'Error al actualizar categoría. Verifica los permisos de la base de datos.', 
-      code: 'UPDATE_ERROR',
-      details: error?.message || error?.code
+      error: 'Error al actualizar categoría', 
+      code: 'UPDATE_ERROR'
     }, 500);
   }
 };
 
 // DELETE - Eliminar una categoría
 export const DELETE: APIRoute = async ({ params, cookies }) => {
-  const userRole = cookies.get('user-role')?.value?.toLowerCase();
-  if (userRole !== 'admin') {
-    return jsonResponse({ error: 'No autorizado', code: 'UNAUTHORIZED' }, 401);
-  }
+  // Verificación segura de admin
+  const auth = await verifyAdminSecure(cookies);
+  if (!auth.isAdmin) return auth.error!;
 
-  const supabase = getSupabaseAdmin();
-  if (!supabase) {
-    return jsonResponse({ 
-      error: 'Error de configuración del servidor. Verifica que SUPABASE_SERVICE_ROLE_KEY esté configurado.', 
-      code: 'CONFIG_ERROR' 
-    }, 500);
-  }
+  const supabase = supabaseAdmin!;
 
   try {
     const { id } = params;
@@ -179,29 +127,19 @@ export const DELETE: APIRoute = async ({ params, cookies }) => {
       .update({ category_id: null })
       .eq('category_id', id);
 
-    if (updateError) {
-      console.error('Error updating products:', updateError);
-      // Continuamos aunque falle, podría no haber productos
-    }
-
     // Luego eliminar la categoría
     const { error } = await supabase
       .from('categories')
       .delete()
       .eq('id', id);
 
-    if (error) {
-      console.error('Supabase delete error:', error);
-      throw error;
-    }
+    if (error) throw error;
 
     return jsonResponse({ success: true, message: 'Categoría eliminada correctamente' });
   } catch (error: any) {
-    console.error('Error deleting category:', error);
     return jsonResponse({ 
-      error: 'Error al eliminar categoría. Verifica los permisos de la base de datos.', 
-      code: 'DELETE_ERROR',
-      details: error?.message || error?.code
+      error: 'Error al eliminar categoría', 
+      code: 'DELETE_ERROR'
     }, 500);
   }
 };

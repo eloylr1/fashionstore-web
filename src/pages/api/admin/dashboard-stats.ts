@@ -9,30 +9,17 @@
 export const prerender = false;
 
 import type { APIRoute } from 'astro';
-import { createClient } from '@supabase/supabase-js';
-
-const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL || '';
-const supabaseServiceKey = import.meta.env.SUPABASE_SERVICE_ROLE_KEY || '';
+import { supabaseAdmin, verifyAdminSecure } from '../../../lib/supabase/server';
 
 export const GET: APIRoute = async ({ cookies }) => {
   try {
     // ═══════════════════════════════════════════════════════════════════
-    // VERIFICACIÓN DE ADMIN
+    // VERIFICACIÓN DE ADMIN (SEGURA - desde BD, no cookie)
     // ═══════════════════════════════════════════════════════════════════
-    const accessToken = cookies.get('sb-access-token')?.value;
-    const userRole = cookies.get('user-role')?.value;
+    const auth = await verifyAdminSecure(cookies);
+    if (!auth.isAdmin) return auth.error!;
 
-    if (!accessToken || userRole !== 'admin') {
-      return new Response(
-        JSON.stringify({ error: 'No autorizado' }),
-        { status: 401, headers: { 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Crear cliente Supabase con service role para acceso completo
-    const supabase = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: { autoRefreshToken: false, persistSession: false }
-    });
+    const supabase = supabaseAdmin!;
 
     // ═══════════════════════════════════════════════════════════════════
     // CALCULAR FECHAS

@@ -6,6 +6,7 @@
  */
 
 import type { APIRoute } from 'astro';
+import type { AstroCookies } from 'astro';
 import { createClient } from '@supabase/supabase-js';
 
 export const prerender = false;
@@ -17,7 +18,41 @@ function getSupabase() {
   return createClient(url, key);
 }
 
-// GET - Obtener todos los métodos
+// Función auxiliar para verificar autenticación de admin
+async function verifyAdmin(cookies: AstroCookies, supabase: ReturnType<typeof createClient>): Promise<{ isAdmin: boolean; error?: Response }> {
+  const token = cookies.get('sb-access-token')?.value;
+  if (!token) {
+    return { 
+      isAdmin: false, 
+      error: new Response(JSON.stringify({ error: 'No autorizado' }), { status: 401 }) 
+    };
+  }
+
+  const { data: { user } } = await supabase.auth.getUser(token);
+  if (!user) {
+    return { 
+      isAdmin: false, 
+      error: new Response(JSON.stringify({ error: 'Sesión inválida' }), { status: 401 }) 
+    };
+  }
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single();
+
+  if (profile?.role?.toLowerCase() !== 'admin') {
+    return { 
+      isAdmin: false, 
+      error: new Response(JSON.stringify({ error: 'Acceso denegado' }), { status: 403 }) 
+    };
+  }
+
+  return { isAdmin: true };
+}
+
+// GET - Obtener todos los métodos (público para mostrar en checkout)
 export const GET: APIRoute = async () => {
   const supabase = getSupabase();
   if (!supabase) {
@@ -41,12 +76,16 @@ export const GET: APIRoute = async () => {
   }
 };
 
-// POST - Crear nuevo método
-export const POST: APIRoute = async ({ request }) => {
+// POST - Crear nuevo método (solo admin)
+export const POST: APIRoute = async ({ request, cookies }) => {
   const supabase = getSupabase();
   if (!supabase) {
     return new Response(JSON.stringify({ error: 'Database not configured' }), { status: 500 });
   }
+
+  // Verificar autenticación de admin
+  const auth = await verifyAdmin(cookies, supabase);
+  if (!auth.isAdmin) return auth.error!;
 
   try {
     const body = await request.json();
@@ -92,12 +131,16 @@ export const POST: APIRoute = async ({ request }) => {
   }
 };
 
-// PUT - Actualizar método
-export const PUT: APIRoute = async ({ request, url }) => {
+// PUT - Actualizar método (solo admin)
+export const PUT: APIRoute = async ({ request, url, cookies }) => {
   const supabase = getSupabase();
   if (!supabase) {
     return new Response(JSON.stringify({ error: 'Database not configured' }), { status: 500 });
   }
+
+  // Verificar autenticación de admin
+  const auth = await verifyAdmin(cookies, supabase);
+  if (!auth.isAdmin) return auth.error!;
 
   try {
     const id = url.searchParams.get('id');
@@ -136,12 +179,16 @@ export const PUT: APIRoute = async ({ request, url }) => {
   }
 };
 
-// DELETE - Eliminar método
-export const DELETE: APIRoute = async ({ url }) => {
+// DELETE - Eliminar método (solo admin)
+export const DELETE: APIRoute = async ({ url, cookies }) => {
   const supabase = getSupabase();
   if (!supabase) {
     return new Response(JSON.stringify({ error: 'Database not configured' }), { status: 500 });
   }
+
+  // Verificar autenticación de admin
+  const auth = await verifyAdmin(cookies, supabase);
+  if (!auth.isAdmin) return auth.error!;
 
   try {
     const id = url.searchParams.get('id');
