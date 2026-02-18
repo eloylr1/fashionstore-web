@@ -6,7 +6,9 @@
  */
 
 import { useState, useEffect } from 'react';
+import { requestPopupSlot, releasePopupSlot, onSlotAvailable } from '../../lib/popupCoordinator';
 
+const POPUP_ID = 'newsletter';
 const STORAGE_KEY = 'newsletter_popup_state';
 const DISMISS_DAYS = 7;
 
@@ -25,35 +27,41 @@ export default function NewsletterPopup() {
   const [copied, setCopied] = useState(false);
   const [success, setSuccess] = useState(false);
 
-  useEffect(() => {
-    // Verificar si debemos mostrar el popup
-    const checkPopupState = () => {
-      try {
-        const stored = localStorage.getItem(STORAGE_KEY);
-        if (stored) {
-          const state: PopupState = JSON.parse(stored);
-          
-          // Si ya está suscrito, no mostrar nunca
-          if (state.subscribed) return;
-          
-          // Si lo cerró, verificar si han pasado los días
-          if (state.dismissed && state.dismissedAt) {
-            const daysPassed = (Date.now() - state.dismissedAt) / (1000 * 60 * 60 * 24);
-            if (daysPassed < DISMISS_DAYS) return;
-          }
+  // Función para verificar si se puede mostrar
+  const canShow = (): boolean => {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        const state: PopupState = JSON.parse(stored);
+        if (state.subscribed) return false;
+        if (state.dismissed && state.dismissedAt) {
+          const daysPassed = (Date.now() - state.dismissedAt) / (1000 * 60 * 60 * 24);
+          if (daysPassed < DISMISS_DAYS) return false;
         }
-        
-        // Mostrar después de un pequeño delay
-        const timer = setTimeout(() => setIsOpen(true), 2000);
-        return () => clearTimeout(timer);
-      } catch {
-        // Si hay error con localStorage, mostrar igualmente
-        const timer = setTimeout(() => setIsOpen(true), 2000);
-        return () => clearTimeout(timer);
       }
-    };
+      return true;
+    } catch {
+      return true;
+    }
+  };
 
-    checkPopupState();
+  const tryShow = () => {
+    if (!canShow()) return;
+    if (requestPopupSlot(POPUP_ID)) {
+      setIsOpen(true);
+    }
+  };
+
+  useEffect(() => {
+    if (!canShow()) return;
+
+    // Mostrar después de 40 segundos (última prioridad)
+    const timer = setTimeout(() => tryShow(), 40000);
+
+    // Si no se pudo, escuchar cuando se libere un slot
+    const unsub = onSlotAvailable(() => tryShow());
+
+    return () => { clearTimeout(timer); unsub(); };
   }, []);
 
   // Cerrar con ESC
@@ -82,6 +90,7 @@ export default function NewsletterPopup() {
 
   const handleClose = () => {
     setIsOpen(false);
+    releasePopupSlot(POPUP_ID);
     // Guardar que cerró el popup
     const state: PopupState = {
       dismissed: true,
@@ -93,6 +102,7 @@ export default function NewsletterPopup() {
 
   const handleSuccessClose = () => {
     setIsOpen(false);
+    releasePopupSlot(POPUP_ID);
     // Marcar como suscrito para no volver a mostrar
     const state: PopupState = {
       dismissed: false,

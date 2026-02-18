@@ -6,6 +6,9 @@
  */
 
 import { useState, useEffect } from 'react';
+import { requestPopupSlot, releasePopupSlot } from '../../lib/popupCoordinator';
+
+const POPUP_ID = 'newsletter-success';
 
 interface NewsletterSuccessPopupProps {
   show?: boolean;
@@ -23,8 +26,20 @@ export default function NewsletterSuccessPopup({ show = false, onClose }: Newsle
     // Verificar si debe mostrarse desde localStorage (después del registro)
     const showNewsletter = localStorage.getItem('show-newsletter-code');
     if (showNewsletter === 'true') {
-      setIsVisible(true);
-      localStorage.removeItem('show-newsletter-code');
+      // Este popup tiene máxima prioridad (post-registro)
+      // Intentar inmediatamente ya que es crítico
+      if (requestPopupSlot(POPUP_ID)) {
+        setIsVisible(true);
+        localStorage.removeItem('show-newsletter-code');
+      } else {
+        // Reintentar después de un breve delay
+        setTimeout(() => {
+          if (requestPopupSlot(POPUP_ID)) {
+            setIsVisible(true);
+          }
+          localStorage.removeItem('show-newsletter-code');
+        }, 2000);
+      }
     }
   }, []);
 
@@ -37,6 +52,7 @@ export default function NewsletterSuccessPopup({ show = false, onClose }: Newsle
   const handleClose = () => {
     setIsVisible(false);
     localStorage.setItem('newsletter-code-seen', 'true');
+    releasePopupSlot(POPUP_ID);
     if (onClose) onClose();
   };
 
@@ -60,6 +76,7 @@ export default function NewsletterSuccessPopup({ show = false, onClose }: Newsle
   const handleShopNow = () => {
     localStorage.setItem('newsletter-code-seen', 'true');
     localStorage.setItem('pending-discount-code', DISCOUNT_CODE);
+    releasePopupSlot(POPUP_ID);
     window.location.href = '/tienda';
   };
 

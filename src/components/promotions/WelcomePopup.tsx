@@ -6,6 +6,9 @@
  */
 
 import { useState, useEffect } from 'react';
+import { requestPopupSlot, releasePopupSlot, onSlotAvailable } from '../../lib/popupCoordinator';
+
+const POPUP_ID = 'welcome';
 
 interface WelcomePopupProps {
   isLoggedIn?: boolean;
@@ -20,44 +23,40 @@ export default function WelcomePopup({ isLoggedIn = false }: WelcomePopupProps) 
   const DISCOUNT_PERCENTAGE = '10%';
 
   useEffect(() => {
-    // Marcar que el componente está montado (solo en cliente)
     setIsMounted(true);
   }, []);
 
-  useEffect(() => {
-    // Solo ejecutar en cliente cuando está montado
-    if (!isMounted) return;
-
-    console.log('[WelcomePopup] Checking conditions:', { isLoggedIn, isMounted });
-    
-    // No mostrar si el usuario está logueado
-    if (isLoggedIn) {
-      console.log('[WelcomePopup] User is logged in, not showing popup');
-      return;
-    }
-
-    // Verificar si ya vio el popup
+  // Función para intentar mostrar el popup
+  const tryShow = () => {
+    if (isLoggedIn) return;
     const hasSeenPopup = localStorage.getItem('welcome-popup-seen');
-    console.log('[WelcomePopup] Has seen popup:', hasSeenPopup);
+    if (hasSeenPopup) return;
     
-    if (hasSeenPopup) {
-      console.log('[WelcomePopup] User has already seen popup');
-      return;
-    }
-
-    // Mostrar popup después de 3 segundos
-    console.log('[WelcomePopup] Will show popup in 3 seconds...');
-    const timer = setTimeout(() => {
-      console.log('[WelcomePopup] Showing popup now!');
+    if (requestPopupSlot(POPUP_ID)) {
       setIsVisible(true);
-    }, 3000);
+    }
+  };
 
-    return () => clearTimeout(timer);
+  useEffect(() => {
+    if (!isMounted) return;
+    if (isLoggedIn) return;
+
+    const hasSeenPopup = localStorage.getItem('welcome-popup-seen');
+    if (hasSeenPopup) return;
+
+    // Intentar mostrar después de 5 segundos
+    const timer = setTimeout(() => tryShow(), 5000);
+
+    // Si no se pudo, escuchar cuando se libere un slot
+    const unsub = onSlotAvailable(() => tryShow());
+
+    return () => { clearTimeout(timer); unsub(); };
   }, [isLoggedIn, isMounted]);
 
   const handleClose = () => {
     setIsVisible(false);
     localStorage.setItem('welcome-popup-seen', 'true');
+    releasePopupSlot(POPUP_ID);
   };
 
   const handleCopyCode = async () => {
@@ -81,6 +80,7 @@ export default function WelcomePopup({ isLoggedIn = false }: WelcomePopupProps) 
   const handleShopNow = () => {
     localStorage.setItem('welcome-popup-seen', 'true');
     localStorage.setItem('pending-discount-code', DISCOUNT_CODE);
+    releasePopupSlot(POPUP_ID);
     window.location.href = '/tienda';
   };
 

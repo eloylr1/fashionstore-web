@@ -6,7 +6,9 @@
  */
 
 import { useState, useEffect } from 'react';
+import { requestPopupSlot, releasePopupSlot, onSlotAvailable } from '../../lib/popupCoordinator';
 
+const POPUP_ID = 'offers';
 const STORAGE_KEY = 'offers_popup_state';
 const DISMISS_HOURS = 24; // Vuelve a mostrar cada 24 horas
 
@@ -38,6 +40,22 @@ export default function OffersPopup() {
   const [offers, setOffers] = useState<OfferProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeOffer, setActiveOffer] = useState(0);
+  const [offersLoaded, setOffersLoaded] = useState(false);
+
+  // Función para intentar mostrar si hay ofertas cargadas
+  const tryShow = () => {
+    if (!offersLoaded || isOpen) return;
+    if (requestPopupSlot(POPUP_ID)) {
+      setIsOpen(true);
+    }
+  };
+
+  // Escuchar liberación de slots
+  useEffect(() => {
+    if (!offersLoaded || isOpen) return;
+    const unsub = onSlotAvailable(() => tryShow());
+    return () => unsub();
+  }, [offersLoaded, isOpen]);
 
   useEffect(() => {
     // Verificar si debemos mostrar el popup
@@ -74,8 +92,13 @@ export default function OffersPopup() {
         
         if (data.offers && data.offers.length > 0) {
           setOffers(data.offers);
-          // Mostrar después de un delay
-          setTimeout(() => setIsOpen(true), 3000);
+          setOffersLoaded(true);
+          // Intentar mostrar después de 25 segundos (dar prioridad a WelcomePopup)
+          setTimeout(() => {
+            if (requestPopupSlot(POPUP_ID)) {
+              setIsOpen(true);
+            }
+          }, 25000);
         }
       } catch (error) {
         console.error('Error loading offers:', error);
@@ -124,6 +147,7 @@ export default function OffersPopup() {
 
   const handleClose = () => {
     setIsOpen(false);
+    releasePopupSlot(POPUP_ID);
     // Guardar que cerró el popup
     const state: PopupState = {
       dismissed: true,
