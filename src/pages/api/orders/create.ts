@@ -150,20 +150,25 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     // Crear mapa de productos para validación
     const productMap = new Map(products.map(p => [p.id, p]));
 
-    // Obtener stock por talla para los productos
-    const { data: sizeStockData } = await supabase
-      .from('product_size_stock')
-      .select('product_id, size, stock')
+    // Obtener stock por talla y color para los productos
+    const { data: variantStockData } = await supabase
+      .from('product_variant_stock')
+      .select('product_id, size, color, stock')
       .in('product_id', productIds);
 
-    // Crear mapa de stock por producto y talla
-    const sizeStockMap = new Map<string, number>();
-    (sizeStockData || []).forEach((item: { product_id: string; size: string; stock: number }) => {
-      const key = `${item.product_id}_${item.size}`;
-      sizeStockMap.set(key, item.stock);
+    // Crear mapa de stock por producto, talla y color
+    const variantStockMap = new Map<string, number>();
+    (variantStockData || []).forEach((item: { product_id: string; size: string; color: string | null; stock: number }) => {
+      // Clave con color
+      const keyWithColor = `${item.product_id}_${item.size}_${item.color || ''}`;
+      variantStockMap.set(keyWithColor, item.stock);
+      // También guardar sin color para fallback
+      const keyWithoutColor = `${item.product_id}_${item.size}_`;
+      const existingStock = variantStockMap.get(keyWithoutColor) || 0;
+      variantStockMap.set(keyWithoutColor, existingStock + item.stock);
     });
 
-    // Verificar stock por talla
+    // Verificar stock por talla y color
     for (const item of items) {
       const product = productMap.get(item.product_id);
       if (!product) {
@@ -173,18 +178,28 @@ export const POST: APIRoute = async ({ request, cookies }) => {
         );
       }
       
-      // Si el item tiene talla, verificar stock específico de la talla
+      // Si el item tiene talla, verificar stock específico de la variante
       if (item.size) {
-        const sizeKey = `${item.product_id}_${item.size}`;
-        const sizeStock = sizeStockMap.get(sizeKey);
+        // Intentar con color primero, luego sin color
+        const keyWithColor = `${item.product_id}_${item.size}_${item.color || ''}`;
+        let variantStock = variantStockMap.get(keyWithColor);
         
-        // Si no hay registro de stock por talla, usar stock global como fallback
-        const availableStock = sizeStock !== undefined ? sizeStock : product.stock;
+        // Si no hay stock con color, intentar sin color
+        if (variantStock === undefined && item.color) {
+          const keyWithoutColor = `${item.product_id}_${item.size}_`;
+          variantStock = variantStockMap.get(keyWithoutColor);
+        }
+        
+        // Si no hay registro de stock por variante, usar stock global como fallback
+        const availableStock = variantStock !== undefined ? variantStock : product.stock;
         
         if (availableStock < item.quantity) {
+          const variantDesc = item.color 
+            ? `(Talla ${item.size} / ${item.color})` 
+            : `(Talla ${item.size})`;
           return new Response(
             JSON.stringify({ 
-              error: `Stock insuficiente para ${product.name} (Talla ${item.size}). Disponible: ${availableStock}` 
+              error: `Stock insuficiente para ${product.name} ${variantDesc}. Disponible: ${availableStock}` 
             }),
             { status: 400, headers: { 'Content-Type': 'application/json' } }
           );
@@ -328,55 +343,40 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       );
     }
 
-    // 5) Reducir stock de cada producto (por talla si aplica)
+    // 5) Reducir stock de cada producto (por variante: talla + color)
     for (const item of items) {
       if (item.size) {
-        // Intentar reducir stock por talla
-        const { error: sizeStockError } = await supabase.rpc('decrement_size_stock', {
+        // Intentar reducir stock por variante (talla + color)
+        const { error: variantStockError } = await supabase.rpc('decrement_variant_stock', {
           p_product_id: item.product_id,
           p_size: item.size,
+          p_color: item.color || null,
           p_quantity: item.quantity,
         });
 
-        // Si la función de talla falla, intentar con stock global
-        if (sizeStockError) {
-          console.log('⚠️ decrement_size_stock no disponible, usando fallback');
-          // Intentar actualizar directamente la tabla de stock por talla
-          const sizeKey = `${item.product_id}_${item.size}`;
-          const currentStock = sizeStockMap.get(sizeKey);
+        // Si la función de variante falla, intentar fallback
+        if (variantStockError) {
+          console.log('⚠️ decrement_variant_stock error:', variantStockError.message);
+          
+          // Intentar actualizar directamente la tabla de stock por variante
+          const keyWithColor = `${item.product_id}_${item.size}_${item.color || ''}`;
+          const currentStock = variantStockMap.get(keyWithColor);
           
           if (currentStock !== undefined) {
-            await supabase
-              .from('product_size_stock')
-              .update({ stock: currentStock - item.quantity })
+            const updateQuery = supabase
+              .from('product_variant_stock')
+              .update({ stock: Math.max(0, currentStock - item.quantity) })
               .eq('product_id', item.product_id)
               .eq('size', item.size);
-          }
-          
-          // También actualizar stock global como respaldo
-          const { error: stockError } = await supabase.rpc('decrement_stock', {
-            p_product_id: item.product_id,
-            p_quantity: item.quantity,
-          });
-
-          if (stockError) {
-            const product = productMap.get(item.product_id);
-            if (product) {
-              await supabase
-                .from('products')
-                .update({ stock: Math.max(0, product.stock - item.quantity) })
-                .eq('id', item.product_id);
+            
+            if (item.color) {
+              await updateQuery.eq('color', item.color);
+            } else {
+              await updateQuery.is('color', null);
             }
           }
-        }
-      } else {
-        // Sin talla, usar stock global
-        const { error: stockError } = await supabase.rpc('decrement_stock', {
-          p_product_id: item.product_id,
-          p_quantity: item.quantity,
-        });
-
-        if (stockError) {
+          
+          // Actualizar stock total del producto
           const product = productMap.get(item.product_id);
           if (product) {
             await supabase
@@ -384,6 +384,15 @@ export const POST: APIRoute = async ({ request, cookies }) => {
               .update({ stock: Math.max(0, product.stock - item.quantity) })
               .eq('id', item.product_id);
           }
+        }
+      } else {
+        // Sin talla, actualizar stock global directamente
+        const product = productMap.get(item.product_id);
+        if (product) {
+          await supabase
+            .from('products')
+            .update({ stock: Math.max(0, product.stock - item.quantity) })
+            .eq('id', item.product_id);
         }
       }
     }
