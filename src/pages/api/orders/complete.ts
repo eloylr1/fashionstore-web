@@ -248,10 +248,9 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     console.log('👤 Nombre para factura:', finalName);
     console.log('🔑 User ID:', user?.id || 'INVITADO');
     
-    // Datos de la factura
-    const invoiceData = {
+    // Datos de la factura - NO enviar user_id si es null (evita problemas de FK)
+    const invoiceData: Record<string, any> = {
       order_id: order.id,
-      user_id: user?.id || null, // null para invitados
       invoice_number: invoiceNumber,
       customer_name: finalName,
       customer_email: finalEmail,
@@ -274,6 +273,11 @@ export const POST: APIRoute = async ({ request, cookies }) => {
         color: item.color,
       })),
     };
+    
+    // Solo añadir user_id si existe (evita insertar null en columna con FK)
+    if (user?.id) {
+      invoiceData.user_id = user.id;
+    }
     
     console.log('📝 Insertando factura en DB...');
     

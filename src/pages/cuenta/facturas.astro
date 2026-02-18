@@ -30,20 +30,42 @@ if (sessionError || !sessionData.user) {
 
 const user = sessionData.user;
 
+// Debug: mostrar info del usuario
+console.log('[FACTURAS] Usuario:', user.id, user.email);
+
 // Obtener pedidos del usuario primero (para poder buscar facturas por order_id)
-const { data: userOrders } = await supabase
+// Buscar por user_id
+const { data: ordersByUserId } = await supabase
   .from('orders')
   .select('id')
-  .or(`user_id.eq.${user.id},guest_email.eq.${user.email}`);
+  .eq('user_id', user.id);
 
-const orderIds = (userOrders || []).map((o: any) => o.id);
+// Buscar por guest_email
+let ordersByEmail: any[] = [];
+if (user.email) {
+  const { data: ordersEmail } = await supabase
+    .from('orders')
+    .select('id')
+    .eq('guest_email', user.email);
+  ordersByEmail = ordersEmail || [];
+}
+
+// Combinar order IDs
+const orderIdsSet = new Set<string>();
+(ordersByUserId || []).forEach((o: any) => orderIdsSet.add(o.id));
+ordersByEmail.forEach((o: any) => orderIdsSet.add(o.id));
+const orderIds = Array.from(orderIdsSet);
+
+console.log('[FACTURAS] Pedidos encontrados:', orderIds.length);
 
 // Obtener facturas del usuario - buscar por user_id, email O order_id
-const { data: invoicesByUserId } = await supabase
+const { data: invoicesByUserId, error: errorByUserId } = await supabase
   .from('invoices')
   .select('*')
   .eq('user_id', user.id)
   .order('created_at', { ascending: false });
+
+console.log('[FACTURAS] Por user_id:', invoicesByUserId?.length || 0, errorByUserId?.message || '');
 
 let invoicesByEmail: any[] = [];
 if (user.email) {
