@@ -30,7 +30,15 @@ if (sessionError || !sessionData.user) {
 
 const user = sessionData.user;
 
-// Obtener facturas del usuario - buscar por user_id O por email
+// Obtener pedidos del usuario primero (para poder buscar facturas por order_id)
+const { data: userOrders } = await supabase
+  .from('orders')
+  .select('id')
+  .or(`user_id.eq.${user.id},guest_email.eq.${user.email}`);
+
+const orderIds = (userOrders || []).map((o: any) => o.id);
+
+// Obtener facturas del usuario - buscar por user_id, email O order_id
 const { data: invoicesByUserId } = await supabase
   .from('invoices')
   .select('*')
@@ -47,20 +55,50 @@ if (user.email) {
   invoicesByEmail = emailResult.data || [];
 }
 
-// Combinar y eliminar duplicados
+// También buscar facturas por order_id de los pedidos del usuario
+let invoicesByOrder: any[] = [];
+if (orderIds.length > 0) {
+  const orderResult = await supabase
+    .from('invoices')
+    .select('*')
+    .in('order_id', orderIds)
+    .order('created_at', { ascending: false });
+  invoicesByOrder = orderResult.data || [];
+}
+
+// Combinar y eliminar duplicados (por user_id, email y order_id)
 const allInvoicesMap = new Map();
 (invoicesByUserId || []).forEach((inv: any) => allInvoicesMap.set(inv.id, inv));
 (invoicesByEmail || []).forEach((inv: any) => allInvoicesMap.set(inv.id, inv));
+(invoicesByOrder || []).forEach((inv: any) => allInvoicesMap.set(inv.id, inv));
 const invoices = Array.from(allInvoicesMap.values()).sort((a: any, b: any) => 
   new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
 );
 
-// Obtener notas de crédito (facturas de abono)
-const { data: creditNotes, error: creditNotesError } = await supabase
+// Obtener notas de crédito (facturas de abono) - por user_id o por order_id
+const { data: creditNotesByUser } = await supabase
   .from('credit_notes')
   .select('*')
   .eq('user_id', user.id)
   .order('created_at', { ascending: false });
+
+let creditNotesByOrder: any[] = [];
+if (orderIds.length > 0) {
+  const cnByOrderResult = await supabase
+    .from('credit_notes')
+    .select('*')
+    .in('order_id', orderIds)
+    .order('created_at', { ascending: false });
+  creditNotesByOrder = cnByOrderResult.data || [];
+}
+
+// Combinar notas de crédito y eliminar duplicados
+const creditNotesMap = new Map();
+(creditNotesByUser || []).forEach((cn: any) => creditNotesMap.set(cn.id, cn));
+(creditNotesByOrder || []).forEach((cn: any) => creditNotesMap.set(cn.id, cn));
+const creditNotes = Array.from(creditNotesMap.values()).sort((a: any, b: any) => 
+  new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+);
 
 // Combinar ambos tipos para mostrar en un solo listado filtrable
 const allDocuments = [

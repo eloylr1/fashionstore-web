@@ -62,6 +62,17 @@ const demoProducts = [
 const { slug } = Astro.params;
 const { categoryName } = Astro.props;
 
+// Obtener parámetros de URL para ordenación
+const url = new URL(Astro.request.url);
+const sortFilter = url.searchParams.get('orden') || 'novedades';
+
+// Opciones de ordenación
+const sortOptions = [
+  { value: 'novedades', label: 'Ordenar por: Novedades' },
+  { value: 'precio-asc', label: 'Precio: Menor a mayor' },
+  { value: 'precio-desc', label: 'Precio: Mayor a menor' },
+];
+
 // Obtener la categoría actual
 let category = demoCategories.find(c => c.slug === slug) || null;
 let products = demoProducts.filter(p => p.category_id === category?.id);
@@ -77,11 +88,27 @@ if (isSupabaseConfigured() && supabase) {
   if (realCategory) {
     category = realCategory as typeof category;
     
-    const { data: realProducts } = await supabase
+    // Construir query con ordenación
+    let query = supabase
       .from('products')
       .select('*')
-      .eq('category_id', category!.id)
-      .order('created_at', { ascending: false });
+      .eq('category_id', category!.id);
+    
+    // Aplicar ordenación según el filtro
+    switch (sortFilter) {
+      case 'precio-asc':
+        query = query.order('price', { ascending: true });
+        break;
+      case 'precio-desc':
+        query = query.order('price', { ascending: false });
+        break;
+      case 'novedades':
+      default:
+        query = query.order('created_at', { ascending: false });
+        break;
+    }
+    
+    const { data: realProducts } = await query;
     
     if (realProducts) products = realProducts as typeof products;
   }
@@ -165,10 +192,12 @@ if (isSupabaseConfigured() && supabase) {
           <p class="text-sm text-charcoal-500">
             {products?.length || 0} productos
           </p>
-          <select class="select-elegant w-auto pr-10">
-            <option>Ordenar por: Novedades</option>
-            <option>Precio: Menor a mayor</option>
-            <option>Precio: Mayor a menor</option>
+          <select id="sort-select" class="select-elegant w-auto pr-10">
+            {sortOptions.map((option) => (
+              <option value={option.value} selected={sortFilter === option.value}>
+                {option.label}
+              </option>
+            ))}
           </select>
         </div>
         
@@ -198,4 +227,16 @@ if (isSupabaseConfigured() && supabase) {
       </main>
     </div>
   </div>
+
+  <script>
+    // Ordenación por select
+    const sortSelect = document.getElementById('sort-select') as HTMLSelectElement;
+    if (sortSelect) {
+      sortSelect.addEventListener('change', () => {
+        const url = new URL(window.location.href);
+        url.searchParams.set('orden', sortSelect.value);
+        window.location.href = url.toString();
+      });
+    }
+  </script>
 </BaseLayout>

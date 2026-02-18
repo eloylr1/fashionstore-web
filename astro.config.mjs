@@ -12,6 +12,12 @@ export default defineConfig({
   
   // SSR con Node.js adapter para Coolify
   output: 'server',
+  
+  // Desactivar verificación de origen para formularios POST nativos
+  // Esto permite que los formularios en /cuenta/perfil y otras páginas funcionen
+  security: {
+    checkOrigin: false
+  },
 
   vite: {
     plugins: [tailwindcss()]
