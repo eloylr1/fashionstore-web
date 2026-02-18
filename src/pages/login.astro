@@ -309,6 +309,21 @@ if (accessToken?.value) {
             // Determinar el rol (por defecto 'customer' si no existe perfil)
             const userRole = (profile as any)?.role || 'customer';
             
+            // Asociar pedidos de invitados si los hay
+            try {
+              await fetch('/api/auth/ensure-profile', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  user_id: data.user.id,
+                  email: data.user.email,
+                  full_name: data.user.user_metadata?.full_name,
+                }),
+              });
+            } catch (e) {
+              console.error('Error asociando pedidos:', e);
+            }
+            
             // Guardar tokens y rol en cookies via API
             const response = await fetch('/api/auth/login', {
               method: 'POST',

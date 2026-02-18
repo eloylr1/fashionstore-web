@@ -346,7 +346,22 @@ if (accessToken?.value) {
               successDiv.classList.remove('hidden');
               form.style.display = 'none';
             } else {
-              // Si el usuario se autentica directamente
+              // Si el usuario se autentica directamente (sin confirmación de email)
+              // Asociar pedidos de invitados si los hay
+              try {
+                await fetch('/api/auth/ensure-profile', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    user_id: data.user.id,
+                    email: data.user.email,
+                    full_name: fullName,
+                  }),
+                });
+              } catch (e) {
+                console.error('Error asociando pedidos:', e);
+              }
+
               const response = await fetch('/api/auth/login', {
                 method: 'POST',
                 headers: {

@@ -297,9 +297,13 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       
       <!-- Contenido -->
       <div style="padding: 30px; text-align: center;">
-        <div style="width: 60px; height: 60px; background: #fef2f2; border-radius: 50%; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center;">
-          <span style="font-size: 28px; color: #dc2626; font-weight: bold;">X</span>
-        </div>
+        <table align="center" style="margin: 0 auto 20px;">
+          <tr>
+            <td style="width: 60px; height: 60px; background: #fef2f2; border-radius: 50%; text-align: center; vertical-align: middle;">
+              <span style="font-size: 24px; color: #dc2626; font-weight: bold; line-height: 60px;">X</span>
+            </td>
+          </tr>
+        </table>
         <h2 style="color: #1e3a5f; margin: 0 0 15px;">Pedido Cancelado</h2>
         
         <p style="color: #555; line-height: 1.6; margin-bottom: 25px;">
