@@ -810,7 +810,7 @@ export async function sendOrderCancellationEmail(data: CancelOrderEmailData): Pr
 
   return sendEmail({
     to: data.customerEmail,
-    subject: `❌ Pedido ${data.orderNumber} cancelado - Factura de anulación ${cancellationNumber}`,
+    subject: `Pedido ${data.orderNumber} cancelado - Factura de anulación ${cancellationNumber}`,
     html,
   });
 }

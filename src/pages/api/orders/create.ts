@@ -570,8 +570,10 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       
       <!-- Contenido -->
       <div style="padding: 30px; text-align: center;">
-        <div style="font-size: 60px; margin-bottom: 20px;">✅</div>
-        <h2 style="color: #1e3a5f; margin: 0 0 15px;">¡Pedido Confirmado!</h2>
+        <div style="width: 70px; height: 70px; background: #ecfdf5; border-radius: 50%; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center;">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+        </div>
+        <h2 style="color: #1e3a5f; margin: 0 0 15px;">Pedido Confirmado</h2>
         
         <p style="color: #555; line-height: 1.6; margin-bottom: 25px;">
           Hola <strong>${shipping_address.full_name}</strong>,<br><br>
@@ -579,7 +581,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
         </p>
         
         <div style="background: #f0f9ff; border-radius: 8px; padding: 20px; margin: 25px 0; text-align: left;">
-          <p style="margin: 0 0 10px; color: #1e3a5f; font-weight: bold;">📋 Detalles del pedido:</p>
+          <p style="margin: 0 0 10px; color: #1e3a5f; font-weight: bold;">Detalles del pedido:</p>
           <p style="margin: 0; color: #555;">
             <strong>Total:</strong> ${formatPrice(total)}<br>
             <strong>Entrega estimada:</strong> ${estimatedDelivery}
@@ -589,7 +591,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
         ${pdfBuffer ? `
         <div style="background: #ecfdf5; border-radius: 8px; padding: 15px; margin: 25px 0;">
           <p style="margin: 0; color: #059669; font-weight: 500;">
-            📎 Tu factura está adjunta a este correo en formato PDF
+            Tu factura está adjunta a este correo en formato PDF
           </p>
         </div>
         ` : ''}
@@ -622,7 +624,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     try {
       const emailResult = await sendEmail({
         to: customerEmail,
-        subject: `✅ Pedido #${order.order_number || orderNumber} confirmado - FashionMarket`,
+        subject: `Pedido #${order.order_number || orderNumber} confirmado - FashionMarket`,
         html: emailHtml,
         attachments: pdfBuffer ? [{
           filename: `Factura-${invoice?.invoice_number || invoiceNumber}.pdf`,
