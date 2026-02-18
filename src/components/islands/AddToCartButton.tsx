@@ -141,9 +141,14 @@ export default function AddToCartButton({ product }: AddToCartButtonProps) {
     setError(null);
     setIsAdding(true);
 
+    // Determinar el índice del color seleccionado
+    const colorIdx = hasColors && selectedColor 
+      ? product.colors.indexOf(selectedColor) 
+      : undefined;
+
     // Simular pequeño delay para feedback visual
     setTimeout(() => {
-      addToCart(product, selectedSize, quantity, selectedColor || undefined);
+      addToCart(product, selectedSize, quantity, selectedColor || undefined, colorIdx !== undefined && colorIdx >= 0 ? colorIdx : undefined);
       setIsAdding(false);
       // Reset después de añadir
       setQuantity(1);

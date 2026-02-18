@@ -121,7 +121,7 @@ export const cartSubtotalFormatted = computed(cartSubtotal, (subtotal) =>
 /**
  * Añadir producto al carrito
  */
-export function addToCart(product: Product, size: string, quantity: number = 1, color?: string): void {
+export function addToCart(product: Product, size: string, quantity: number = 1, color?: string, colorIndex?: number): void {
   const currentItems = cartItems.get();
   
   // Buscar si ya existe este producto con esta talla y color
@@ -141,6 +141,12 @@ export function addToCart(product: Product, size: string, quantity: number = 1, 
       return item;
     });
   } else {
+    // Determinar la imagen correcta según el color seleccionado
+    let image = product.images[0] || '/placeholder.jpg';
+    if (colorIndex !== undefined && colorIndex >= 0 && colorIndex < product.images.length) {
+      image = product.images[colorIndex];
+    }
+    
     // Añadir nuevo item
     const newItem: CartItem = {
       productId: product.id,
@@ -150,7 +156,7 @@ export function addToCart(product: Product, size: string, quantity: number = 1, 
       quantity: Math.min(quantity, product.stock),
       size,
       color,
-      image: product.images[0] || '/placeholder.jpg',
+      image,
       maxStock: product.stock,
     };
     newItems = [...currentItems, newItem];
