@@ -2,8 +2,7 @@
  * ═══════════════════════════════════════════════════════════════════════════
  * FASHIONMARKET - API: Cancelar Pedido
  * Llama a la RPC cancel_order_and_restore_stock para cancelación atómica
- * Crea nota de crédito para la cancelación
- * Envía email de confirmación de cancelación
+ * La RPC crea la nota de crédito, luego enviamos email con PDF
  * ═══════════════════════════════════════════════════════════════════════════
  */
 
@@ -15,20 +14,6 @@ import { generateCreditNotePDF } from '../../../lib/pdf/invoiceGenerator';
 const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL || '';
 const supabaseAnonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY || '';
 const supabaseServiceKey = import.meta.env.SUPABASE_SERVICE_ROLE_KEY || '';
-
-/**
- * Genera número de nota de crédito
- * Formato: NC-YYYY-XXXXXX
- */
-async function generateCreditNoteNumber(supabase: any): Promise<string> {
-  const year = new Date().getFullYear();
-  const { count } = await supabase
-    .from('credit_notes')
-    .select('*', { count: 'exact', head: true })
-    .ilike('credit_note_number', `NC-${year}-%`);
-  
-  return `NC-${year}-${String((count || 0) + 1).padStart(6, '0')}`;
-}
 
 export const POST: APIRoute = async ({ request, cookies }) => {
   try {
@@ -115,6 +100,15 @@ export const POST: APIRoute = async ({ request, cookies }) => {
         .eq('order_id', order_id)
         .single();
       
+      // Obtener la nota de crédito creada por la RPC
+      const { data: creditNote } = await serviceClient
+        .from('credit_notes')
+        .select('*')
+        .eq('order_id', order_id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+      
       // Obtener email del usuario
       const { data: profile } = await serviceClient
         .from('profiles')
@@ -122,13 +116,13 @@ export const POST: APIRoute = async ({ request, cookies }) => {
         .eq('id', sessionData.user.id)
         .single();
 
-      // Crear nota de crédito si existe factura original
-      if (originalInvoice && orderData) {
+      // Enviar email si tenemos los datos necesarios
+      if (creditNote && orderData) {
         try {
-          const creditNoteNumber = await generateCreditNoteNumber(serviceClient);
+          const creditNoteNumber = creditNote.credit_note_number;
           
-          // Los items de la nota de crédito (con valores negativos)
-          const creditNoteItems = (orderData.order_items || []).map((item: any) => ({
+          // Los items de la nota de crédito
+          const creditNoteItems = creditNote.items || (orderData.order_items || []).map((item: any) => ({
             name: item.product_name,
             quantity: item.quantity,
             unit_price: item.price,
@@ -137,64 +131,36 @@ export const POST: APIRoute = async ({ request, cookies }) => {
             color: item.color,
           }));
 
-          // Crear nota de crédito
-          const { error: creditNoteError } = await serviceClient
-            .from('credit_notes')
-            .insert({
-              original_invoice_id: originalInvoice.id,
-              order_id: order_id,
-              user_id: sessionData.user.id,
+          console.log('✅ Nota de crédito encontrada:', creditNoteNumber);
+          
+          // Generar PDF de nota de crédito
+          try {
+            const pdfBuffer = generateCreditNotePDF({
               credit_note_number: creditNoteNumber,
-              customer_name: originalInvoice.customer_name,
-              customer_email: originalInvoice.customer_email,
-              customer_nif: originalInvoice.customer_nif,
-              customer_address: originalInvoice.customer_address,
+              original_invoice_number: originalInvoice?.invoice_number || orderData.order_number,
+              issue_date: creditNote.issue_date || new Date().toISOString(),
+              customer_name: creditNote.customer_name || originalInvoice?.customer_name || orderData.shipping_name || 'Cliente',
+              customer_email: creditNote.customer_email || originalInvoice?.customer_email || profile?.email || '',
+              customer_nif: creditNote.customer_nif || originalInvoice?.customer_nif,
+              customer_address: creditNote.customer_address || originalInvoice?.customer_address,
               items: creditNoteItems,
-              subtotal: -originalInvoice.subtotal, // Negativo
-              tax_rate: originalInvoice.tax_rate,
-              tax_amount: -originalInvoice.tax_amount, // Negativo
-              total: -originalInvoice.total, // Negativo
-              reason: 'Cancelación de pedido por el cliente',
-              refund_method: 'Devolución a tarjeta original',
-              company_name: originalInvoice.company_name,
-              company_nif: originalInvoice.company_nif,
-              company_address: originalInvoice.company_address,
-              issue_date: new Date().toISOString(),
+              subtotal: Math.abs(creditNote.subtotal || originalInvoice?.subtotal || orderData.subtotal || 0),
+              tax_rate: creditNote.tax_rate || originalInvoice?.tax_rate || 21,
+              tax_amount: Math.abs(creditNote.tax_amount || originalInvoice?.tax_amount || 0),
+              total: Math.abs(creditNote.total || originalInvoice?.total || orderData.total || 0),
+              reason: creditNote.reason || 'Cancelación de pedido por el cliente',
+              refund_method: creditNote.refund_method || 'Devolución a método de pago original',
+              company_name: creditNote.company_name || originalInvoice?.company_name || 'FashionMarket S.L.',
+              company_nif: creditNote.company_nif || originalInvoice?.company_nif || 'B12345678',
+              company_address: creditNote.company_address || originalInvoice?.company_address || 'Calle Moda 123, 28001 Madrid',
             });
 
-          if (creditNoteError) {
-            console.error('Error creating credit note:', creditNoteError);
-          } else {
-            console.log('✅ Credit note created:', creditNoteNumber);
+            // Enviar email simple con PDF adjunto
+            const customerEmail = creditNote.customer_email || originalInvoice?.customer_email || orderData.guest_email || profile?.email;
+            const customerName = creditNote.customer_name || originalInvoice?.customer_name || orderData.shipping_name || profile?.full_name || 'Cliente';
             
-            // Generar PDF de nota de crédito
-            try {
-              const pdfBuffer = generateCreditNotePDF({
-                credit_note_number: creditNoteNumber,
-                original_invoice_number: originalInvoice.invoice_number,
-                issue_date: new Date().toISOString(),
-                customer_name: originalInvoice.customer_name,
-                customer_email: originalInvoice.customer_email || profile?.email || '',
-                customer_nif: originalInvoice.customer_nif,
-                customer_address: originalInvoice.customer_address,
-                items: creditNoteItems,
-                subtotal: Math.abs(originalInvoice.subtotal),
-                tax_rate: originalInvoice.tax_rate,
-                tax_amount: Math.abs(originalInvoice.tax_amount),
-                total: Math.abs(originalInvoice.total),
-                reason: 'Cancelación de pedido por el cliente',
-                refund_method: 'Devolución a método de pago original',
-                company_name: originalInvoice.company_name || 'FashionMarket S.L.',
-                company_nif: originalInvoice.company_nif || 'B12345678',
-                company_address: originalInvoice.company_address || 'Calle Moda 123, 28001 Madrid',
-              });
-
-              // Enviar email simple con PDF adjunto
-              const customerEmail = originalInvoice.customer_email || profile?.email;
-              const customerName = originalInvoice.customer_name || profile?.full_name || 'Cliente';
-              
-              if (customerEmail) {
-                const emailHtml = `
+            if (customerEmail) {
+              const emailHtml = `
 <!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"></head>
@@ -203,43 +169,45 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     <div style="background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
       
       <!-- Header -->
-      <div style="background: #991b1b; padding: 30px; text-align: center;">
-        <h1 style="color: white; margin: 0; font-size: 24px;">Fashion<span style="color: #fca5a5;">Market</span></h1>
+      <div style="background: #1e3a5f; padding: 30px; text-align: center;">
+        <h1 style="color: white; margin: 0; font-size: 24px;">Fashion<span style="color: #c9a227;">Market</span></h1>
         <p style="color: rgba(255,255,255,0.8); margin: 10px 0 0;">Confirmación de cancelación</p>
       </div>
       
       <!-- Contenido -->
       <div style="padding: 30px; text-align: center;">
-        <div style="font-size: 60px; margin-bottom: 20px;">❌</div>
-        <h2 style="color: #991b1b; margin: 0 0 15px;">Pedido Cancelado</h2>
+        <div style="width: 60px; height: 60px; background: #fef2f2; border-radius: 50%; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center;">
+          <span style="font-size: 28px; color: #dc2626;">✕</span>
+        </div>
+        <h2 style="color: #1e3a5f; margin: 0 0 15px;">Pedido Cancelado</h2>
         
         <p style="color: #555; line-height: 1.6; margin-bottom: 25px;">
-          Hola <strong>${customerName}</strong>,<br><br>
-          Tu pedido <strong>#${orderData.order_number || result.order_number}</strong> ha sido cancelado correctamente.
+          Estimado/a <strong>${customerName}</strong>,<br><br>
+          Le confirmamos que su pedido <strong>#${orderData.order_number || result.order_number}</strong> ha sido cancelado correctamente.
         </p>
         
-        <div style="background: #fef2f2; border-radius: 8px; padding: 20px; margin: 25px 0; text-align: left;">
-          <p style="margin: 0 0 10px; color: #991b1b; font-weight: bold;">💰 Información de reembolso:</p>
+        <div style="background: #f8fafc; border-radius: 8px; padding: 20px; margin: 25px 0; text-align: left;">
+          <p style="margin: 0 0 10px; color: #1e3a5f; font-weight: bold;">Información de reembolso:</p>
           <p style="margin: 0; color: #555;">
-            El importe será devuelto a tu método de pago original en un plazo de 5-10 días hábiles.
+            El importe de <strong>${(Math.abs(creditNote.total || orderData.total) / 100).toFixed(2)} €</strong> será devuelto a su método de pago original en un plazo de 5-10 días hábiles.
           </p>
         </div>
         
-        <div style="background: #ecfdf5; border-radius: 8px; padding: 15px; margin: 25px 0;">
-          <p style="margin: 0; color: #059669; font-weight: 500;">
-            📎 Adjuntamos la nota de crédito en formato PDF
+        <div style="background: #f0fdf4; border: 1px solid #86efac; border-radius: 8px; padding: 15px; margin: 25px 0;">
+          <p style="margin: 0; color: #166534; font-weight: 500;">
+            Adjuntamos la nota de crédito <strong>${creditNoteNumber}</strong> en formato PDF
           </p>
         </div>
         
         <p style="color: #888; font-size: 14px; margin-top: 25px;">
-          Si tienes alguna pregunta, responde a este email.
+          Si tiene alguna consulta, puede responder a este correo electrónico.
         </p>
       </div>
       
       <!-- Footer -->
       <div style="background: #f8f9fa; padding: 20px; text-align: center; border-top: 1px solid #eee;">
         <p style="margin: 0; color: #888; font-size: 12px;">
-          © ${new Date().getFullYear()} FashionMarket · Moda masculina con estilo
+          © ${new Date().getFullYear()} FashionMarket - Moda masculina con estilo
         </p>
       </div>
     </div>
@@ -247,25 +215,28 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 </body>
 </html>`;
 
-                await sendEmail({
-                  to: customerEmail,
-                  subject: `❌ Pedido #${orderData.order_number || result.order_number} cancelado - Nota de crédito ${creditNoteNumber}`,
-                  html: emailHtml,
-                  attachments: [{
-                    filename: `NotaCredito-${creditNoteNumber}.pdf`,
-                    content: pdfBuffer,
-                    contentType: 'application/pdf',
-                  }],
-                });
-                console.log('✅ Email de cancelación enviado con PDF adjunto');
-              }
-            } catch (pdfError) {
-              console.error('Error generating credit note PDF:', pdfError);
+              await sendEmail({
+                to: customerEmail,
+                subject: `Pedido #${orderData.order_number || result.order_number} cancelado - Nota de crédito ${creditNoteNumber}`,
+                html: emailHtml,
+                attachments: [{
+                  filename: `NotaCredito-${creditNoteNumber}.pdf`,
+                  content: pdfBuffer,
+                  contentType: 'application/pdf',
+                }],
+              });
+              console.log('✅ Email de cancelación enviado a:', customerEmail);
+            } else {
+              console.log('⚠️ No se encontró email del cliente para enviar notificación');
             }
+          } catch (pdfError) {
+            console.error('Error generating credit note PDF:', pdfError);
           }
         } catch (cnError) {
-          console.error('Error in credit note creation:', cnError);
+          console.error('Error processing credit note:', cnError);
         }
+      } else {
+        console.log('⚠️ No se encontró nota de crédito para el pedido');
       }
     } catch (emailError) {
       console.error('Error sending cancellation email:', emailError);
