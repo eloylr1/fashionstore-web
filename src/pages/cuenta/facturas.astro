@@ -3,47 +3,62 @@
  * ═══════════════════════════════════════════════════════════════════════════
  * PÁGINA: Mis Facturas
  * Lista todas las facturas y notas de crédito del usuario con filtros
+ * Usa supabaseAdmin (service role) para leer datos - bypasa RLS
  * ═══════════════════════════════════════════════════════════════════════════
  */
 
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import { supabaseAdmin } from '../../lib/supabase/server';
 import { supabase } from '../../lib/supabase/client';
 
 // Verificar autenticación
 const accessToken = Astro.cookies.get('sb-access-token')?.value;
 const refreshToken = Astro.cookies.get('sb-refresh-token')?.value;
 
-if (!accessToken || !refreshToken || !supabase) {
+if (!accessToken || !refreshToken || !supabaseAdmin) {
   return Astro.redirect('/login?redirect=/cuenta/facturas');
 }
 
-const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
-  access_token: accessToken,
-  refresh_token: refreshToken,
-});
+// Verificar token con admin client (más fiable)
+const { data: { user: authUser }, error: authError } = await supabaseAdmin.auth.getUser(accessToken);
 
-if (sessionError || !sessionData.user) {
-  Astro.cookies.delete('sb-access-token', { path: '/' });
-  Astro.cookies.delete('sb-refresh-token', { path: '/' });
+if (authError || !authUser) {
+  // Intentar refresh con anon client
+  if (supabase && refreshToken) {
+    const { data: refreshData } = await supabase.auth.setSession({
+      access_token: accessToken,
+      refresh_token: refreshToken,
+    });
+    if (!refreshData.user) {
+      Astro.cookies.delete('sb-access-token', { path: '/' });
+      Astro.cookies.delete('sb-refresh-token', { path: '/' });
+      return Astro.redirect('/login?redirect=/cuenta/facturas');
+    }
+  } else {
+    Astro.cookies.delete('sb-access-token', { path: '/' });
+    Astro.cookies.delete('sb-refresh-token', { path: '/' });
+    return Astro.redirect('/login?redirect=/cuenta/facturas');
+  }
+}
+
+// Usar authUser del token verificado, o el refreshed user
+const user = authUser || (supabase ? (await supabase.auth.getUser(accessToken)).data.user : null);
+if (!user) {
   return Astro.redirect('/login?redirect=/cuenta/facturas');
 }
 
-const user = sessionData.user;
+// Usar supabaseAdmin para TODAS las consultas de datos (bypasa RLS)
+const db = supabaseAdmin;
 
-// Debug: mostrar info del usuario
-console.log('[FACTURAS] Usuario:', user.id, user.email);
-
-// Obtener pedidos del usuario primero (para poder buscar facturas por order_id)
-// Buscar por user_id
-const { data: ordersByUserId } = await supabase
+// Obtener pedidos del usuario (por user_id o guest_email)
+const { data: ordersByUserId } = await db
   .from('orders')
   .select('id')
   .eq('user_id', user.id);
 
-// Buscar por guest_email
 let ordersByEmail: any[] = [];
 if (user.email) {
-  const { data: ordersEmail } = await supabase
+  const { data: ordersEmail } = await db
     .from('orders')
     .select('id')
     .eq('guest_email', user.email);
@@ -56,36 +71,31 @@ const orderIdsSet = new Set<string>();
 ordersByEmail.forEach((o: any) => orderIdsSet.add(o.id));
 const orderIds = Array.from(orderIdsSet);
 
-console.log('[FACTURAS] Pedidos encontrados:', orderIds.length);
-
-// Obtener facturas del usuario - buscar por user_id, email O order_id
-const { data: invoicesByUserId, error: errorByUserId } = await supabase
+// Obtener facturas - buscar por user_id, email Y order_id
+const { data: invoicesByUserId } = await db
   .from('invoices')
   .select('*')
   .eq('user_id', user.id)
   .order('created_at', { ascending: false });
 
-console.log('[FACTURAS] Por user_id:', invoicesByUserId?.length || 0, errorByUserId?.message || '');
-
 let invoicesByEmail: any[] = [];
 if (user.email) {
-  const emailResult = await supabase
+  const { data: emailInvoices } = await db
     .from('invoices')
     .select('*')
     .eq('customer_email', user.email as string)
     .order('created_at', { ascending: false });
-  invoicesByEmail = emailResult.data || [];
+  invoicesByEmail = emailInvoices || [];
 }
 
-// También buscar facturas por order_id de los pedidos del usuario
 let invoicesByOrder: any[] = [];
 if (orderIds.length > 0) {
-  const orderResult = await supabase
+  const { data: orderInvoices } = await db
     .from('invoices')
     .select('*')
     .in('order_id', orderIds)
     .order('created_at', { ascending: false });
-  invoicesByOrder = orderResult.data || [];
+  invoicesByOrder = orderInvoices || [];
 }
 
 // Combinar y eliminar duplicados (por user_id, email y order_id)
@@ -97,8 +107,8 @@ const invoices = Array.from(allInvoicesMap.values()).sort((a: any, b: any) =>
   new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
 );
 
-// Obtener notas de crédito (facturas de abono) - por user_id o por order_id
-const { data: creditNotesByUser } = await supabase
+// Obtener notas de crédito - por user_id o por order_id (con admin client)
+const { data: creditNotesByUser } = await db
   .from('credit_notes')
   .select('*')
   .eq('user_id', user.id)
@@ -106,12 +116,12 @@ const { data: creditNotesByUser } = await supabase
 
 let creditNotesByOrder: any[] = [];
 if (orderIds.length > 0) {
-  const cnByOrderResult = await supabase
+  const { data: cnByOrder } = await db
     .from('credit_notes')
     .select('*')
     .in('order_id', orderIds)
     .order('created_at', { ascending: false });
-  creditNotesByOrder = cnByOrderResult.data || [];
+  creditNotesByOrder = cnByOrder || [];
 }
 
 // Combinar notas de crédito y eliminar duplicados

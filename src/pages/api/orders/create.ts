@@ -428,23 +428,14 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       }
     }
 
-    // 7) Generar factura - SIEMPRE crear factura
+    // 7) Generar factura - SIEMPRE crear factura con reintentos
     const year = new Date().getFullYear();
-    const { count } = await supabase
-      .from('invoices')
-      .select('*', { count: 'exact', head: true })
-      .ilike('invoice_number', `FM-${year}-%`);
     
-    const invoiceNumber = `FM-${year}-${String((count || 0) + 1).padStart(6, '0')}`;
-
     const invoiceStatus = payment_method === 'card' ? 'paid' : 'pending';
     
-    console.log('📝 Creando factura para usuario:', userId, 'email:', finalEmail);
-    
-    // Preparar datos de factura - solo campos que existen en la tabla
-    const invoiceData: Record<string, any> = {
+    // Preparar datos de factura base (sin invoice_number que se genera en cada intento)
+    const baseInvoiceData: Record<string, any> = {
       order_id: order.id,
-      invoice_number: invoiceNumber,
       customer_name: shipping_address.full_name,
       customer_email: finalEmail,
       customer_address: shipping_address,
@@ -465,24 +456,63 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     
     // Solo añadir user_id si existe (no null)
     if (userId) {
-      invoiceData.user_id = userId;
+      baseInvoiceData.user_id = userId;
     }
     
-    console.log('📝 Datos de factura:', JSON.stringify(invoiceData, null, 2));
+    // Intentar crear factura con reintentos (por si hay conflicto de invoice_number)
+    let invoice: any = null;
+    let invoiceNumber = '';
+    const MAX_INVOICE_RETRIES = 5;
     
-    const { data: invoice, error: invoiceError } = await supabase
-      .from('invoices')
-      .insert(invoiceData)
-      .select()
-      .single();
+    for (let attempt = 0; attempt < MAX_INVOICE_RETRIES; attempt++) {
+      // Obtener el máximo número de factura actual de forma más fiable
+      const { data: maxInvoice } = await supabase
+        .from('invoices')
+        .select('invoice_number')
+        .ilike('invoice_number', `FM-${year}-%`)
+        .order('invoice_number', { ascending: false })
+        .limit(1)
+        .single();
+      
+      let nextNum = 1;
+      if (maxInvoice?.invoice_number) {
+        const match = maxInvoice.invoice_number.match(/FM-\d{4}-(\d+)/);
+        if (match) {
+          nextNum = parseInt(match[1], 10) + 1;
+        }
+      }
+      // Añadir offset por intento para evitar colisiones
+      nextNum += attempt;
+      
+      invoiceNumber = `FM-${year}-${String(nextNum).padStart(6, '0')}`;
+      
+      const invoiceData = { ...baseInvoiceData, invoice_number: invoiceNumber };
+      
+      console.log(`📝 Intento ${attempt + 1}: Creando factura ${invoiceNumber}`);
+      
+      const { data: insertedInvoice, error: invoiceError } = await supabase
+        .from('invoices')
+        .insert(invoiceData)
+        .select()
+        .single();
+      
+      if (!invoiceError && insertedInvoice) {
+        invoice = insertedInvoice;
+        console.log('✅ Factura creada exitosamente:', invoice.invoice_number, 'ID:', invoice.id);
+        break;
+      }
+      
+      console.error(`❌ Intento ${attempt + 1} fallido:`, invoiceError.message, invoiceError.code);
+      
+      // Si el error NO es de duplicado, no tiene sentido reintentar
+      if (invoiceError.code !== '23505') {
+        console.error('❌ Error no recuperable, abortando reintentos');
+        break;
+      }
+    }
     
-    // Log del resultado de la factura
-    if (invoiceError) {
-      console.error('❌ ERROR creando factura:', invoiceError.message);
-      console.error('❌ Código de error:', invoiceError.code);
-      console.error('❌ Detalles:', JSON.stringify(invoiceError));
-    } else {
-      console.log('✅ Factura creada exitosamente:', invoice?.invoice_number, 'ID:', invoice?.id);
+    if (!invoice) {
+      console.error('❌ No se pudo crear la factura después de', MAX_INVOICE_RETRIES, 'intentos');
     }
 
     // 8) Generar PDF de factura
