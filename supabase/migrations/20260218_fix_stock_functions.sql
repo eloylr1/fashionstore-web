@@ -12,14 +12,18 @@ CREATE OR REPLACE FUNCTION public.cancel_order_and_restore_stock(p_order_id UUID
 RETURNS TABLE(success BOOLEAN, message VARCHAR, order_number VARCHAR) AS $$
 DECLARE
   v_order RECORD;
+  v_invoice RECORD;
   v_item RECORD;
   v_order_number VARCHAR;
   v_credit_note_number VARCHAR;
   v_year INT;
   v_count INT;
+  v_items JSONB;
 BEGIN
   -- 1) Verificar que el pedido existe y pertenece al usuario o es admin
-  SELECT o.id, o.status, o.order_number, o.total, o.user_id INTO v_order
+  SELECT o.id, o.status, o.order_number, o.total, o.user_id, 
+         o.shipping_name, o.subtotal, o.tax, o.discount
+  INTO v_order
   FROM public.orders o
   WHERE o.id = p_order_id
     AND (
@@ -44,7 +48,13 @@ BEGIN
   SET status = 'cancelled', updated_at = NOW()
   WHERE id = p_order_id;
   
-  -- 3) Generar número de nota de crédito
+  -- 3) Obtener factura asociada (si existe)
+  SELECT * INTO v_invoice
+  FROM public.invoices
+  WHERE order_id = p_order_id
+  LIMIT 1;
+  
+  -- 4) Generar número de nota de crédito
   v_year := EXTRACT(YEAR FROM NOW())::INT;
   SELECT COUNT(*) INTO v_count
   FROM public.credit_notes
@@ -52,31 +62,95 @@ BEGIN
   
   v_credit_note_number := 'NC-' || v_year || '-' || LPAD((v_count + 1)::TEXT, 6, '0');
   
-  -- 4) Crear nota de crédito
-  INSERT INTO public.credit_notes (
-    order_id,
-    credit_note_number,
-    user_id,
-    total,
-    reason,
-    status
-  )
-  SELECT 
-    p_order_id,
-    v_credit_note_number,
-    o.user_id,
-    o.total,
-    'Cancelación de pedido por el cliente',
-    'pending'
-  FROM public.orders o
-  WHERE o.id = p_order_id;
+  -- 5) Construir JSON de items
+  SELECT COALESCE(jsonb_agg(jsonb_build_object(
+    'name', oi.product_name,
+    'quantity', oi.quantity,
+    'unit_price', oi.price,
+    'total', oi.price * oi.quantity,
+    'size', oi.size,
+    'color', oi.color
+  )), '[]'::jsonb) INTO v_items
+  FROM public.order_items oi
+  WHERE oi.order_id = p_order_id;
   
-  -- 5) Actualizar factura asociada (si existe)
-  UPDATE public.invoices
-  SET status = 'cancelled', updated_at = NOW()
-  WHERE order_id = p_order_id;
+  -- 6) Crear nota de crédito con todos los campos requeridos
+  IF v_invoice IS NOT NULL THEN
+    -- Si hay factura, usar sus datos
+    INSERT INTO public.credit_notes (
+      order_id,
+      original_invoice_id,
+      credit_note_number,
+      user_id,
+      customer_name,
+      customer_email,
+      customer_nif,
+      customer_address,
+      subtotal,
+      tax_rate,
+      tax_amount,
+      total,
+      reason,
+      refund_method,
+      items,
+      status
+    ) VALUES (
+      p_order_id,
+      v_invoice.id,
+      v_credit_note_number,
+      COALESCE(v_order.user_id, auth.uid()),
+      COALESCE(v_invoice.customer_name, v_order.shipping_name, 'Cliente'),
+      COALESCE(v_invoice.customer_email, 'sin-email@fashionmarket.com'),
+      v_invoice.customer_nif,
+      v_invoice.customer_address,
+      -ABS(COALESCE(v_invoice.subtotal, v_order.subtotal, 0)),
+      COALESCE(v_invoice.tax_rate, 21),
+      -ABS(COALESCE(v_invoice.tax_amount, v_order.tax, 0)),
+      -ABS(COALESCE(v_invoice.total, v_order.total, 0)),
+      'Cancelación de pedido por el cliente',
+      'Devolución a método de pago original',
+      v_items,
+      'pending'
+    );
+    
+    -- Actualizar factura
+    UPDATE public.invoices
+    SET status = 'cancelled', updated_at = NOW()
+    WHERE order_id = p_order_id;
+  ELSE
+    -- Sin factura, crear nota de crédito con datos del pedido
+    INSERT INTO public.credit_notes (
+      order_id,
+      credit_note_number,
+      user_id,
+      customer_name,
+      customer_email,
+      subtotal,
+      tax_rate,
+      tax_amount,
+      total,
+      reason,
+      refund_method,
+      items,
+      status
+    ) VALUES (
+      p_order_id,
+      v_credit_note_number,
+      COALESCE(v_order.user_id, auth.uid()),
+      COALESCE(v_order.shipping_name, 'Cliente'),
+      'sin-email@fashionmarket.com',
+      -ABS(COALESCE(v_order.subtotal, 0)),
+      21,
+      -ABS(COALESCE(v_order.tax, 0)),
+      -ABS(v_order.total),
+      'Cancelación de pedido por el cliente',
+      'Devolución a método de pago original',
+      v_items,
+      'pending'
+    );
+  END IF;
   
-  -- 6) Restaurar stock de cada item POR TALLA Y COLOR
+  -- 7) Restaurar stock de cada item POR TALLA Y COLOR
   FOR v_item IN 
     SELECT product_id, quantity, size, color
     FROM public.order_items
