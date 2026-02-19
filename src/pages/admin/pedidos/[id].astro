@@ -27,18 +27,10 @@ let orderItems: any[] = [];
 
 if (isSupabaseAdminConfigured() && supabaseAdmin) {
   try {
-    // Obtener pedido con datos del cliente
+    // Obtener pedido
     const { data: orderData, error } = await supabaseAdmin
       .from('orders')
-      .select(`
-        *,
-        profiles:user_id!left (
-          id,
-          full_name,
-          email,
-          phone
-        )
-      `)
+      .select('*')
       .eq('id', id)
       .single();
     
@@ -47,7 +39,16 @@ if (isSupabaseAdminConfigured() && supabaseAdmin) {
     }
     
     order = orderData;
-    customer = (orderData as any)?.profiles;
+
+    // Obtener perfil del cliente por separado (FK va a auth.users, no a profiles)
+    if (order && (order as any).user_id) {
+      const { data: profileData } = await supabaseAdmin
+        .from('profiles')
+        .select('id, full_name, email, phone')
+        .eq('id', (order as any).user_id)
+        .single();
+      customer = profileData;
+    }
 
     // Obtener items del pedido
     if (order) {
@@ -415,7 +416,7 @@ const paymentMethods: Record<string, string> = {
       const newStatus = select.value;
 
       try {
-        const response = await fetch(`/api/admin/orders/${orderId}/status`, {
+        const response = await fetch(`/api/admin/orders/${orderId}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ status: newStatus })
