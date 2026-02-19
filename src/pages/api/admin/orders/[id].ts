@@ -184,7 +184,7 @@ export const PATCH: APIRoute = async ({ params, request, cookies }) => {
     try {
       const { data: orderData } = await (supabase as any)
         .from('orders')
-        .select('order_number, user_id, guest_email, guest_name')
+        .select('order_number, user_id, guest_email, guest_name, total, shipping_address, order_items(product_name, quantity, unit_price, price, size, color)')
         .eq('id', id)
         .single();
 
@@ -207,7 +207,20 @@ export const PATCH: APIRoute = async ({ params, request, cookies }) => {
 
         if (customerEmail) {
           const trackingNumber = status === 'shipped' ? body.tracking_number : undefined;
-          await sendOrderStatusEmail(customerEmail, customerName, orderNumber, status, trackingNumber);
+          
+          // Preparar detalles del pedido para el email
+          const orderDetails = {
+            items: (orderData.order_items || []).map((item: any) => ({
+              name: item.product_name || 'Producto',
+              quantity: item.quantity || 1,
+              price: item.unit_price || item.price || 0,
+              size: item.size,
+              color: item.color,
+            })),
+            total: orderData.total || 0,
+          };
+          
+          await sendOrderStatusEmail(customerEmail, customerName, orderNumber, status, trackingNumber, orderDetails);
         }
       }
     } catch (emailError) {

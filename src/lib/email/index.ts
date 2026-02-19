@@ -463,71 +463,221 @@ export async function sendOrderStatusEmail(
   customerName: string,
   orderNumber: string,
   newStatus: string,
-  trackingNumber?: string
+  trackingNumber?: string,
+  orderDetails?: {
+    items?: Array<{ name: string; quantity: number; price: number; size?: string; color?: string }>;
+    total?: number;
+    shippingAddress?: string;
+  }
 ): Promise<EmailResult> {
-  const statusInfo: Record<string, { icon: string; title: string; message: string }> = {
+  const trackingUrl = `https://eloyfashionstore.victoriafp.online/seguimiento?order=${orderNumber}`;
+  
+  const statusConfig: Record<string, { 
+    title: string; 
+    subtitle: string; 
+    message: string; 
+    color: string; 
+    bgColor: string;
+    stepNumber: number;
+  }> = {
     processing: {
-      icon: '',
-      title: 'Tu pedido está siendo preparado',
-      message: 'Estamos preparando tu pedido con mucho cuidado. Te avisaremos cuando se envíe.'
+      title: 'Tu pedido esta siendo preparado',
+      subtitle: 'Estamos trabajando en el',
+      message: 'Hemos comenzado a preparar tu pedido. Nuestro equipo esta seleccionando y empaquetando cada articulo con cuidado para asegurar que todo llegue en perfectas condiciones. Te enviaremos otro email en cuanto este listo para ser enviado.',
+      color: '#2563eb',
+      bgColor: '#eff6ff',
+      stepNumber: 2,
     },
     shipped: {
-      icon: '',
       title: 'Tu pedido ha sido enviado',
-      message: 'Tu pedido ya está en camino. Puedes seguir el envío con el número de seguimiento.'
+      subtitle: 'Ya esta en camino',
+      message: 'Tu pedido ya ha salido de nuestro almacen y esta de camino a tu direccion. Puedes hacer seguimiento en tiempo real con el numero de seguimiento que encontraras mas abajo.',
+      color: '#7c3aed',
+      bgColor: '#f5f3ff',
+      stepNumber: 3,
     },
     delivered: {
-      icon: '',
-      title: 'Pedido entregado',
-      message: 'Tu pedido ha sido entregado. Esperamos que disfrutes tu compra.'
+      title: 'Tu pedido ha sido entregado',
+      subtitle: 'Esperamos que lo disfrutes',
+      message: 'Tu pedido ha llegado a su destino. Esperamos que estes satisfecho con tu compra. Si algo no es como esperabas, recuerda que tienes 30 dias para solicitar una devolucion desde tu cuenta.',
+      color: '#059669',
+      bgColor: '#ecfdf5',
+      stepNumber: 4,
     },
     cancelled: {
-      icon: '',
       title: 'Pedido cancelado',
-      message: 'Tu pedido ha sido cancelado. Si tienes dudas, contacta con nosotros.'
+      subtitle: 'Tu pedido ha sido cancelado',
+      message: 'Lamentamos informarte de que tu pedido ha sido cancelado. Si se realizo algun cargo, el reembolso se procesara automaticamente en los proximos 5-10 dias laborables. Si tienes alguna duda, no dudes en contactarnos.',
+      color: '#dc2626',
+      bgColor: '#fef2f2',
+      stepNumber: 0,
     },
     refunded: {
-      icon: '',
       title: 'Reembolso procesado',
-      message: 'Hemos procesado el reembolso de tu pedido. Puede tardar 5-10 días en aparecer en tu cuenta.'
+      subtitle: 'Hemos tramitado tu reembolso',
+      message: 'El reembolso de tu pedido ha sido procesado correctamente. Dependiendo de tu entidad bancaria, puede tardar entre 5 y 10 dias laborables en reflejarse en tu cuenta. Conserva este email como justificante.',
+      color: '#059669',
+      bgColor: '#ecfdf5',
+      stepNumber: 0,
     }
   };
 
-  const info = statusInfo[newStatus] || {
-    icon: '',
-    title: 'Actualización de pedido',
-    message: 'El estado de tu pedido ha cambiado.'
+  const config = statusConfig[newStatus] || {
+    title: 'Actualizacion de tu pedido',
+    subtitle: 'Hay novedades sobre tu pedido',
+    message: 'El estado de tu pedido ha sido actualizado. Puedes consultar los detalles accediendo a tu cuenta.',
+    color: '#1e3a5f',
+    bgColor: '#f0f9ff',
+    stepNumber: 0,
   };
+
+  // Generar barra de progreso para estados normales (no cancelado/reembolsado)
+  const steps = ['Confirmado', 'Preparando', 'Enviado', 'Entregado'];
+  const progressHtml = config.stepNumber > 0 ? `
+      <div style="padding: 0 40px 32px;">
+        <table style="width: 100%; border-collapse: collapse;">
+          <tr>
+            ${steps.map((step, i) => {
+              const stepNum = i + 1;
+              const isActive = stepNum <= config.stepNumber;
+              const isCurrent = stepNum === config.stepNumber;
+              return `
+              <td style="width: 25%; text-align: center; position: relative;">
+                <div style="width: 32px; height: 32px; border-radius: 50%; margin: 0 auto 8px; line-height: 32px; font-size: 14px; font-weight: 600; ${isActive ? `background: ${config.color}; color: white;` : 'background: #e5e7eb; color: #9ca3af;'} ${isCurrent ? `box-shadow: 0 0 0 4px ${config.bgColor};` : ''}">
+                  ${isActive ? (stepNum < config.stepNumber ? '&#10003;' : stepNum) : stepNum}
+                </div>
+                <p style="margin: 0; font-size: 11px; ${isActive ? `color: ${config.color}; font-weight: 600;` : 'color: #9ca3af;'}">${step}</p>
+              </td>`;
+            }).join('')}
+          </tr>
+          <tr>
+            <td colspan="4" style="padding-top: 8px;">
+              <div style="height: 3px; background: #e5e7eb; border-radius: 3px; position: relative;">
+                <div style="height: 3px; background: ${config.color}; border-radius: 3px; width: ${Math.round(((config.stepNumber - 1) / (steps.length - 1)) * 100)}%;"></div>
+              </div>
+            </td>
+          </tr>
+        </table>
+      </div>` : '';
+
+  // Generar tabla de productos si hay items
+  const itemsHtml = orderDetails?.items && orderDetails.items.length > 0 ? `
+      <div style="padding: 0 40px 24px;">
+        <p style="color: #6b7280; font-size: 12px; margin: 0 0 12px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">Resumen del pedido</p>
+        <table style="width: 100%; border-collapse: collapse;">
+          ${orderDetails.items.map(item => `
+          <tr>
+            <td style="padding: 10px 0; border-bottom: 1px solid #f3f4f6; vertical-align: top;">
+              <p style="margin: 0; color: #1e3a5f; font-size: 14px; font-weight: 500;">${item.name}</p>
+              ${item.size || item.color ? `<p style="margin: 2px 0 0; color: #9ca3af; font-size: 12px;">${[item.size ? 'Talla: ' + item.size : '', item.color ? 'Color: ' + item.color : ''].filter(Boolean).join(' | ')}</p>` : ''}
+            </td>
+            <td style="padding: 10px 8px; border-bottom: 1px solid #f3f4f6; text-align: center; color: #6b7280; font-size: 13px; vertical-align: top;">
+              x${item.quantity}
+            </td>
+            <td style="padding: 10px 0; border-bottom: 1px solid #f3f4f6; text-align: right; color: #1e3a5f; font-size: 14px; font-weight: 500; vertical-align: top;">
+              ${formatPrice(item.price * item.quantity)}
+            </td>
+          </tr>`).join('')}
+          ${orderDetails.total ? `
+          <tr>
+            <td colspan="2" style="padding: 14px 0 0; text-align: right; color: #1e3a5f; font-size: 15px; font-weight: 700;">Total</td>
+            <td style="padding: 14px 0 0; text-align: right; color: #1e3a5f; font-size: 17px; font-weight: 700;">${formatPrice(orderDetails.total)}</td>
+          </tr>` : ''}
+        </table>
+      </div>` : '';
+
+  // Tracking section
+  const trackingHtml = trackingNumber ? `
+      <div style="margin: 0 40px 24px; padding: 20px; background: #f0f9ff; border-radius: 10px; border: 1px solid #bae6fd;">
+        <table style="width: 100%;">
+          <tr>
+            <td>
+              <p style="color: #0369a1; font-size: 12px; margin: 0 0 6px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;">Numero de seguimiento</p>
+              <p style="color: #1e3a5f; font-size: 20px; font-weight: 700; font-family: 'Courier New', monospace; margin: 0; letter-spacing: 1px;">${trackingNumber}</p>
+            </td>
+          </tr>
+        </table>
+      </div>` : '';
 
   const html = `
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
   <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${config.title} - FashionMarket</title>
 </head>
-<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f9fafb;">
-  <div style="max-width: 600px; margin: 0 auto; padding: 40px 20px;">
-    <div style="text-align: center; margin-bottom: 32px;">
-      <h1 style="font-size: 28px; font-weight: 600; color: #1e3a5f; margin: 0;">FashionMarket</h1>
-    </div>
-
-    <div style="background: white; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); padding: 32px; text-align: center;">
-      <div style="font-size: 48px; margin-bottom: 16px;">${info.icon}</div>
-      <h2 style="color: #1e3a5f; font-size: 24px; margin: 0 0 8px;">${info.title}</h2>
-      <p style="color: #6b7280; margin: 0 0 24px;">Pedido: <strong>${orderNumber}</strong></p>
-      <p style="color: #374151; font-size: 16px; line-height: 1.6;">${info.message}</p>
+<body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f3f4f6; -webkit-font-smoothing: antialiased;">
+  <div style="max-width: 640px; margin: 0 auto; padding: 32px 16px;">
+    
+    <div style="background: white; border-radius: 12px; box-shadow: 0 4px 24px rgba(0,0,0,0.08); overflow: hidden;">
       
-      ${trackingNumber ? `
-      <div style="background: #f0f9ff; border-radius: 8px; padding: 16px; margin-top: 24px;">
-        <p style="color: #0369a1; font-size: 14px; margin: 0 0 4px;">Número de seguimiento</p>
-        <p style="color: #1e3a5f; font-size: 18px; font-weight: 600; font-family: monospace; margin: 0;">${trackingNumber}</p>
+      <!-- Cabecera -->
+      <div style="background: linear-gradient(135deg, #1e3a5f 0%, #2d5a8f 100%); padding: 36px 40px; text-align: center;">
+        <h1 style="color: white; font-size: 26px; margin: 0; font-weight: 700;">Fashion<span style="color: #c9a227;">Market</span></h1>
+        <p style="color: rgba(255,255,255,0.6); margin: 8px 0 0; font-size: 13px;">Moda masculina con estilo</p>
       </div>
-      ` : ''}
+
+      <!-- Banner de estado -->
+      <div style="background: ${config.bgColor}; padding: 32px 40px; text-align: center; border-bottom: 1px solid #e5e7eb;">
+        <h2 style="color: ${config.color}; font-size: 22px; margin: 0 0 6px; font-weight: 700;">${config.title}</h2>
+        <p style="color: ${config.color}; opacity: 0.7; font-size: 14px; margin: 0;">${config.subtitle}</p>
+      </div>
+
+      <!-- Info del pedido -->
+      <div style="padding: 24px 40px; background: #f8fafc; border-bottom: 1px solid #e5e7eb;">
+        <table style="width: 100%;">
+          <tr>
+            <td>
+              <p style="color: #6b7280; font-size: 12px; margin: 0; text-transform: uppercase; letter-spacing: 0.5px;">Pedido</p>
+              <p style="color: #1e3a5f; font-size: 16px; font-weight: 700; margin: 4px 0 0;">${orderNumber}</p>
+            </td>
+            <td style="text-align: right;">
+              <p style="color: #6b7280; font-size: 12px; margin: 0; text-transform: uppercase; letter-spacing: 0.5px;">Cliente</p>
+              <p style="color: #1e3a5f; font-size: 14px; font-weight: 500; margin: 4px 0 0;">${customerName}</p>
+            </td>
+          </tr>
+        </table>
+      </div>
+
+      <!-- Barra de progreso -->
+      ${progressHtml}
+
+      <!-- Mensaje -->
+      <div style="padding: ${config.stepNumber > 0 ? '0' : '32px'} 40px 24px;">
+        <p style="color: #374151; font-size: 15px; line-height: 1.7; margin: 0;">${config.message}</p>
+      </div>
+
+      <!-- Tracking -->
+      ${trackingHtml}
+
+      <!-- Detalle de productos -->
+      ${itemsHtml}
+
+      <!-- Boton de seguimiento -->
+      <div style="padding: 8px 40px 36px; text-align: center;">
+        <a href="${trackingUrl}" 
+           style="display: inline-block; background: linear-gradient(135deg, #1e3a5f 0%, #2d5a8f 100%); color: white; text-decoration: none; padding: 16px 40px; border-radius: 10px; font-weight: 600; font-size: 15px; box-shadow: 0 4px 14px rgba(30,58,95,0.25);">
+          Ver estado del pedido
+        </a>
+      </div>
+
     </div>
 
-    <div style="text-align: center; margin-top: 32px; color: #9ca3af; font-size: 14px;">
-      <p>© 2025 FashionMarket. Todos los derechos reservados.</p>
+    <!-- Pie de pagina -->
+    <div style="margin-top: 24px; padding: 24px; background: white; border-radius: 12px; text-align: center;">
+      <p style="color: #6b7280; font-size: 13px; margin: 0 0 12px; line-height: 1.5;">
+        Si tienes alguna pregunta, contactanos en<br>
+        <a href="mailto:soporte@fashionmarket.es" style="color: #1e3a5f; text-decoration: none; font-weight: 500;">soporte@fashionmarket.es</a>
+      </p>
+      <div style="border-top: 1px solid #e5e7eb; padding-top: 16px; margin-top: 16px;">
+        <p style="color: #9ca3af; font-size: 12px; margin: 0;">
+          FashionMarket S.L. -- CIF: B12345678 -- C/ Moda, 123 -- 28001 Madrid<br>
+          &copy; ${new Date().getFullYear()} FashionMarket. Todos los derechos reservados.
+        </p>
+      </div>
     </div>
+
   </div>
 </body>
 </html>
@@ -535,7 +685,7 @@ export async function sendOrderStatusEmail(
 
   return sendEmail({
     to: email,
-    subject: `${info.title} - Pedido ${orderNumber}`,
+    subject: `${config.title} - Pedido ${orderNumber}`,
     html,
   });
 }

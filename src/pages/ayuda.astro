@@ -165,9 +165,19 @@ const faqs = [
       <div class="bg-navy-900 rounded-lg p-8 text-center text-white">
         <h3 class="text-xl font-serif mb-2">¿No encuentras lo que buscas?</h3>
         <p class="text-white/70 mb-4">Nuestro equipo de soporte estará encantado de ayudarte</p>
-        <a href="mailto:soporte@fashionmarket.es" class="inline-block bg-gold-matte text-navy-900 px-6 py-3 rounded-lg font-medium hover:bg-gold-matte/90 transition-colors">
-          Contactar soporte
-        </a>
+        <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
+          <a href="mailto:soporte@fashionmarket.es" class="inline-block bg-gold-matte text-navy-900 px-6 py-3 rounded-lg font-medium hover:bg-gold-matte/90 transition-colors">
+            Enviar email
+          </a>
+          <span class="text-white/50 hidden sm:inline">o</span>
+          <button 
+            onclick="navigator.clipboard.writeText('soporte@fashionmarket.es').then(() => { this.textContent = 'Copiado!'; setTimeout(() => { this.textContent = 'Copiar email'; }, 2000); })"
+            class="inline-block bg-white/10 border border-white/20 text-white px-6 py-3 rounded-lg font-medium hover:bg-white/20 transition-colors cursor-pointer"
+          >
+            Copiar email
+          </button>
+        </div>
+        <p class="text-white/40 text-sm mt-3">soporte@fashionmarket.es</p>
       </div>
 
       <!-- Volver -->
