@@ -79,42 +79,33 @@ export const GET: APIRoute = async ({ cookies }) => {
       supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'customer'),
       
       // Total pedidos
-      supabase.from('orders').select('*', { count: 'exact', head: true }),
+      (supabase as any).from('orders').select('*', { count: 'exact', head: true }),
       
       // Pedidos del mes (pagados, enviados, entregados)
-      supabase.from('orders')
+      (supabase as any).from('orders')
         .select('id, total')
         .gte('created_at', startOfMonthISO)
         .in('status', ['paid', 'shipped', 'delivered', 'processing']),
       
       // Pedidos pendientes
-      supabase.from('orders').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
+      (supabase as any).from('orders').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
       
       // Pedidos mes anterior
-      supabase.from('orders')
+      (supabase as any).from('orders')
         .select('total')
         .gte('created_at', startOfLastMonth.toISOString())
         .lte('created_at', endOfLastMonth.toISOString())
         .in('status', ['paid', 'shipped', 'delivered', 'processing']),
       
       // Pedidos últimos 7 días
-      supabase.from('orders')
+      (supabase as any).from('orders')
         .select('created_at, total')
         .gte('created_at', startOf7Days)
         .in('status', ['paid', 'shipped', 'delivered', 'processing']),
       
       // Últimos 5 pedidos
-      supabase.from('orders')
-        .select(`
-          id,
-          order_number,
-          total,
-          status,
-          created_at,
-          shipping_name,
-          shipping_email,
-          user_id
-        `)
+      (supabase as any).from('orders')
+        .select('id, order_number, total, status, created_at, shipping_name, shipping_email, user_id')
         .order('created_at', { ascending: false })
         .limit(5),
       
@@ -161,7 +152,7 @@ export const GET: APIRoute = async ({ cookies }) => {
     if (monthOrdersResult.data && monthOrdersResult.data.length > 0) {
       const orderIds = monthOrdersResult.data.map(o => o.id);
       
-      const { data: orderItems } = await supabase
+      const { data: orderItems } = await (supabase as any)
         .from('order_items')
         .select('product_id, product_name, quantity')
         .in('order_id', orderIds);
@@ -213,7 +204,7 @@ export const GET: APIRoute = async ({ cookies }) => {
     // ═══════════════════════════════════════════════════════════════════
     // INGRESOS TOTALES (todos los pedidos completados históricos)
     // ═══════════════════════════════════════════════════════════════════
-    const { data: allCompletedOrders } = await supabase
+    const { data: allCompletedOrders } = await (supabase as any)
       .from('orders')
       .select('total')
       .in('status', ['paid', 'shipped', 'delivered', 'processing']);
@@ -223,7 +214,11 @@ export const GET: APIRoute = async ({ cookies }) => {
     // ═══════════════════════════════════════════════════════════════════
     // FORMATEAR PEDIDOS RECIENTES
     // ═══════════════════════════════════════════════════════════════════
-    const recentOrders = (recentOrdersResult.data || []).map(order => ({
+    if (recentOrdersResult.error) {
+      console.error('Error fetching recent orders:', recentOrdersResult.error);
+    }
+
+    const recentOrders = (recentOrdersResult.data || []).map((order: any) => ({
       id: order.id,
       orderNumber: order.order_number,
       total: order.total,
@@ -234,7 +229,7 @@ export const GET: APIRoute = async ({ cookies }) => {
     }));
 
     // Productos con stock bajo
-    const lowStockProducts = (lowStockProductsResult.data || []).map(p => ({
+    const lowStockProducts = (lowStockProductsResult.data || []).map((p: any) => ({
       id: p.id,
       name: p.name,
       stock: p.stock,

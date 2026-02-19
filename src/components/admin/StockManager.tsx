@@ -629,7 +629,23 @@ function ProductRow({
         <td className="px-4 py-3">
           <div className="flex items-center gap-3">
             {product.images?.[0] ? (
-              <img src={product.images[0]} alt={product.name} className="w-10 h-10 object-cover rounded" />
+              <>
+                <img
+                  src={product.images[0]}
+                  alt={product.name}
+                  className="w-10 h-10 object-cover rounded bg-charcoal-100"
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none';
+                    const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                    if (fallback) fallback.style.display = 'flex';
+                  }}
+                />
+                <div className="w-10 h-10 bg-charcoal-100 rounded items-center justify-center" style={{ display: 'none' }}>
+                  <svg className="w-5 h-5 text-charcoal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                </div>
+              </>
             ) : (
               <div className="w-10 h-10 bg-charcoal-100 rounded flex items-center justify-center">
                 <svg className="w-5 h-5 text-charcoal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -666,22 +682,37 @@ function ProductRow({
         {/* Stock total */}
         <td className="px-4 py-3">
           <div className="flex items-center justify-center">
-            <input
-              type="number"
-              min="0"
-              value={editingStock[product.id] !== undefined ? editingStock[product.id] : product.stock}
-              onChange={(e) => handleStockChange(product.id, e.target.value)}
-              onBlur={() => handleStockBlur(product)}
-              onKeyDown={(e) => handleKeyDown(e, product)}
-              className={`w-20 text-center px-2 py-1 border rounded text-sm font-medium ${
-                product.stock === 0
-                  ? 'border-red-300 bg-red-50 text-red-700'
-                  : product.stock <= 10
-                    ? 'border-amber-300 bg-amber-50 text-amber-700'
-                    : 'border-charcoal-200 text-charcoal-700'
-              } ${saving === product.id ? 'opacity-50' : ''}`}
-              disabled={saving === product.id}
-            />
+            {hasVariantsFn(product) ? (
+              <span
+                className={`w-20 text-center px-2 py-1 border rounded text-sm font-medium cursor-default ${
+                  product.stock === 0
+                    ? 'border-red-300 bg-red-50 text-red-700'
+                    : product.stock <= 10
+                      ? 'border-amber-300 bg-amber-50 text-amber-700'
+                      : 'border-charcoal-200 bg-charcoal-50 text-charcoal-600'
+                }`}
+                title="Stock total calculado desde variantes"
+              >
+                {product.stock}
+              </span>
+            ) : (
+              <input
+                type="number"
+                min="0"
+                value={editingStock[product.id] !== undefined ? editingStock[product.id] : product.stock}
+                onChange={(e) => handleStockChange(product.id, e.target.value)}
+                onBlur={() => handleStockBlur(product)}
+                onKeyDown={(e) => handleKeyDown(e, product)}
+                className={`w-20 text-center px-2 py-1 border rounded text-sm font-medium ${
+                  product.stock === 0
+                    ? 'border-red-300 bg-red-50 text-red-700'
+                    : product.stock <= 10
+                      ? 'border-amber-300 bg-amber-50 text-amber-700'
+                      : 'border-charcoal-200 text-charcoal-700'
+                } ${saving === product.id ? 'opacity-50' : ''}`}
+                disabled={saving === product.id}
+              />
+            )}
           </div>
         </td>
 
@@ -729,28 +760,41 @@ function ProductRow({
 
         {/* Ajuste rápido */}
         <td className="px-4 py-3">
-          <div className="flex items-center justify-center gap-1">
+          {hasVariantsFn(product) ? (
             <button
-              onClick={() => adjustStock(product.id, product.stock, -10)}
-              disabled={saving === product.id || product.stock < 10}
-              className="px-2 py-1 text-xs bg-charcoal-100 hover:bg-charcoal-200 text-charcoal-600 disabled:opacity-50 rounded transition-colors"
-            >-10</button>
-            <button
-              onClick={() => adjustStock(product.id, product.stock, -1)}
-              disabled={saving === product.id || product.stock < 1}
-              className="px-2 py-1 text-xs bg-charcoal-100 hover:bg-charcoal-200 text-charcoal-600 disabled:opacity-50 rounded transition-colors"
-            >-1</button>
-            <button
-              onClick={() => adjustStock(product.id, product.stock, 1)}
-              disabled={saving === product.id}
-              className="px-2 py-1 text-xs bg-green-100 hover:bg-green-200 text-green-700 disabled:opacity-50 rounded transition-colors"
-            >+1</button>
-            <button
-              onClick={() => adjustStock(product.id, product.stock, 10)}
-              disabled={saving === product.id}
-              className="px-2 py-1 text-xs bg-green-100 hover:bg-green-200 text-green-700 disabled:opacity-50 rounded transition-colors"
-            >+10</button>
-          </div>
+              onClick={() => toggleExpand(product.id)}
+              className="text-xs text-navy-600 hover:text-navy-800 font-medium flex items-center gap-1 mx-auto transition-colors"
+              title="Expandir para editar stock por variante"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+              </svg>
+              Editar variantes
+            </button>
+          ) : (
+            <div className="flex items-center justify-center gap-1">
+              <button
+                onClick={() => adjustStock(product.id, product.stock, -10)}
+                disabled={saving === product.id || product.stock < 10}
+                className="px-2 py-1 text-xs bg-charcoal-100 hover:bg-charcoal-200 text-charcoal-600 disabled:opacity-50 rounded transition-colors"
+              >-10</button>
+              <button
+                onClick={() => adjustStock(product.id, product.stock, -1)}
+                disabled={saving === product.id || product.stock < 1}
+                className="px-2 py-1 text-xs bg-charcoal-100 hover:bg-charcoal-200 text-charcoal-600 disabled:opacity-50 rounded transition-colors"
+              >-1</button>
+              <button
+                onClick={() => adjustStock(product.id, product.stock, 1)}
+                disabled={saving === product.id}
+                className="px-2 py-1 text-xs bg-green-100 hover:bg-green-200 text-green-700 disabled:opacity-50 rounded transition-colors"
+              >+1</button>
+              <button
+                onClick={() => adjustStock(product.id, product.stock, 10)}
+                disabled={saving === product.id}
+                className="px-2 py-1 text-xs bg-green-100 hover:bg-green-200 text-green-700 disabled:opacity-50 rounded transition-colors"
+              >+10</button>
+            </div>
+          )}
         </td>
       </tr>
 

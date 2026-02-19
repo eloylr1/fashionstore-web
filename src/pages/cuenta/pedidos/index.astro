@@ -59,6 +59,18 @@ const { data: orders } = await sb
   .eq('user_id', user.id)
   .order('created_at', { ascending: false });
 
+// Obtener devoluciones activas del usuario para bloquear duplicados
+const { data: activeReturns } = await sb
+  .from('returns')
+  .select('order_id, status')
+  .eq('user_id', user.id)
+  .not('status', 'eq', 'rejected');
+
+// Set de order_ids que ya tienen devolución activa
+const ordersWithReturn = new Set(
+  (activeReturns || []).map((r: any) => r.order_id)
+);
+
 const getStatusColor = (status: string) => {
   const colors: Record<string, string> = {
     pending: 'bg-yellow-100 text-yellow-800 border-yellow-200',
@@ -392,8 +404,8 @@ const getStepIndex = (status: string) => {
                       </button>
                     )}
                     
-                    {/* Devolución - Solo para entregados */}
-                    {order.status === 'delivered' && (
+                    {/* Devolución - Solo para entregados SIN devolución activa */}
+                    {order.status === 'delivered' && !ordersWithReturn.has(order.id) && (
                       <button 
                         type="button"
                         data-order-id={order.id}
@@ -405,6 +417,16 @@ const getStepIndex = (status: string) => {
                         </svg>
                         Solicitar devolución
                       </button>
+                    )}
+                    
+                    {/* Devolución ya solicitada */}
+                    {order.status === 'delivered' && ordersWithReturn.has(order.id) && (
+                      <span class="inline-flex items-center gap-2 px-4 py-2 bg-charcoal-50 text-charcoal-500 text-sm rounded-lg cursor-default">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                        </svg>
+                        Devolución solicitada
+                      </span>
                     )}
                     
                     {/* Seguir envío */}
