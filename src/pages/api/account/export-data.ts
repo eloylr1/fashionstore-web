@@ -55,14 +55,14 @@ export const GET: APIRoute = async ({ cookies }) => {
       creditNotesResult,
       newsletterResult,
     ] = await Promise.all([
-      supabaseAdmin.from('profiles').select('*').eq('id', userId).single(),
-      supabaseAdmin.from('orders').select('*, order_items(*)').eq('user_id', userId).order('created_at', { ascending: false }),
-      supabaseAdmin.from('addresses').select('*').eq('user_id', userId),
-      supabaseAdmin.from('payment_methods').select('id, card_brand, card_last4, expiry_month, expiry_year, type, is_default, created_at').eq('user_id', userId),
-      supabaseAdmin.from('returns').select('*').eq('user_id', userId),
-      supabaseAdmin.from('invoices').select('*').eq('user_id', userId),
-      supabaseAdmin.from('credit_notes').select('*').eq('user_id', userId),
-      supabaseAdmin.from('newsletter_subscriptions').select('email, subscribed_at, is_active').eq('email', userEmail || ''),
+      supabaseAdmin!.from('profiles').select('*').eq('id', userId).single(),
+      supabaseAdmin!.from('orders').select('*, order_items(*)').eq('user_id', userId).order('created_at', { ascending: false }),
+      supabaseAdmin!.from('addresses').select('*').eq('user_id', userId),
+      supabaseAdmin!.from('payment_methods').select('id, card_brand, card_last4, expiry_month, expiry_year, type, is_default, created_at').eq('user_id', userId),
+      supabaseAdmin!.from('returns').select('*').eq('user_id', userId),
+      supabaseAdmin!.from('invoices').select('*').eq('user_id', userId),
+      supabaseAdmin!.from('credit_notes').select('*').eq('user_id', userId),
+      supabaseAdmin!.from('newsletter_subscriptions').select('email, subscribed_at, is_active').eq('email', userEmail || ''),
     ]);
 
     const exportData = {

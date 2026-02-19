@@ -78,7 +78,7 @@ if (orders && orders.length > 0) {
     for (const order of orders) {
       for (const item of (order.order_items || [])) {
         if (!item.product_image && item.product_id && productMap.has(item.product_id)) {
-          const product = productMap.get(item.product_id);
+          const product = productMap.get(item.product_id) as any;
           item.product_image = product?.images?.[0] || null;
           if (!item.product_slug && product?.slug) {
             item.product_slug = product.slug;
