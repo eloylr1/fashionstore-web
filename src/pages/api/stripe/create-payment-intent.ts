@@ -9,6 +9,7 @@ export const prerender = false;
 
 import type { APIRoute } from 'astro';
 import Stripe from 'stripe';
+import { getOrCreateStripeCustomer } from '../../../lib/stripe/customer';
 
 const stripeSecretKey = import.meta.env.STRIPE_SECRET_KEY;
 
@@ -46,7 +47,7 @@ export const POST: APIRoute = async ({ request }) => {
       );
     }
 
-    const { amount, currency = 'eur', metadata = {} } = body;
+    const { amount, currency = 'eur', metadata = {}, saved_card_user_id } = body;
 
     // Validar que tenemos un monto válido
     if (!amount || amount <= 0) {
@@ -56,6 +57,16 @@ export const POST: APIRoute = async ({ request }) => {
       );
     }
 
+    // Si es un pago con tarjeta guardada, necesitamos el Stripe Customer
+    let stripeCustomerId: string | undefined;
+    if (saved_card_user_id) {
+      try {
+        stripeCustomerId = await getOrCreateStripeCustomer(saved_card_user_id);
+      } catch (err) {
+        console.error('Error getting stripe customer:', err);
+      }
+    }
+
     // Crear Payment Intent con todos los métodos de pago disponibles
     const paymentIntent = await stripe.paymentIntents.create({
       amount: Math.round(amount), // Monto en céntimos
@@ -63,6 +74,7 @@ export const POST: APIRoute = async ({ request }) => {
       automatic_payment_methods: {
         enabled: true, // Habilita todos los métodos: tarjeta, Google Pay, Apple Pay, etc.
       },
+      ...(stripeCustomerId && { customer: stripeCustomerId }),
       metadata, // Información adicional (order_id, user_id, etc.)
     });
 

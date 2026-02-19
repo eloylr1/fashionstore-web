@@ -7,6 +7,7 @@
 
 import type { APIRoute } from 'astro';
 import { createClient } from '@supabase/supabase-js';
+import { getOrCreateStripeCustomer, attachPaymentMethodToCustomer } from '../../../lib/stripe/customer';
 
 export const POST: APIRoute = async ({ request, cookies }) => {
   try {
@@ -78,6 +79,16 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       .eq('user_id', finalUserId);
 
     const isDefault = !userCards || userCards.length === 0;
+
+    // CRÍTICO: Vincular el PaymentMethod a un Stripe Customer para poder reusarlo
+    if (paymentMethodId) {
+      try {
+        const stripeCustomerId = await getOrCreateStripeCustomer(finalUserId);
+        await attachPaymentMethodToCustomer(paymentMethodId, stripeCustomerId);
+      } catch (attachErr: any) {
+        console.error('Error attaching payment method to customer:', attachErr);
+      }
+    }
 
     // Insertar en base de datos usando el cliente admin
     // Usamos los nombres de columna del schema original: card_brand, card_last4

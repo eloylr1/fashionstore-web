@@ -6,6 +6,7 @@
 import type { APIRoute } from 'astro';
 import { supabase, isSupabaseConfigured } from '../../../lib/supabase/client';
 import Stripe from 'stripe';
+import { getOrCreateStripeCustomer, attachPaymentMethodToCustomer } from '../../../lib/stripe/customer';
 
 const stripe = new Stripe(import.meta.env.STRIPE_SECRET_KEY || '', {
   // @ts-ignore - versión compatible con nuestra instalación
@@ -82,6 +83,18 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     // Crear label descriptivo
     const brandName = card.brand ? card.brand.charAt(0).toUpperCase() + card.brand.slice(1) : 'Tarjeta';
     const label = `${brandName} terminada en ${card.last4}`;
+
+    // CRÍTICO: Vincular el PaymentMethod a un Stripe Customer para poder reusarlo
+    try {
+      const stripeCustomerId = await getOrCreateStripeCustomer(
+        user.id,
+        user.email,
+      );
+      await attachPaymentMethodToCustomer(payment_method_id, stripeCustomerId);
+    } catch (attachErr: any) {
+      console.error('Error attaching payment method to customer:', attachErr);
+      // No bloquear el guardado, pero logear el error
+    }
 
     // Guardar en la base de datos
     // Intentar con stripe_payment_method_id, si la columna no existe, reintentar sin ella

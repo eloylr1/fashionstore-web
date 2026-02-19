@@ -1612,13 +1612,14 @@ const stripePublicKey = import.meta.env.PUBLIC_STRIPE_PUBLISHABLE_KEY || '';
         throw new Error('No se encontró el método de pago. Por favor, usa otra tarjeta.');
       }
 
-      // 1. Crear Payment Intent
+      // 1. Crear Payment Intent (con customer de Stripe para reutilizar tarjeta)
       const piResponse = await fetch('/api/stripe/create-payment-intent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           amount: checkoutState.total,
           currency: 'eur',
+          saved_card_user_id: userId || null,
           metadata: {
             customer_email: checkoutState.shippingData.email,
             saved_card: 'true',
