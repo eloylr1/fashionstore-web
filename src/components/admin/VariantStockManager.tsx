@@ -220,11 +220,11 @@ export default function VariantStockManager({
 
   if (loading) {
     return (
-      <div className="bg-white rounded-lg border border-charcoal-200 p-6">
+      <div className="bg-white p-6 rounded-lg shadow-sm border border-charcoal-100">
         <div className="animate-pulse space-y-4">
-          <div className="h-6 bg-charcoal-200 rounded w-1/3"></div>
-          <div className="grid grid-cols-5 gap-3">
-            {[1,2,3,4,5].map((i) => (
+          <div className="h-5 bg-charcoal-200 rounded w-1/4"></div>
+          <div className="grid grid-cols-4 gap-4">
+            {[1,2,3,4].map((i) => (
               <div key={i} className="h-20 bg-charcoal-100 rounded"></div>
             ))}
           </div>
@@ -234,66 +234,62 @@ export default function VariantStockManager({
   }
 
   return (
-    <div className="bg-white rounded-lg border border-charcoal-200 overflow-hidden">
-      {/* Header - Con colores corregidos para visibilidad */}
-      <div className="bg-gradient-to-r from-navy-800 to-navy-900 px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-lg font-semibold text-white">
-              Stock por {hasSizes && hasColors ? 'Talla y Color' : hasSizes ? 'Talla' : 'Color'}
-            </h3>
-            <p className="text-sm text-gray-300 mt-1">
-              Gestiona el inventario de cada variante individualmente
-            </p>
-          </div>
-          <div className="flex items-center gap-4">
-            <div className="text-right">
-              <p className="text-2xl font-bold text-white">{totalStock}</p>
-              <p className="text-xs text-gray-300">unidades totales</p>
-            </div>
-          </div>
+    <div className="bg-white p-6 rounded-lg shadow-sm border border-charcoal-100 space-y-6">
+      {/* Header - mismo estilo que las demás secciones */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="font-medium text-navy-900">
+            Stock por {hasSizes && hasColors ? 'Talla y Color' : hasSizes ? 'Talla' : 'Color'}
+          </h2>
+          <p className="text-xs text-charcoal-500 mt-1">
+            Gestiona el inventario de cada variante individualmente
+          </p>
+        </div>
+        <div className="text-right">
+          <p className="text-2xl font-bold text-navy-900">{totalStock}</p>
+          <p className="text-xs text-charcoal-500">unidades totales</p>
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-3 gap-4 p-4 bg-charcoal-50 border-b border-charcoal-200">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
-            <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      {/* Stats - compactos */}
+      <div className="grid grid-cols-3 gap-4">
+        <div className="flex items-center gap-3 p-3 bg-charcoal-50 rounded-lg">
+          <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
+            <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
             </svg>
           </div>
           <div>
-            <p className="text-sm text-charcoal-500">Con stock</p>
-            <p className="font-semibold text-charcoal-800">{variantsWithStock} variantes</p>
+            <p className="text-xs text-charcoal-500">Con stock</p>
+            <p className="text-sm font-semibold text-charcoal-800">{variantsWithStock} variantes</p>
           </div>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
-            <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="flex items-center gap-3 p-3 bg-charcoal-50 rounded-lg">
+          <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+            <svg className="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
             </svg>
           </div>
           <div>
-            <p className="text-sm text-charcoal-500">Agotadas</p>
-            <p className="font-semibold text-charcoal-800">{variantsOutOfStock} variantes</p>
+            <p className="text-xs text-charcoal-500">Agotadas</p>
+            <p className="text-sm font-semibold text-charcoal-800">{variantsOutOfStock} variantes</p>
           </div>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
-            <svg className="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="flex items-center gap-3 p-3 bg-charcoal-50 rounded-lg">
+          <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
+            <svg className="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
             </svg>
           </div>
           <div>
-            <p className="text-sm text-charcoal-500">Esperando</p>
-            <p className="font-semibold text-charcoal-800">{totalPendingNotifications} clientes</p>
+            <p className="text-xs text-charcoal-500">Esperando</p>
+            <p className="text-sm font-semibold text-charcoal-800">{totalPendingNotifications} clientes</p>
           </div>
         </div>
       </div>
 
       {/* Quick Actions */}
-      <div className="px-6 py-3 bg-white border-b border-charcoal-200 flex items-center justify-between">
+      <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="text-sm text-charcoal-600">Stock rápido:</span>
           <button
@@ -344,7 +340,7 @@ export default function VariantStockManager({
       </div>
 
       {/* Stock Grid/Table */}
-      <div className="p-6">
+      <div>
         {hasSizes && hasColors ? (
           viewMode === 'table' ? (
             // Vista de tabla para talla + color
@@ -421,12 +417,12 @@ export default function VariantStockManager({
             </div>
           ) : (
             // Vista de grid para talla + color
-            <div className="space-y-6">
+            <div className="space-y-4">
               {sizes.map(size => (
-                <div key={size} className="border border-charcoal-200 rounded-lg overflow-hidden">
-                  <div className="bg-charcoal-100 px-4 py-2 flex items-center justify-between">
-                    <span className="font-medium text-charcoal-800">Talla: {size}</span>
-                    <span className="text-sm text-charcoal-600">
+                <div key={size} className="border border-charcoal-100 rounded-lg overflow-hidden">
+                  <div className="bg-charcoal-50 px-4 py-2.5 flex items-center justify-between">
+                    <span className="text-sm font-medium text-charcoal-800">Talla: {size}</span>
+                    <span className="text-xs text-charcoal-500">
                       Total: {stockBySizeOnly.find(s => s.size === size)?.totalStock || 0}
                     </span>
                   </div>
@@ -619,10 +615,10 @@ export default function VariantStockManager({
 
       {/* Actions */}
       {hasChanges && (
-        <div className="sticky bottom-0 bg-white border-t border-charcoal-200 px-6 py-4 flex items-center justify-between">
+        <div className="flex items-center justify-between pt-4 border-t border-charcoal-100">
           <p className="text-sm text-charcoal-600">
             <span className="font-medium text-amber-600">Cambios sin guardar</span>
-            {' • '}
+            {' · '}
             Stock total: <span className="font-bold">{totalStock}</span> unidades
           </p>
           <div className="flex items-center gap-3">
@@ -637,7 +633,7 @@ export default function VariantStockManager({
               type="button"
               onClick={saveAllStock}
               disabled={saving}
-              className="px-6 py-2 bg-navy-900 text-white font-medium rounded-lg hover:bg-navy-800 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              className="px-5 py-2 bg-navy-900 text-white text-sm font-medium hover:bg-navy-800 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-colors"
             >
               {saving ? (
                 <>

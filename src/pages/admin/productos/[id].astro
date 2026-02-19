@@ -180,11 +180,11 @@ if (!product) {
         </div>
       </div>
       
-      <!-- Pricing & Stock -->
+      <!-- Precio -->
       <div class="bg-white p-6 rounded-lg shadow-sm border border-charcoal-100">
         <h2 class="font-medium text-navy-900 mb-4">Precio</h2>
         
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <label for="price" class="block text-sm font-medium text-charcoal-700 mb-2">
               Precio (céntimos) *
@@ -199,22 +199,6 @@ if (!product) {
               class="input-elegant w-full"
             />
             <p class="text-xs text-charcoal-500 mt-1">Ej: 9900 = 99,00€</p>
-          </div>
-          
-          <div>
-            <label for="stock" class="block text-sm font-medium text-charcoal-700 mb-2">
-              Stock Total (calculado)
-            </label>
-            <input 
-              type="number" 
-              id="stock" 
-              name="stock" 
-              min="0"
-              value={product.stock}
-              class="input-elegant w-full bg-charcoal-50"
-              readonly
-            />
-            <p class="text-xs text-charcoal-500 mt-1">Se calcula automáticamente desde el stock por talla</p>
           </div>
           
           <div class="flex items-center">
@@ -360,7 +344,6 @@ if (!product) {
           material: formData.get('material') || null,
           price: parseInt(formData.get('price'), 10),
           compare_at_price: formData.get('compare_at_price') ? parseInt(formData.get('compare_at_price'), 10) : null,
-          stock: parseInt(formData.get('stock'), 10),
           featured: formData.get('featured') === 'on',
           sizes,
           colors,
