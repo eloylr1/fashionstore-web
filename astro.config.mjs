@@ -2,6 +2,7 @@
 import { defineConfig } from 'astro/config';
 import tailwindcss from '@tailwindcss/vite';
 import react from '@astrojs/react';
+import sitemap from '@astrojs/sitemap';
 
 import node from '@astrojs/node';
 
@@ -23,7 +24,28 @@ export default defineConfig({
     plugins: [tailwindcss()]
   },
 
-  integrations: [react()],
+  integrations: [
+    react(),
+    sitemap({
+      // Filtrar rutas que NO deben estar en el sitemap
+      filter: (page) => 
+        !page.includes('/admin') &&
+        !page.includes('/api/') &&
+        !page.includes('/auth/') &&
+        !page.includes('/checkout') &&
+        !page.includes('/limpiar-cookies') &&
+        !page.includes('/cuenta/'),
+      // Rutas estáticas personalizadas para el sitemap
+      customPages: [
+        'https://eloyfashionstore.victoriafp.online/',
+        'https://eloyfashionstore.victoriafp.online/tienda',
+        'https://eloyfashionstore.victoriafp.online/login',
+        'https://eloyfashionstore.victoriafp.online/registro',
+        'https://eloyfashionstore.victoriafp.online/seguimiento',
+        'https://eloyfashionstore.victoriafp.online/carrito',
+      ],
+    }),
+  ],
 
   // Configuración de seguridad para imágenes externas (Supabase Storage)
   image: {
