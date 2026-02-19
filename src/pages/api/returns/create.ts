@@ -78,12 +78,13 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     // Verificar que el pedido existe, pertenece al usuario y está entregado
     const { data: order, error: orderError } = await (supabaseAdmin as any)
       .from('orders')
-      .select('id, order_number, status, total, user_id, delivered_at')
+      .select('*')
       .eq('id', order_id)
       .single();
 
     if (orderError || !order) {
-      return json({ success: false, error: 'Pedido no encontrado' }, 404);
+      console.error('Error fetching order for return:', orderError, 'order_id:', order_id);
+      return json({ success: false, error: 'Pedido no encontrado. Recarga la página e inténtalo de nuevo.' }, 404);
     }
 
     if (order.user_id !== user.id) {
@@ -138,12 +139,17 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       }
     }
 
-    // Crear la devolución (return_number se genera por trigger)
+    // Crear la devolución
+    // Generar return_number (el trigger lo genera si es NULL, pero lo generamos como fallback)
+    const year = new Date().getFullYear();
+    const fallbackReturnNumber = `RET-${year}-${Date.now().toString().slice(-6)}`;
+
     const { data: newReturn, error: returnError } = await (supabaseAdmin as any)
       .from('returns')
       .insert({
         order_id,
         user_id: user.id,
+        return_number: fallbackReturnNumber,
         status: 'requested',
         reason,
         description: description || null,
@@ -155,7 +161,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 
     if (returnError) {
       console.error('Error creating return:', returnError);
-      return json({ success: false, error: 'Error al crear la devolución' }, 500);
+      return json({ success: false, error: `Error al crear la devolución: ${returnError.message || 'Error desconocido'}` }, 500);
     }
 
     // Crear return_items
