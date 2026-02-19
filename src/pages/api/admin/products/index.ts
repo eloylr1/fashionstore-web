@@ -107,7 +107,8 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       sizes = [], 
       colors = [], 
       material, 
-      featured = false 
+      featured = false,
+      size_stocks = {} 
     } = body;
 
     // Validaciones
@@ -149,6 +150,59 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       .single();
 
     if (error) throw error;
+
+    // Crear entradas de stock por variante (talla + color)
+    if (data && Object.keys(size_stocks).length > 0) {
+      const productId = data.id;
+      const colorList = colors.length > 0 ? colors : [null];
+      
+      const variantInserts: { product_id: string; size: string; color: string | null; stock: number }[] = [];
+      
+      for (const [size, sizeStock] of Object.entries(size_stocks)) {
+        const stockPerSize = sizeStock as number;
+        if (colorList.length > 1) {
+          // Distribuir stock equitativamente entre colores
+          const stockPerColor = Math.floor(stockPerSize / colorList.length);
+          const remainder = stockPerSize % colorList.length;
+          
+          colorList.forEach((color: string | null, idx: number) => {
+            variantInserts.push({
+              product_id: productId,
+              size,
+              color,
+              stock: stockPerColor + (idx < remainder ? 1 : 0)
+            });
+          });
+        } else {
+          variantInserts.push({
+            product_id: productId,
+            size,
+            color: colorList[0] || null,
+            stock: stockPerSize
+          });
+        }
+      }
+      
+      if (variantInserts.length > 0) {
+        const { error: variantError } = await supabase
+          .from('product_variant_stock')
+          .insert(variantInserts as any);
+        
+        if (variantError) {
+          console.error('Error creating variant stock:', variantError);
+          // Intentar con product_size_stock como fallback
+          const sizeInserts = Object.entries(size_stocks).map(([size, stock]) => ({
+            product_id: productId,
+            size,
+            stock: stock as number
+          }));
+          
+          await supabase
+            .from('product_size_stock')
+            .insert(sizeInserts as any);
+        }
+      }
+    }
 
     return new Response(JSON.stringify({ 
       success: true, 

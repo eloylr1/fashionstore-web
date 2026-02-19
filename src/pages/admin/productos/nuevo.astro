@@ -142,11 +142,11 @@ const sizeOptions: Record<string, string[]> = {
         </div>
       </div>
       
-      <!-- Pricing & Stock -->
+      <!-- Pricing -->
       <div class="bg-white border border-charcoal-100 p-6">
-        <h2 class="font-medium text-navy-900 mb-6">Precio e inventario</h2>
+        <h2 class="font-medium text-navy-900 mb-6">Precio</h2>
         
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <label for="price" class="block text-sm font-medium text-charcoal-700 mb-2">
               Precio (€) *
@@ -164,21 +164,6 @@ const sizeOptions: Record<string, string[]> = {
             <p class="text-xs text-charcoal-400 mt-1">
               Se guardará en céntimos
             </p>
-          </div>
-          
-          <div>
-            <label for="stock" class="block text-sm font-medium text-charcoal-700 mb-2">
-              Stock *
-            </label>
-            <input
-              type="number"
-              id="stock"
-              name="stock"
-              required
-              min="0"
-              class="input-elegant"
-              placeholder="50"
-            />
           </div>
           
           <div class="flex items-end">
@@ -224,6 +209,22 @@ const sizeOptions: Record<string, string[]> = {
             </div>
           </div>
           
+          <!-- Stock por talla -->
+          <div id="size-stock-section" class="hidden">
+            <label class="block text-sm font-medium text-charcoal-700 mb-3">
+              Stock por talla *
+              <span class="text-xs font-normal text-charcoal-400 ml-2">Asigna unidades a cada talla seleccionada</span>
+            </label>
+            <div id="size-stock-inputs" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+              <!-- Se genera dinámicamente -->
+            </div>
+            <div class="mt-3 flex items-center gap-2 text-sm">
+              <span class="text-charcoal-500">Stock total:</span>
+              <span id="total-stock-display" class="font-semibold text-navy-900">0</span>
+              <span class="text-charcoal-400">unidades</span>
+            </div>
+          </div>
+
           <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label for="colors" class="block text-sm font-medium text-charcoal-700 mb-2">
@@ -318,6 +319,61 @@ const sizeOptions: Record<string, string[]> = {
     const categorySelect = document.getElementById('category_id') as HTMLSelectElement;
     const sizesContainer = document.getElementById('sizes-container') as HTMLDivElement;
     const sizeTypeLabel = document.getElementById('size-type-label') as HTMLSpanElement;
+    const sizeStockSection = document.getElementById('size-stock-section') as HTMLDivElement;
+    const sizeStockInputs = document.getElementById('size-stock-inputs') as HTMLDivElement;
+    const totalStockDisplay = document.getElementById('total-stock-display') as HTMLSpanElement;
+
+    // Función para actualizar los inputs de stock según las tallas seleccionadas
+    function updateStockInputs() {
+      const selectedSizes = Array.from(
+        document.querySelectorAll('input[name="sizes"]:checked')
+      ).map((input) => (input as HTMLInputElement).value);
+
+      if (selectedSizes.length === 0) {
+        sizeStockSection.classList.add('hidden');
+        sizeStockInputs.innerHTML = '';
+        totalStockDisplay.textContent = '0';
+        return;
+      }
+
+      sizeStockSection.classList.remove('hidden');
+
+      // Guardar valores actuales antes de regenerar
+      const currentValues: Record<string, string> = {};
+      sizeStockInputs.querySelectorAll('input[data-size]').forEach((input) => {
+        const inp = input as HTMLInputElement;
+        currentValues[inp.dataset.size!] = inp.value;
+      });
+
+      sizeStockInputs.innerHTML = selectedSizes.map(size => `
+        <div class="flex flex-col gap-1.5">
+          <label class="text-xs font-medium text-charcoal-600 text-center">${size}</label>
+          <input
+            type="number"
+            data-size="${size}"
+            class="size-stock-input input-elegant text-center text-sm"
+            min="0"
+            value="${currentValues[size] || '0'}"
+            placeholder="0"
+          />
+        </div>
+      `).join('');
+
+      // Añadir event listeners para recalcular total
+      sizeStockInputs.querySelectorAll('.size-stock-input').forEach((input) => {
+        input.addEventListener('input', recalculateTotal);
+      });
+
+      recalculateTotal();
+    }
+
+    function recalculateTotal() {
+      let total = 0;
+      sizeStockInputs.querySelectorAll('.size-stock-input').forEach((input) => {
+        total += parseInt((input as HTMLInputElement).value) || 0;
+      });
+      totalStockDisplay.textContent = total.toString();
+    }
 
     // Función para detectar el tipo de talla
     function getSizeType(slug: string, categoryName: string): string {
@@ -368,7 +424,21 @@ const sizeOptions: Record<string, string[]> = {
         const checkbox = sizesContainer.querySelector('input[type="checkbox"]') as HTMLInputElement;
         if (checkbox) checkbox.checked = true;
       }
+
+      // Añadir listeners a los nuevos checkboxes de tallas
+      attachSizeCheckboxListeners();
+      updateStockInputs();
     }
+
+    // Función para añadir listeners a los checkboxes de tallas
+    function attachSizeCheckboxListeners() {
+      sizesContainer.querySelectorAll('input[name="sizes"]').forEach((checkbox) => {
+        checkbox.addEventListener('change', updateStockInputs);
+      });
+    }
+
+    // Listener inicial para los checkboxes por defecto
+    attachSizeCheckboxListeners();
 
     // Evento de cambio de categoría
     categorySelect.addEventListener('change', () => {
@@ -415,6 +485,16 @@ const sizeOptions: Record<string, string[]> = {
           throw new Error('Selecciona al menos una talla');
         }
         
+        // Get stock per size
+        const sizeStocks: Record<string, number> = {};
+        let totalStock = 0;
+        document.querySelectorAll('.size-stock-input').forEach((input) => {
+          const inp = input as HTMLInputElement;
+          const stock = parseInt(inp.value) || 0;
+          sizeStocks[inp.dataset.size!] = stock;
+          totalStock += stock;
+        });
+        
         // Get images from ImageUploader (stored in hidden input)
         const imagesInput = document.getElementById('images') as HTMLInputElement;
         const images = JSON.parse(imagesInput.value || '[]');
@@ -433,12 +513,13 @@ const sizeOptions: Record<string, string[]> = {
           description: formData.get('description') as string,
           category_id: formData.get('category_id') as string,
           price: priceInCents,
-          stock: parseInt(formData.get('stock') as string),
+          stock: totalStock,
           featured: formData.get('featured') === 'on',
           sizes,
           colors,
           material: (formData.get('material') as string) || null,
           images,
+          size_stocks: sizeStocks,
         };
         
         console.log('Creando producto:', productData);

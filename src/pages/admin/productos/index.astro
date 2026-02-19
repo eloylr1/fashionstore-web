@@ -52,6 +52,23 @@ if (isSupabaseAdminConfigured() && supabaseAdmin) {
   if (prodError) console.error('Error fetching products:', prodError);
   if (realProducts?.length) products = realProducts;
 
+  // Obtener stock por variante para todos los productos
+  const { data: variantStock } = await (supabaseAdmin as any)
+    .from('product_variant_stock')
+    .select('product_id, size, color, stock');
+
+  if (variantStock) {
+    const stockMap: Record<string, { size: string; color: string | null; stock: number }[]> = {};
+    (variantStock as any[]).forEach((v: any) => {
+      if (!stockMap[v.product_id]) stockMap[v.product_id] = [];
+      stockMap[v.product_id].push({ size: v.size, color: v.color, stock: v.stock });
+    });
+    products = products.map(p => ({
+      ...p,
+      variant_stock: stockMap[p.id] || []
+    }));
+  }
+
   const { data: realCategories } = await supabaseAdmin
     .from('categories')
     .select('id, name')
@@ -157,16 +174,46 @@ const categoriesJson = JSON.stringify(categories);
                     </span>
                   </td>
                   <td class="px-6 py-4">
-                    <span class={`inline-flex items-center gap-1.5 text-sm font-medium ${
-                      product.stock < 10 ? 'text-red-600' : product.stock > 50 ? 'text-green-600' : 'text-charcoal-800'
-                    }`}>
-                      {product.stock < 10 && (
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                        </svg>
-                      )}
-                      {product.stock}
-                    </span>
+                    {product.variant_stock && product.variant_stock.length > 0 ? (
+                      <div class="space-y-1">
+                        {(() => {
+                          const sizeMap = {} as any;
+                          product.variant_stock.forEach((v: any) => {
+                            sizeMap[v.size] = (sizeMap[v.size] || 0) + v.stock;
+                          });
+                          return Object.entries(sizeMap).map(([size, stock]) => (
+                            <div class="flex items-center gap-2 text-xs">
+                              <span class="inline-flex items-center justify-center min-w-[36px] px-1.5 py-0.5 bg-charcoal-50 border border-charcoal-200 font-medium text-charcoal-600 rounded">
+                                {size}
+                              </span>
+                              <span class={`font-medium ${
+                                (stock as number) === 0 ? 'text-red-600' : (stock as number) < 10 ? 'text-amber-600' : 'text-charcoal-800'
+                              }`}>
+                                {stock as number}
+                              </span>
+                            </div>
+                          ));
+                        })()}
+                        <div class="border-t border-charcoal-100 pt-1 mt-1">
+                          <span class={`text-xs font-semibold ${
+                            product.stock === 0 ? 'text-red-600' : product.stock < 10 ? 'text-amber-600' : 'text-charcoal-800'
+                          }`}>
+                            Total: {product.stock}
+                          </span>
+                        </div>
+                      </div>
+                    ) : (
+                      <span class={`inline-flex items-center gap-1.5 text-sm font-medium ${
+                        product.stock === 0 ? 'text-red-600' : product.stock < 10 ? 'text-amber-600' : 'text-charcoal-800'
+                      }`}>
+                        {product.stock === 0 && (
+                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                          </svg>
+                        )}
+                        {product.stock}
+                      </span>
+                    )}
                   </td>
                   <td class="px-6 py-4">
                     {product.featured ? (
