@@ -253,13 +253,15 @@ if (!product) {
       </div>
       
       <!-- Stock por Variantes (Talla y Color) -->
-      <VariantStockManager 
-        client:load 
-        productId={product.id}
-        sizes={product.sizes || []}
-        colors={product.colors || []}
-        productName={product.name}
-      />
+      <div class="mt-8">
+        <VariantStockManager 
+          client:load 
+          productId={product.id}
+          sizes={product.sizes || []}
+          colors={product.colors || []}
+          productName={product.name}
+        />
+      </div>
       
       <!-- Images -->
       <div class="bg-white p-6 rounded-lg shadow-sm border border-charcoal-100">
