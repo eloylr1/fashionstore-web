@@ -44,7 +44,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     }
 
     // Verificar que el pedido existe, pertenece al usuario y está entregado
-    const { data: order, error: orderError } = await supabaseAdmin
+    const { data: order, error: orderError } = await (supabaseAdmin as any)
       .from('orders')
       .select('id, order_number, status, total, user_id, delivered_at')
       .eq('id', order_id)
@@ -107,7 +107,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     }
 
     // Crear la devolución (return_number se genera por trigger)
-    const { data: newReturn, error: returnError } = await supabaseAdmin
+    const { data: newReturn, error: returnError } = await (supabaseAdmin as any)
       .from('returns')
       .insert({
         order_id,
@@ -134,7 +134,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       reason: reason,
     }));
 
-    const { error: returnItemsError } = await supabaseAdmin
+    const { error: returnItemsError } = await (supabaseAdmin as any)
       .from('return_items')
       .insert(returnItems);
 

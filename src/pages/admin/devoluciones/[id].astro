@@ -22,7 +22,7 @@ let order: any = null;
 if (isSupabaseAdminConfigured() && supabaseAdmin) {
   try {
     // Obtener devolución
-    const { data: ret, error } = await supabaseAdmin
+    const { data: retRaw, error } = await (supabaseAdmin as any)
       .from('returns')
       .select(`
         *,
@@ -31,6 +31,7 @@ if (isSupabaseAdminConfigured() && supabaseAdmin) {
       .eq('id', id)
       .single();
 
+    const ret = retRaw as any;
     if (error) console.error('Error:', error);
     returnData = ret;
     order = ret?.orders;
@@ -47,7 +48,7 @@ if (isSupabaseAdminConfigured() && supabaseAdmin) {
 
     // Items devueltos
     if (ret) {
-      const { data: items } = await supabaseAdmin
+      const { data: items } = await (supabaseAdmin as any)
         .from('return_items')
         .select(`
           *,

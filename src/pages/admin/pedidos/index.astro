@@ -185,6 +185,7 @@ const orderStatuses: Record<string, { label: string; color: string; bg: string }
                         </a>
                         <select 
                           data-order-id={order.id}
+                          data-prev-status={order.status}
                           class="status-select px-3 py-1.5 text-xs border border-charcoal-200 focus:border-navy-500 focus:ring-1 focus:ring-navy-500/20 outline-none"
                         >
                           {Object.entries(orderStatuses).map(([value, { label }]) => (
@@ -253,21 +254,37 @@ const orderStatuses: Record<string, { label: string; color: string; bg: string }
       const target = e.target as HTMLSelectElement;
       const orderId = target.getAttribute('data-order-id');
       const newStatus = target.value;
+      const previousValue = target.getAttribute('data-prev-status') || '';
 
       try {
         const response = await fetch(`/api/admin/orders/${orderId}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
           body: JSON.stringify({ status: newStatus }),
         });
 
         if (response.ok) {
           window.location.reload();
         } else {
-          alert('Error al actualizar el estado');
+          let errorMsg = 'Error al actualizar el estado';
+          try {
+            const data = await response.json();
+            errorMsg = data.error || errorMsg;
+          } catch {}
+          // Si es error de sesión, ofrecer recargar
+          if (response.status === 401) {
+            if (confirm(errorMsg + '. ¿Recargar la página para renovar sesión?')) {
+              window.location.reload();
+            }
+          } else {
+            alert(errorMsg);
+          }
+          target.value = previousValue;
         }
       } catch (error) {
-        alert('Error al actualizar el estado');
+        alert('Error de red al actualizar el estado');
+        target.value = previousValue;
       }
     });
   });

@@ -143,6 +143,7 @@ const paymentMethods: Record<string, string> = {
         <select 
           id="status-select"
           data-order-id={order.id}
+          data-prev-status={order.status}
           class="px-4 py-2 text-sm border border-charcoal-200 focus:border-navy-500 focus:ring-2 focus:ring-navy-500/20 outline-none"
         >
           {Object.entries(orderStatuses).map(([value, { label }]) => (
@@ -414,22 +415,37 @@ const paymentMethods: Record<string, string> = {
       const select = e.target as HTMLSelectElement;
       const orderId = select.dataset.orderId;
       const newStatus = select.value;
+      const previousValue = select.dataset.prevStatus || '';
 
       try {
         const response = await fetch(`/api/admin/orders/${orderId}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
           body: JSON.stringify({ status: newStatus })
         });
 
         if (response.ok) {
           window.location.reload();
         } else {
-          alert('Error al actualizar el estado');
+          let errorMsg = 'Error al actualizar el estado';
+          try {
+            const data = await response.json();
+            errorMsg = data.error || errorMsg;
+          } catch {}
+          if (response.status === 401) {
+            if (confirm(errorMsg + '. ¿Recargar la página?')) {
+              window.location.reload();
+            }
+          } else {
+            alert(errorMsg);
+          }
+          select.value = previousValue;
         }
       } catch (error) {
         console.error('Error:', error);
-        alert('Error al actualizar el estado');
+        alert('Error de red al actualizar el estado');
+        select.value = previousValue;
       }
     });
 
