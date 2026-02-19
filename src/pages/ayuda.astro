@@ -1,0 +1,181 @@
+---
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * FASHIONMARKET - Centro de Ayuda
+ * Preguntas frecuentes y canales de soporte
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
+
+import BaseLayout from '../layouts/BaseLayout.astro';
+
+const faqs = [
+  {
+    category: 'Pedidos y Envíos',
+    items: [
+      {
+        question: '¿Cuánto tarda en llegar mi pedido?',
+        answer: 'Los pedidos estándar se entregan en 3-5 días laborables. El envío exprés tarda 1-2 días laborables. Los envíos a Baleares y Canarias pueden tardar 1-2 días adicionales.'
+      },
+      {
+        question: '¿Cuánto cuesta el envío?',
+        answer: 'El envío estándar es gratuito en pedidos superiores a 100€. Para pedidos inferiores, el coste de envío estándar es de 4,95€ y el exprés de 9,95€.'
+      },
+      {
+        question: '¿Puedo hacer seguimiento de mi pedido?',
+        answer: 'Sí, una vez que tu pedido sea enviado recibirás un email con el número de seguimiento. También puedes consultar el estado en la sección "Mis Pedidos" de tu cuenta.'
+      },
+      {
+        question: '¿Hacéis envíos internacionales?',
+        answer: 'Actualmente realizamos envíos a toda España peninsular, Baleares y Canarias. Estamos trabajando para ampliar a más países de la UE próximamente.'
+      }
+    ]
+  },
+  {
+    category: 'Devoluciones y Reembolsos',
+    items: [
+      {
+        question: '¿Cuál es la política de devoluciones?',
+        answer: 'Dispones de 30 días desde la recepción del pedido para solicitar una devolución. Los artículos deben estar sin usar, con etiquetas y en su embalaje original.'
+      },
+      {
+        question: '¿Cómo solicito una devolución?',
+        answer: 'Accede a tu cuenta, ve a "Mis Pedidos", selecciona el pedido y haz clic en "Solicitar devolución". También puedes hacerlo desde la sección "Devoluciones" de tu cuenta.'
+      },
+      {
+        question: '¿Cuánto tardan en procesarse los reembolsos?',
+        answer: 'Una vez recibido y verificado el artículo devuelto, el reembolso se procesa en 5-10 días laborables. El tiempo puede variar según tu entidad bancaria.'
+      },
+      {
+        question: '¿Las devoluciones son gratuitas?',
+        answer: 'Sí, las devoluciones dentro del plazo de 30 días son completamente gratuitas.'
+      }
+    ]
+  },
+  {
+    category: 'Cuenta y Pagos',
+    items: [
+      {
+        question: '¿Qué métodos de pago aceptáis?',
+        answer: 'Aceptamos tarjetas de crédito/débito (Visa, Mastercard, American Express), pago contra reembolso y tarjetas guardadas para compras futuras.'
+      },
+      {
+        question: '¿Es seguro comprar en FashionMarket?',
+        answer: 'Absolutamente. Utilizamos cifrado SSL y procesamos los pagos a través de Stripe, la plataforma de pagos más segura del mundo. Nunca almacenamos los datos completos de tu tarjeta.'
+      },
+      {
+        question: '¿Cómo cambio mi contraseña?',
+        answer: 'Ve a "Mi Cuenta" > "Configuración" y encontrarás la opción para cambiar tu contraseña. También puedes usar "He olvidado mi contraseña" desde la página de inicio de sesión.'
+      },
+      {
+        question: '¿Puedo eliminar mi cuenta?',
+        answer: 'Sí, puedes solicitar la eliminación de tu cuenta desde "Mi Cuenta" > "Configuración" > "Zona de peligro". Ten en cuenta que esta acción es irreversible.'
+      }
+    ]
+  },
+  {
+    category: 'Productos y Tallas',
+    items: [
+      {
+        question: '¿Cómo sé qué talla elegir?',
+        answer: 'En cada producto encontrarás una guía de tallas detallada. Si tienes dudas, nuestro recomendador de tallas te ayudará a encontrar la talla perfecta basándose en tus medidas.'
+      },
+      {
+        question: '¿Los productos son de calidad?',
+        answer: 'Todos nuestros productos están confeccionados con materiales premium y pasan rigurosos controles de calidad. Trabajamos con los mejores proveedores de tejidos.'
+      },
+      {
+        question: '¿Puedo solicitar un artículo agotado?',
+        answer: 'Si un artículo está agotado, puedes activar la notificación de disponibilidad y te avisaremos en cuanto vuelva a estar en stock.'
+      }
+    ]
+  }
+];
+---
+
+<BaseLayout title="Centro de Ayuda | FashionMarket">
+  <main class="min-h-screen bg-cream py-8 lg:py-12">
+    <div class="container-custom max-w-4xl">
+      <!-- Breadcrumb -->
+      <nav class="mb-6">
+        <ol class="flex items-center gap-2 text-sm text-charcoal-500">
+          <li><a href="/" class="hover:text-navy-900 transition-colors">Inicio</a></li>
+          <li>/</li>
+          <li class="text-navy-900 font-medium">Centro de Ayuda</li>
+        </ol>
+      </nav>
+
+      <!-- Header -->
+      <div class="text-center mb-10">
+        <h1 class="text-3xl lg:text-4xl font-serif text-navy-900 mb-3">Centro de Ayuda</h1>
+        <p class="text-charcoal-500 text-lg">¿En qué podemos ayudarte?</p>
+      </div>
+
+      <!-- Contacto rápido -->
+      <div class="grid sm:grid-cols-3 gap-4 mb-10">
+        <a href="mailto:soporte@fashionmarket.es" class="bg-white rounded-lg shadow-sm p-5 text-center hover:shadow-md transition-shadow">
+          <svg class="w-8 h-8 mx-auto text-gold-matte mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+          </svg>
+          <p class="font-medium text-navy-900">Email</p>
+          <p class="text-sm text-charcoal-500 mt-1">soporte@fashionmarket.es</p>
+        </a>
+        <div class="bg-white rounded-lg shadow-sm p-5 text-center">
+          <svg class="w-8 h-8 mx-auto text-gold-matte mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+          </svg>
+          <p class="font-medium text-navy-900">Teléfono</p>
+          <p class="text-sm text-charcoal-500 mt-1">900 123 456</p>
+          <p class="text-xs text-charcoal-400">L-V 9:00-18:00</p>
+        </div>
+        <div class="bg-white rounded-lg shadow-sm p-5 text-center">
+          <svg class="w-8 h-8 mx-auto text-gold-matte mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <p class="font-medium text-navy-900">Horario</p>
+          <p class="text-sm text-charcoal-500 mt-1">Lunes a Viernes</p>
+          <p class="text-xs text-charcoal-400">9:00 - 18:00h</p>
+        </div>
+      </div>
+
+      <!-- FAQs -->
+      {faqs.map((section) => (
+        <div class="bg-white rounded-lg shadow-sm mb-6">
+          <div class="p-6 border-b border-charcoal-100">
+            <h2 class="text-xl font-serif text-navy-900">{section.category}</h2>
+          </div>
+          <div class="divide-y divide-charcoal-100">
+            {section.items.map((faq) => (
+              <details class="group">
+                <summary class="p-5 cursor-pointer flex items-center justify-between hover:bg-charcoal-50 transition-colors">
+                  <span class="font-medium text-navy-900 pr-4">{faq.question}</span>
+                  <svg class="w-5 h-5 text-charcoal-400 flex-shrink-0 transform transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </summary>
+                <div class="px-5 pb-5 text-charcoal-600 text-sm leading-relaxed">
+                  {faq.answer}
+                </div>
+              </details>
+            ))}
+          </div>
+        </div>
+      ))}
+
+      <!-- CTA final -->
+      <div class="bg-navy-900 rounded-lg p-8 text-center text-white">
+        <h3 class="text-xl font-serif mb-2">¿No encuentras lo que buscas?</h3>
+        <p class="text-white/70 mb-4">Nuestro equipo de soporte estará encantado de ayudarte</p>
+        <a href="mailto:soporte@fashionmarket.es" class="inline-block bg-gold-matte text-navy-900 px-6 py-3 rounded-lg font-medium hover:bg-gold-matte/90 transition-colors">
+          Contactar soporte
+        </a>
+      </div>
+
+      <!-- Volver -->
+      <div class="mt-6">
+        <a href="/" class="text-charcoal-600 hover:text-navy-900 transition-colors text-sm">
+          ← Volver al inicio
+        </a>
+      </div>
+    </div>
+  </main>
+</BaseLayout>

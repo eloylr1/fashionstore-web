@@ -1,0 +1,136 @@
+---
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * FASHIONMARKET - Política de Privacidad
+ * Información legal sobre tratamiento de datos personales
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
+
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="Política de Privacidad | FashionMarket">
+  <main class="min-h-screen bg-cream py-8 lg:py-12">
+    <div class="container-custom max-w-3xl">
+      <!-- Breadcrumb -->
+      <nav class="mb-6">
+        <ol class="flex items-center gap-2 text-sm text-charcoal-500">
+          <li><a href="/" class="hover:text-navy-900 transition-colors">Inicio</a></li>
+          <li>/</li>
+          <li class="text-navy-900 font-medium">Política de Privacidad</li>
+        </ol>
+      </nav>
+
+      <div class="bg-white rounded-lg shadow-sm">
+        <div class="p-6 lg:p-10">
+          <h1 class="text-3xl font-serif text-navy-900 mb-2">Política de Privacidad</h1>
+          <p class="text-sm text-charcoal-400 mb-8">Última actualización: 19 de febrero de 2026</p>
+
+          <div class="prose prose-charcoal max-w-none space-y-8 text-charcoal-700 text-sm leading-relaxed">
+
+            <section>
+              <h2 class="text-lg font-serif text-navy-900 mb-3">1. Responsable del tratamiento</h2>
+              <p>FashionMarket, S.L. (en adelante, "FashionMarket") es el responsable del tratamiento de los datos personales recogidos a través de este sitio web.</p>
+              <ul class="list-disc pl-5 space-y-1 mt-2">
+                <li><strong>Denominación social:</strong> FashionMarket, S.L.</li>
+                <li><strong>CIF:</strong> B-12345678</li>
+                <li><strong>Domicilio:</strong> Calle Moda 1, 28001 Madrid, España</li>
+                <li><strong>Email:</strong> privacidad@fashionmarket.es</li>
+              </ul>
+            </section>
+
+            <section>
+              <h2 class="text-lg font-serif text-navy-900 mb-3">2. Datos que recopilamos</h2>
+              <p>Recopilamos los siguientes datos personales:</p>
+              <ul class="list-disc pl-5 space-y-1 mt-2">
+                <li><strong>Datos de registro:</strong> nombre, apellidos, email y contraseña.</li>
+                <li><strong>Datos de envío:</strong> dirección postal, teléfono de contacto.</li>
+                <li><strong>Datos de pago:</strong> procesados de forma segura por Stripe. No almacenamos datos completos de tarjetas.</li>
+                <li><strong>Datos de navegación:</strong> cookies técnicas y de preferencias (ver Política de Cookies).</li>
+                <li><strong>Historial de compras:</strong> pedidos, facturas y devoluciones.</li>
+              </ul>
+            </section>
+
+            <section>
+              <h2 class="text-lg font-serif text-navy-900 mb-3">3. Finalidad del tratamiento</h2>
+              <p>Tus datos se utilizan para:</p>
+              <ul class="list-disc pl-5 space-y-1 mt-2">
+                <li>Gestionar tu cuenta de usuario y autenticación.</li>
+                <li>Procesar y entregar tus pedidos.</li>
+                <li>Gestionar pagos, facturación y devoluciones.</li>
+                <li>Enviarte comunicaciones transaccionales (confirmaciones, seguimiento).</li>
+                <li>Enviarte newsletter y ofertas promocionales (solo si has dado tu consentimiento).</li>
+                <li>Mejorar nuestros servicios y la experiencia de usuario.</li>
+              </ul>
+            </section>
+
+            <section>
+              <h2 class="text-lg font-serif text-navy-900 mb-3">4. Base legal</h2>
+              <p>El tratamiento de tus datos se fundamenta en:</p>
+              <ul class="list-disc pl-5 space-y-1 mt-2">
+                <li><strong>Ejecución contractual:</strong> para procesar tus compras y gestionar tu cuenta.</li>
+                <li><strong>Consentimiento:</strong> para el envío de comunicaciones comerciales y newsletter.</li>
+                <li><strong>Interés legítimo:</strong> para la mejora de nuestros servicios y prevención del fraude.</li>
+                <li><strong>Obligación legal:</strong> para el cumplimiento de obligaciones fiscales y contables.</li>
+              </ul>
+            </section>
+
+            <section>
+              <h2 class="text-lg font-serif text-navy-900 mb-3">5. Conservación de datos</h2>
+              <p>Conservaremos tus datos personales mientras mantengas tu cuenta activa. Una vez eliminada, los datos se conservarán bloqueados durante los plazos legales exigidos (normalmente 5 años para obligaciones fiscales).</p>
+            </section>
+
+            <section>
+              <h2 class="text-lg font-serif text-navy-900 mb-3">6. Destinatarios de los datos</h2>
+              <p>Tus datos podrán ser comunicados a:</p>
+              <ul class="list-disc pl-5 space-y-1 mt-2">
+                <li><strong>Stripe:</strong> para el procesamiento seguro de pagos.</li>
+                <li><strong>Empresas de transporte:</strong> para la entrega de pedidos.</li>
+                <li><strong>Supabase:</strong> como proveedor de infraestructura de base de datos.</li>
+                <li><strong>Administraciones públicas:</strong> cuando exista obligación legal.</li>
+              </ul>
+              <p class="mt-2">No vendemos ni cedemos tus datos a terceros con fines comerciales.</p>
+            </section>
+
+            <section>
+              <h2 class="text-lg font-serif text-navy-900 mb-3">7. Tus derechos</h2>
+              <p>De acuerdo con el RGPD, tienes derecho a:</p>
+              <ul class="list-disc pl-5 space-y-1 mt-2">
+                <li><strong>Acceso:</strong> conocer qué datos tuyos tratamos.</li>
+                <li><strong>Rectificación:</strong> modificar datos inexactos o incompletos.</li>
+                <li><strong>Supresión:</strong> solicitar la eliminación de tus datos.</li>
+                <li><strong>Portabilidad:</strong> obtener una copia de tus datos en formato electrónico.</li>
+                <li><strong>Oposición:</strong> oponerte al tratamiento en determinadas circunstancias.</li>
+                <li><strong>Limitación:</strong> solicitar la limitación del tratamiento.</li>
+              </ul>
+              <p class="mt-2">Puedes ejercer estos derechos desde la sección <a href="/cuenta/configuracion" class="text-navy-900 underline hover:text-gold-matte">Configuración de tu cuenta</a> o enviando un email a <a href="mailto:privacidad@fashionmarket.es" class="text-navy-900 underline hover:text-gold-matte">privacidad@fashionmarket.es</a>.</p>
+            </section>
+
+            <section>
+              <h2 class="text-lg font-serif text-navy-900 mb-3">8. Seguridad</h2>
+              <p>Implementamos medidas técnicas y organizativas para proteger tus datos: cifrado SSL/TLS, almacenamiento seguro de contraseñas, control de accesos y auditorías periódicas.</p>
+            </section>
+
+            <section>
+              <h2 class="text-lg font-serif text-navy-900 mb-3">9. Cookies</h2>
+              <p>Utilizamos cookies técnicas y de preferencias necesarias para el funcionamiento del sitio. Puedes gestionar tus preferencias desde el botón "Gestionar Cookies" en el pie de página.</p>
+            </section>
+
+            <section>
+              <h2 class="text-lg font-serif text-navy-900 mb-3">10. Modificaciones</h2>
+              <p>Nos reservamos el derecho de actualizar esta política. Cualquier cambio será publicado en esta página con la fecha de actualización correspondiente.</p>
+            </section>
+
+          </div>
+        </div>
+      </div>
+
+      <!-- Volver -->
+      <div class="mt-6">
+        <a href="/" class="text-charcoal-600 hover:text-navy-900 transition-colors text-sm">
+          ← Volver al inicio
+        </a>
+      </div>
+    </div>
+  </main>
+</BaseLayout>
