@@ -57,8 +57,8 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       .from('payment_methods')
       .select('id')
       .eq('user_id', user.id)
-      .eq('last_four', card.last4)
-      .eq('brand', card.brand);
+      .eq('card_last4', card.last4)
+      .eq('card_brand', card.brand);
 
     if (existingCards && existingCards.length > 0) {
       return new Response(JSON.stringify({ 
@@ -84,21 +84,39 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     const label = `${brandName} terminada en ${card.last4}`;
 
     // Guardar en la base de datos
-    const { data: savedCard, error } = await supabase
+    // Intentar con stripe_payment_method_id, si la columna no existe, reintentar sin ella
+    const basePayload: Record<string, any> = {
+      user_id: user.id,
+      type: 'card',
+      card_brand: card.brand,
+      card_last4: card.last4,
+      expiry_month: card.exp_month,
+      expiry_year: card.exp_year,
+      is_default: isDefault,
+    };
+
+    let savedCard: any = null;
+    let error: any = null;
+
+    const result1 = await supabase
       .from('payment_methods')
-      .insert({
-        user_id: user.id,
-        type: 'card',
-        label: label,
-        last_four: card.last4,
-        brand: card.brand,
-        expiry_month: card.exp_month,
-        expiry_year: card.exp_year,
-        is_default: isDefault,
-        stripe_payment_method_id: payment_method_id,
-      } as any)
+      .insert({ ...basePayload, stripe_payment_method_id: payment_method_id } as any)
       .select()
       .single();
+
+    if (result1.error && result1.error.message?.includes('stripe_payment_method_id')) {
+      console.warn('stripe_payment_method_id column not found, inserting without it');
+      const result2 = await supabase
+        .from('payment_methods')
+        .insert(basePayload as any)
+        .select()
+        .single();
+      savedCard = result2.data;
+      error = result2.error;
+    } else {
+      savedCard = result1.data;
+      error = result1.error;
+    }
 
     if (error) {
       console.error('Error guardando tarjeta:', error);
@@ -113,9 +131,8 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       message: 'Tarjeta guardada correctamente',
       card: {
         id: (savedCard as any)?.id,
-        label: (savedCard as any)?.label,
-        last_four: (savedCard as any)?.last_four,
-        brand: (savedCard as any)?.brand,
+        card_last4: (savedCard as any)?.card_last4,
+        card_brand: (savedCard as any)?.card_brand,
       }
     }), { 
       status: 200,

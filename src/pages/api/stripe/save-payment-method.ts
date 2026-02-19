@@ -81,22 +81,39 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 
     // Insertar en base de datos usando el cliente admin
     // Usamos los nombres de columna del schema original: card_brand, card_last4
-    const { data, error: insertError } = await supabaseAdmin
+    // Intentar con stripe_payment_method_id primero, si la columna no existe, reintentar sin ella
+    let data: any = null;
+    let insertError: any = null;
+
+    const basePayload: Record<string, any> = {
+      user_id: finalUserId,
+      type: 'card',
+      card_brand: brand,
+      card_last4: last4,
+      expiry_month: expMonth,
+      expiry_year: expYear,
+      is_default: isDefault,
+    };
+
+    // Primer intento: con stripe_payment_method_id
+    const result1 = await supabaseAdmin
       .from('payment_methods')
-      .insert({
-        user_id: finalUserId,
-        type: 'card',
-        card_brand: brand,
-        card_last4: last4,
-        brand: brand,
-        last_four: last4,
-        expiry_month: expMonth,
-        expiry_year: expYear,
-        is_default: isDefault,
-        stripe_payment_method_id: paymentMethodId,
-        label: `${(brand || 'Card').charAt(0).toUpperCase()}${(brand || 'card').slice(1)} terminada en ${last4}`,
-      })
+      .insert({ ...basePayload, stripe_payment_method_id: paymentMethodId })
       .select();
+
+    if (result1.error && result1.error.message?.includes('stripe_payment_method_id')) {
+      // La columna no existe, reintentar sin ella
+      console.warn('stripe_payment_method_id column not found, inserting without it');
+      const result2 = await supabaseAdmin
+        .from('payment_methods')
+        .insert(basePayload)
+        .select();
+      data = result2.data;
+      insertError = result2.error;
+    } else {
+      data = result1.data;
+      insertError = result1.error;
+    }
 
     if (insertError) {
       console.error('Error inserting payment method:', insertError);
