@@ -568,7 +568,7 @@ const isCancelled = order.status === 'cancelled' || order.status === 'refunded';
     </div>
   </div>
 
-  <!-- Modal de Devolución (Informativo) -->
+  <!-- Modal de Devolución -->
   <div id="return-modal" class="fixed inset-0 z-50 hidden" role="dialog" aria-modal="true">
     <div class="absolute inset-0 bg-black/60 backdrop-blur-sm modal-backdrop"></div>
     <div class="absolute inset-0 flex items-center justify-center p-4">
@@ -597,94 +597,71 @@ const isCancelled = order.status === 'cancelled' || order.status === 'refunded';
         
         <!-- Contenido -->
         <div class="p-6 space-y-6">
-          <!-- Paso 1: Instrucciones de envío -->
-          <div class="flex gap-4">
-            <div class="flex-shrink-0 w-10 h-10 bg-gold-matte/10 rounded-full flex items-center justify-center">
-              <span class="text-gold-matte font-bold">1</span>
-            </div>
-            <div class="flex-1">
-              <h4 class="font-semibold text-navy-900 mb-2">Prepara el paquete</h4>
-              <p class="text-sm text-charcoal-600 mb-3">
-                Empaqueta los artículos en su <strong>embalaje original</strong> con todas las etiquetas intactas.
-              </p>
-              <div class="bg-cream rounded-lg p-4 border border-charcoal-100">
-                <p class="text-xs text-charcoal-500 uppercase tracking-wide mb-2">Dirección de devolución</p>
-                <p class="font-semibold text-navy-900">FashionMarket - Devoluciones</p>
-                <p class="text-charcoal-700">Calle de la Moda 123</p>
-                <p class="text-charcoal-700">Polígono Industrial Norte</p>
-                <p class="text-charcoal-700">28001 Madrid, España</p>
-              </div>
-            </div>
-          </div>
-          
-          <!-- Paso 2: Confirmación por email -->
-          <div class="flex gap-4">
-            <div class="flex-shrink-0 w-10 h-10 bg-gold-matte/10 rounded-full flex items-center justify-center">
-              <span class="text-gold-matte font-bold">2</span>
-            </div>
-            <div class="flex-1">
-              <h4 class="font-semibold text-navy-900 mb-2">Etiqueta de devolución</h4>
-              <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <div class="flex items-start gap-3">
-                  <svg class="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                  </svg>
-                  <p class="text-sm text-blue-800">
-                    Hemos enviado un correo con la <strong>etiqueta de devolución prepagada</strong> a tu email asociado. 
-                    Imprímela y pégala en el paquete.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          <!-- Paso 3: Reembolso -->
-          <div class="flex gap-4">
-            <div class="flex-shrink-0 w-10 h-10 bg-gold-matte/10 rounded-full flex items-center justify-center">
-              <span class="text-gold-matte font-bold">3</span>
-            </div>
-            <div class="flex-1">
-              <h4 class="font-semibold text-navy-900 mb-2">Proceso de reembolso</h4>
-              <p class="text-sm text-charcoal-600">
-                Una vez recibamos y validemos el paquete, procesaremos el reembolso a tu método de pago original.
-              </p>
-            </div>
-          </div>
-          
-          <!-- Disclaimer financiero -->
-          <div class="bg-amber-50 border border-amber-200 rounded-lg p-4">
-            <div class="flex items-start gap-3">
-              <svg class="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          <!-- Info -->
+          <div class="flex items-start gap-4">
+            <div class="w-12 h-12 bg-gold-matte/10 rounded-full flex items-center justify-center flex-shrink-0">
+              <svg class="w-6 h-6 text-gold-dark" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
               </svg>
-              <div class="text-sm text-amber-800">
-                <p class="font-semibold mb-1">Información importante sobre el reembolso</p>
-                <p>
-                  El reembolso se procesará en tu <strong>método de pago original</strong> en un plazo de 
-                  <strong>5 a 7 días hábiles</strong> desde la validación del paquete.
-                </p>
-              </div>
             </div>
-          </div>
-          
-          <!-- Política de devolución -->
-          <div class="bg-charcoal-50 rounded-lg p-4 text-sm text-charcoal-600">
-            <p class="font-medium text-charcoal-800 mb-2">Condiciones de devolución:</p>
-            <ul class="space-y-1 list-disc list-inside">
-              <li>Plazo máximo: <strong>30 días</strong> desde la entrega</li>
-              <li>Artículos sin usar y con etiquetas originales</li>
-              <li>Embalaje original o equivalente</li>
-              <li>No aplica a productos personalizados o de higiene</li>
-            </ul>
+            <div>
+              <h4 class="font-semibold text-navy-900 mb-1">¿Quieres devolver este pedido?</h4>
+              <p class="text-sm text-charcoal-600">
+                Tienes <strong>30 días</strong> desde la entrega para solicitar una devolución. Los artículos deben estar sin usar y en su embalaje original.
+              </p>
+            </div>
           </div>
 
-          <!-- Botón entendido -->
-          <button type="button" id="return-understood-btn" class="w-full px-4 py-3.5 bg-navy-900 text-white rounded-lg hover:bg-navy-800 transition-colors font-medium flex items-center justify-center gap-2">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-            </svg>
-            Entendido
-          </button>
+          <!-- Resumen del pedido -->
+          <div class="bg-cream/50 rounded-lg p-4 border border-charcoal-100">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-sm text-charcoal-500">Pedido</span>
+              <span class="font-mono font-medium text-navy-900">{order.order_number}</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-sm text-charcoal-500">Total</span>
+              <span class="font-bold text-navy-900">{formatPrice(order.total)}</span>
+            </div>
+          </div>
+          
+          <!-- Pasos del proceso -->
+          <div class="space-y-3">
+            <h4 class="text-sm font-semibold text-charcoal-700 uppercase tracking-wide">Proceso de devolución</h4>
+            <div class="flex items-start gap-3">
+              <div class="w-6 h-6 bg-navy-900 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                <span class="text-white text-xs font-bold">1</span>
+              </div>
+              <p class="text-sm text-charcoal-600">Completas el formulario con el motivo de la devolución</p>
+            </div>
+            <div class="flex items-start gap-3">
+              <div class="w-6 h-6 bg-navy-900 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                <span class="text-white text-xs font-bold">2</span>
+              </div>
+              <p class="text-sm text-charcoal-600">Nuestro equipo revisa tu solicitud (1-2 días hábiles)</p>
+            </div>
+            <div class="flex items-start gap-3">
+              <div class="w-6 h-6 bg-navy-900 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                <span class="text-white text-xs font-bold">3</span>
+              </div>
+              <p class="text-sm text-charcoal-600">Recibes un email con la resolución y pasos a seguir</p>
+            </div>
+          </div>
+
+          <!-- Botones -->
+          <div class="flex gap-3 pt-2">
+            <button type="button" id="return-modal-cancel" class="flex-1 px-4 py-3 border border-charcoal-200 text-charcoal-700 rounded-lg hover:bg-charcoal-50 transition-colors font-medium">
+              Cancelar
+            </button>
+            <a 
+              href={`/cuenta/devoluciones/nueva?order=${order.id}`}
+              class="flex-1 px-4 py-3 bg-navy-900 text-white rounded-lg hover:bg-navy-800 transition-colors font-medium flex items-center justify-center gap-2"
+            >
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+              </svg>
+              Continuar
+            </a>
+          </div>
         </div>
       </div>
     </div>
@@ -722,7 +699,7 @@ const isCancelled = order.status === 'cancelled' || order.status === 'refunded';
 
     document.getElementById('cancel-modal-close')?.addEventListener('click', () => closeModal(cancelModal));
     document.getElementById('return-modal-close')?.addEventListener('click', () => closeModal(returnModal));
-    document.getElementById('return-understood-btn')?.addEventListener('click', () => closeModal(returnModal));
+    document.getElementById('return-modal-cancel')?.addEventListener('click', () => closeModal(returnModal));
 
     // Cerrar con click en backdrop
     document.querySelectorAll('.modal-backdrop').forEach(backdrop => {

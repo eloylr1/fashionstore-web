@@ -1,0 +1,493 @@
+---
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * FASHIONMARKET - Admin: Detalle de Devolución
+ * Vista completa con productos, cliente, historial y acciones
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
+
+export const prerender = false;
+
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { supabaseAdmin, isSupabaseAdminConfigured } from '../../../lib/supabase/server';
+
+const { id } = Astro.params;
+if (!id) return Astro.redirect('/admin/devoluciones');
+
+let returnData: any = null;
+let customer: any = null;
+let returnItems: any[] = [];
+let order: any = null;
+
+if (isSupabaseAdminConfigured() && supabaseAdmin) {
+  try {
+    // Obtener devolución
+    const { data: ret, error } = await supabaseAdmin
+      .from('returns')
+      .select(`
+        *,
+        orders (id, order_number, total, status, payment_method, stripe_payment_intent_id, created_at, delivered_at)
+      `)
+      .eq('id', id)
+      .single();
+
+    if (error) console.error('Error:', error);
+    returnData = ret;
+    order = ret?.orders;
+
+    // Cliente
+    if (ret?.user_id) {
+      const { data: profile } = await supabaseAdmin
+        .from('profiles')
+        .select('id, full_name, email, phone')
+        .eq('id', ret.user_id)
+        .single();
+      customer = profile;
+    }
+
+    // Items devueltos
+    if (ret) {
+      const { data: items } = await supabaseAdmin
+        .from('return_items')
+        .select(`
+          *,
+          order_items (product_name, size, color, quantity, unit_price, product_image, product_slug)
+        `)
+        .eq('return_id', id);
+      returnItems = items || [];
+    }
+  } catch (error) {
+    console.error('Error fetching return:', error);
+  }
+}
+
+if (!returnData) return Astro.redirect('/admin/devoluciones');
+
+function formatDateTime(dateString: string) {
+  if (!dateString) return 'N/A';
+  return new Date(dateString).toLocaleDateString('es-ES', {
+    day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit'
+  });
+}
+
+const returnStatuses: Record<string, { label: string; color: string; bg: string }> = {
+  'requested': { label: 'Pendiente', color: 'text-amber-700', bg: 'bg-amber-100' },
+  'approved': { label: 'Aprobada', color: 'text-blue-700', bg: 'bg-blue-100' },
+  'in_transit': { label: 'En tránsito', color: 'text-purple-700', bg: 'bg-purple-100' },
+  'received': { label: 'Recibida', color: 'text-indigo-700', bg: 'bg-indigo-100' },
+  'refunded': { label: 'Reembolsada', color: 'text-green-700', bg: 'bg-green-100' },
+  'rejected': { label: 'Rechazada', color: 'text-red-700', bg: 'bg-red-100' },
+};
+
+const reasonLabels: Record<string, string> = {
+  wrong_size: 'Talla incorrecta',
+  defective: 'Producto defectuoso',
+  not_as_described: 'No coincide con la descripción',
+  changed_mind: 'Cambio de opinión',
+  other: 'Otro motivo',
+};
+
+const currentStatus = returnStatuses[returnData.status] || returnStatuses['requested'];
+const canApproveReject = returnData.status === 'requested';
+const canProcessRefund = ['approved', 'received'].includes(returnData.status);
+---
+
+<AdminLayout title={`Devolución ${returnData.return_number}`}>
+  <div class="space-y-6">
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div class="flex items-center gap-4">
+        <a href="/admin/devoluciones" class="p-2 text-charcoal-400 hover:text-navy-700 hover:bg-navy-50 transition-colors">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+          </svg>
+        </a>
+        <div>
+          <h1 class="text-2xl font-serif font-semibold text-navy-900">
+            Devolución {returnData.return_number}
+          </h1>
+          <p class="text-charcoal-500">{formatDateTime(returnData.created_at)}</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <span class={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-full ${currentStatus.bg} ${currentStatus.color}`}>
+          <span class="w-2 h-2 rounded-full bg-current"></span>
+          {currentStatus.label}
+        </span>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <!-- Columna principal -->
+      <div class="lg:col-span-2 space-y-6">
+        <!-- Detalle de la solicitud -->
+        <div class="bg-white border border-charcoal-100 overflow-hidden">
+          <div class="px-6 py-4 border-b border-charcoal-100">
+            <h3 class="font-semibold text-navy-900">Detalle de la solicitud</h3>
+          </div>
+          <div class="p-6 space-y-4">
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <p class="text-xs text-charcoal-400 uppercase tracking-wider mb-1">Motivo</p>
+                <p class="text-sm font-medium text-navy-900">{reasonLabels[returnData.reason] || returnData.reason}</p>
+              </div>
+              <div>
+                <p class="text-xs text-charcoal-400 uppercase tracking-wider mb-1">Importe a reembolsar</p>
+                <p class="text-lg font-bold text-navy-900">{returnData.refund_amount ? (returnData.refund_amount / 100).toFixed(2) + '€' : 'Pendiente'}</p>
+              </div>
+            </div>
+            {returnData.description && (
+              <div>
+                <p class="text-xs text-charcoal-400 uppercase tracking-wider mb-1">Descripción del cliente</p>
+                <p class="text-sm text-charcoal-700 bg-charcoal-50 rounded-lg p-3">{returnData.description}</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <!-- Productos devueltos -->
+        <div class="bg-white border border-charcoal-100 overflow-hidden">
+          <div class="px-6 py-4 border-b border-charcoal-100">
+            <h3 class="font-semibold text-navy-900">Productos a devolver ({returnItems.length})</h3>
+          </div>
+          
+          {returnItems.length > 0 ? (
+            <div class="divide-y divide-charcoal-100">
+              {returnItems.map((item) => (
+                <div class="flex items-center gap-4 p-4">
+                  <div class="w-16 h-16 bg-cream flex-shrink-0 overflow-hidden rounded">
+                    {item.order_items?.product_image ? (
+                      <img 
+                        src={item.order_items.product_image}
+                        alt={item.order_items.product_name}
+                        class="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div class="w-full h-full flex items-center justify-center text-charcoal-400">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                      </div>
+                    )}
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <p class="text-sm font-semibold text-navy-900">{item.order_items?.product_name || 'Producto'}</p>
+                    <div class="flex items-center gap-2 mt-1 text-xs text-charcoal-500">
+                      {item.order_items?.size && <span>Talla: {item.order_items.size}</span>}
+                      {item.order_items?.color && <span>Color: {item.order_items.color}</span>}
+                    </div>
+                    <p class="text-xs text-charcoal-400 mt-1">Cantidad a devolver: {item.quantity}</p>
+                  </div>
+                  <div class="text-right">
+                    <p class="text-sm font-semibold text-navy-900">
+                      {item.order_items?.unit_price ? ((item.order_items.unit_price * item.quantity) / 100).toFixed(2) + '€' : '-'}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div class="p-6 text-center text-charcoal-500">No hay items registrados</div>
+          )}
+        </div>
+
+        <!-- Timeline -->
+        <div class="bg-white border border-charcoal-100 p-6">
+          <h3 class="font-semibold text-navy-900 mb-4">Historial</h3>
+          <div class="relative">
+            <div class="absolute left-4 top-0 bottom-0 w-0.5 bg-charcoal-200"></div>
+            <div class="space-y-6">
+              <div class="relative flex items-start gap-4">
+                <div class="w-8 h-8 bg-amber-100 rounded-full flex items-center justify-center z-10">
+                  <svg class="w-4 h-4 text-amber-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                  </svg>
+                </div>
+                <div>
+                  <p class="text-sm font-medium text-navy-900">Solicitud creada</p>
+                  <p class="text-xs text-charcoal-500">{formatDateTime(returnData.created_at)}</p>
+                </div>
+              </div>
+
+              {returnData.approved_at && (
+                <div class="relative flex items-start gap-4">
+                  <div class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center z-10">
+                    <svg class="w-4 h-4 text-green-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p class="text-sm font-medium text-navy-900">Devolución aprobada</p>
+                    <p class="text-xs text-charcoal-500">{formatDateTime(returnData.approved_at)}</p>
+                  </div>
+                </div>
+              )}
+
+              {returnData.completed_at && (
+                <div class="relative flex items-start gap-4">
+                  <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center z-10">
+                    <svg class="w-4 h-4 text-blue-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p class="text-sm font-medium text-navy-900">Reembolso completado</p>
+                    <p class="text-xs text-charcoal-500">{formatDateTime(returnData.completed_at)}</p>
+                  </div>
+                </div>
+              )}
+
+              {returnData.status === 'rejected' && (
+                <div class="relative flex items-start gap-4">
+                  <div class="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center z-10">
+                    <svg class="w-4 h-4 text-red-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p class="text-sm font-medium text-navy-900">Devolución rechazada</p>
+                    <p class="text-xs text-charcoal-500">{formatDateTime(returnData.updated_at)}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Columna lateral -->
+      <div class="space-y-6">
+        <!-- Acciones -->
+        {canApproveReject && (
+          <div class="bg-white border border-charcoal-100 p-6 space-y-4">
+            <h3 class="font-semibold text-navy-900">Acciones</h3>
+            
+            <div>
+              <label class="block text-sm font-medium text-charcoal-700 mb-2">Nota para el cliente</label>
+              <textarea 
+                id="admin-notes" 
+                rows="3"
+                class="w-full px-3 py-2 border border-charcoal-200 rounded-lg focus:border-navy-500 focus:ring-2 focus:ring-navy-500/20 outline-none text-sm resize-none"
+                placeholder="Mensaje opcional..."
+              ></textarea>
+            </div>
+
+            <div id="action-error" class="hidden p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm"></div>
+
+            <button
+              type="button"
+              id="approve-btn"
+              data-return-id={returnData.id}
+              class="w-full flex items-center justify-center gap-2 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+              </svg>
+              Aprobar devolución
+            </button>
+            
+            <button
+              type="button"
+              id="reject-btn"
+              data-return-id={returnData.id}
+              class="w-full flex items-center justify-center gap-2 px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+              Rechazar devolución
+            </button>
+          </div>
+        )}
+
+        {canProcessRefund && (
+          <div class="bg-white border border-charcoal-100 p-6 space-y-4">
+            <h3 class="font-semibold text-navy-900">Procesar reembolso</h3>
+            <p class="text-sm text-charcoal-500">La devolución está aprobada. Puedes procesar el reembolso cuando recibas el paquete.</p>
+            
+            <div id="refund-error" class="hidden p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm"></div>
+
+            <button
+              type="button"
+              id="refund-btn"
+              data-return-id={returnData.id}
+              class="w-full flex items-center justify-center gap-2 px-4 py-3 bg-navy-900 text-white rounded-lg hover:bg-navy-800 transition-colors text-sm font-medium"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Procesar reembolso ({returnData.refund_amount ? (returnData.refund_amount / 100).toFixed(2) + '€' : 'Total'})
+            </button>
+          </div>
+        )}
+
+        {/* Estado final: reembolsada o rechazada */}
+        {returnData.status === 'refunded' && (
+          <div class="bg-green-50 border border-green-200 p-6 rounded-lg">
+            <div class="flex items-center gap-2 mb-2">
+              <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+              </svg>
+              <h3 class="font-semibold text-green-800">Reembolso completado</h3>
+            </div>
+            <p class="text-sm text-green-700">
+              Se han reembolsado {returnData.refund_amount ? (returnData.refund_amount / 100).toFixed(2) + '€' : 'el total'} al cliente.
+            </p>
+            {returnData.completed_at && (
+              <p class="text-xs text-green-600 mt-2">{formatDateTime(returnData.completed_at)}</p>
+            )}
+          </div>
+        )}
+
+        {returnData.status === 'rejected' && (
+          <div class="bg-red-50 border border-red-200 p-6 rounded-lg">
+            <div class="flex items-center gap-2 mb-2">
+              <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+              <h3 class="font-semibold text-red-800">Devolución rechazada</h3>
+            </div>
+            <p class="text-sm text-red-700">Esta solicitud fue rechazada y se ha notificado al cliente.</p>
+          </div>
+        )}
+
+        <!-- Cliente -->
+        <div class="bg-white border border-charcoal-100 p-6">
+          <h3 class="font-semibold text-navy-900 mb-4">Cliente</h3>
+          {customer ? (
+            <div class="space-y-3">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-navy-100 flex items-center justify-center font-bold text-navy-700 rounded-full">
+                  {(customer.full_name || 'C').charAt(0).toUpperCase()}
+                </div>
+                <div>
+                  <p class="text-sm font-medium text-navy-900">{customer.full_name || 'Sin nombre'}</p>
+                  <p class="text-xs text-charcoal-500">{customer.email}</p>
+                </div>
+              </div>
+              {customer.phone && (
+                <p class="text-sm text-charcoal-600">Tel: {customer.phone}</p>
+              )}
+            </div>
+          ) : (
+            <p class="text-sm text-charcoal-500">Datos del cliente no disponibles</p>
+          )}
+        </div>
+
+        <!-- Pedido original -->
+        <div class="bg-white border border-charcoal-100 p-6">
+          <h3 class="font-semibold text-navy-900 mb-4">Pedido original</h3>
+          <div class="space-y-3 text-sm">
+            <div class="flex justify-between">
+              <span class="text-charcoal-500">Nº Pedido</span>
+              <a href={`/admin/pedidos/${order?.id}`} class="text-navy-700 hover:text-leather font-mono underline">
+                {order?.order_number || 'N/A'}
+              </a>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-charcoal-500">Total pedido</span>
+              <span class="font-semibold text-navy-900">{order?.total ? (order.total / 100).toFixed(2) + '€' : '-'}</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-charcoal-500">Método de pago</span>
+              <span class="text-charcoal-700">{order?.payment_method || 'N/A'}</span>
+            </div>
+            {order?.delivered_at && (
+              <div class="flex justify-between">
+                <span class="text-charcoal-500">Entregado</span>
+                <span class="text-charcoal-700">{formatDateTime(order.delivered_at)}</span>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script define:vars={{ returnId: returnData.id }}>
+    // Aprobar
+    document.getElementById('approve-btn')?.addEventListener('click', async function() {
+      const btn = this;
+      const notes = document.getElementById('admin-notes')?.value?.trim() || '';
+      const errorEl = document.getElementById('action-error');
+      
+      btn.disabled = true;
+      btn.innerHTML = '<svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Procesando...';
+      errorEl?.classList.add('hidden');
+
+      try {
+        const res = await fetch(`/api/admin/returns/${returnId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'approve', admin_notes: notes || undefined }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Error');
+        window.location.reload();
+      } catch (err) {
+        if (errorEl) { errorEl.textContent = err.message; errorEl.classList.remove('hidden'); }
+        btn.disabled = false;
+        btn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg> Aprobar devolución';
+      }
+    });
+
+    // Rechazar
+    document.getElementById('reject-btn')?.addEventListener('click', async function() {
+      const btn = this;
+      const notes = document.getElementById('admin-notes')?.value?.trim() || '';
+      const errorEl = document.getElementById('action-error');
+
+      if (!notes) {
+        if (errorEl) { errorEl.textContent = 'Por favor, indica el motivo del rechazo para el cliente'; errorEl.classList.remove('hidden'); }
+        return;
+      }
+      
+      btn.disabled = true;
+      btn.innerHTML = '<svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Procesando...';
+      errorEl?.classList.add('hidden');
+
+      try {
+        const res = await fetch(`/api/admin/returns/${returnId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'reject', admin_notes: notes }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Error');
+        window.location.reload();
+      } catch (err) {
+        if (errorEl) { errorEl.textContent = err.message; errorEl.classList.remove('hidden'); }
+        btn.disabled = false;
+        btn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg> Rechazar devolución';
+      }
+    });
+
+    // Procesar reembolso
+    document.getElementById('refund-btn')?.addEventListener('click', async function() {
+      const btn = this;
+      const errorEl = document.getElementById('refund-error');
+      
+      if (!confirm('¿Procesar el reembolso? Esta acción no se puede deshacer.')) return;
+      
+      btn.disabled = true;
+      btn.innerHTML = '<svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Procesando reembolso...';
+      errorEl?.classList.add('hidden');
+
+      try {
+        const res = await fetch('/api/returns/process-refund', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ return_id: returnId }),
+        });
+        const data = await res.json();
+        if (!res.ok || !data.success) throw new Error(data.error || 'Error');
+        window.location.reload();
+      } catch (err) {
+        if (errorEl) { errorEl.textContent = err.message; errorEl.classList.remove('hidden'); }
+        btn.disabled = false;
+        btn.innerHTML = 'Procesar reembolso';
+      }
+    });
+  </script>
+</AdminLayout>

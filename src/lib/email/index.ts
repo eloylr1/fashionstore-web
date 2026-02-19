@@ -991,3 +991,275 @@ export async function sendNewsletterWelcomeEmail(data: NewsletterWelcomeData): P
     html,
   });
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// EMAIL DE DEVOLUCIÓN APROBADA
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface ReturnApprovedEmailData {
+  customerName: string;
+  customerEmail: string;
+  returnNumber: string;
+  orderNumber: string;
+  refundAmount: number;
+  reason: string;
+  adminNotes?: string;
+}
+
+const reasonLabels: Record<string, string> = {
+  wrong_size: 'Talla incorrecta',
+  defective: 'Producto defectuoso',
+  not_as_described: 'No coincide con la descripción',
+  changed_mind: 'Cambio de opinión',
+  other: 'Otro motivo',
+};
+
+/**
+ * Envía email al cliente cuando su devolución es APROBADA
+ */
+export async function sendReturnApprovedEmail(data: ReturnApprovedEmailData): Promise<EmailResult> {
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f9fafb;">
+  <div style="max-width: 600px; margin: 0 auto; padding: 40px 20px;">
+    <!-- Header -->
+    <div style="text-align: center; margin-bottom: 32px;">
+      <h1 style="font-size: 28px; font-weight: 600; color: #1e3a5f; margin: 0;">
+        Fashion<span style="color: #c9a227;">Market</span>
+      </h1>
+    </div>
+
+    <!-- Card -->
+    <div style="background: white; border-radius: 16px; box-shadow: 0 10px 40px rgba(0,0,0,0.08); overflow: hidden;">
+      <!-- Banner verde -->
+      <div style="background: linear-gradient(135deg, #059669 0%, #10b981 100%); padding: 40px 32px; text-align: center;">
+        <div style="width: 64px; height: 64px; background: rgba(255,255,255,0.2); border-radius: 50%; margin: 0 auto 16px; display: flex; align-items: center; justify-content: center;">
+          <table cellpadding="0" cellspacing="0" border="0" style="margin: 0 auto;">
+            <tr><td style="width: 64px; height: 64px; background: rgba(255,255,255,0.2); border-radius: 50%; text-align: center; vertical-align: middle;">
+              <span style="font-size: 28px;">✅</span>
+            </td></tr>
+          </table>
+        </div>
+        <h2 style="color: white; font-size: 24px; margin: 0 0 8px; font-weight: 700;">Devolución Aprobada</h2>
+        <p style="color: rgba(255,255,255,0.9); margin: 0; font-size: 16px;">Tu solicitud ha sido aceptada</p>
+      </div>
+
+      <!-- Contenido -->
+      <div style="padding: 32px;">
+        <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 24px;">
+          Hola <strong>${data.customerName}</strong>,
+        </p>
+        <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 24px;">
+          Tu solicitud de devolución ha sido <strong style="color: #059669;">aprobada</strong>. A continuación encontrarás los detalles y los pasos a seguir.
+        </p>
+
+        <!-- Detalles -->
+        <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 20px; margin-bottom: 24px;">
+          <table style="width: 100%; border-collapse: collapse;">
+            <tr>
+              <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">Nº Devolución</td>
+              <td style="padding: 8px 0; text-align: right; font-weight: 600; color: #1e3a5f; font-family: monospace;">${data.returnNumber}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">Pedido original</td>
+              <td style="padding: 8px 0; text-align: right; font-weight: 600; color: #1e3a5f; font-family: monospace;">${data.orderNumber}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">Motivo</td>
+              <td style="padding: 8px 0; text-align: right; color: #374151; font-size: 14px;">${reasonLabels[data.reason] || data.reason}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; border-top: 1px solid #bbf7d0; color: #059669; font-weight: 600;">Importe a reembolsar</td>
+              <td style="padding: 8px 0; border-top: 1px solid #bbf7d0; text-align: right; font-weight: 700; color: #059669; font-size: 18px;">${formatPrice(data.refundAmount)}</td>
+            </tr>
+          </table>
+        </div>
+
+        ${data.adminNotes ? `
+        <div style="background: #f0f9ff; border-left: 4px solid #3b82f6; border-radius: 0 8px 8px 0; padding: 16px; margin-bottom: 24px;">
+          <p style="font-weight: 600; color: #1e3a5f; font-size: 14px; margin: 0 0 8px;">Nota del equipo:</p>
+          <p style="color: #374151; font-size: 14px; margin: 0; line-height: 1.5;">${data.adminNotes}</p>
+        </div>
+        ` : ''}
+
+        <!-- Pasos a seguir -->
+        <h3 style="color: #1e3a5f; font-size: 18px; margin: 0 0 16px;">Pasos a seguir</h3>
+        
+        <div style="background: #f8fafc; border-radius: 12px; padding: 20px; margin-bottom: 24px;">
+          <table style="width: 100%;">
+            <tr>
+              <td style="width: 36px; vertical-align: top; padding-bottom: 16px;">
+                <div style="width: 28px; height: 28px; background: #1e3a5f; border-radius: 50%; text-align: center; line-height: 28px; color: #c9a227; font-weight: 600; font-size: 14px;">1</div>
+              </td>
+              <td style="vertical-align: top; padding-bottom: 16px;">
+                <p style="font-weight: 600; color: #1e3a5f; margin: 0 0 4px;">Empaqueta los artículos</p>
+                <p style="color: #6b7280; font-size: 14px; margin: 0;">Usa el embalaje original con todas las etiquetas intactas.</p>
+              </td>
+            </tr>
+            <tr>
+              <td style="width: 36px; vertical-align: top; padding-bottom: 16px;">
+                <div style="width: 28px; height: 28px; background: #1e3a5f; border-radius: 50%; text-align: center; line-height: 28px; color: #c9a227; font-weight: 600; font-size: 14px;">2</div>
+              </td>
+              <td style="vertical-align: top; padding-bottom: 16px;">
+                <p style="font-weight: 600; color: #1e3a5f; margin: 0 0 4px;">Envía el paquete</p>
+                <p style="color: #6b7280; font-size: 14px; margin: 0;">Dirección: FashionMarket - Devoluciones, Calle de la Moda 123, 28001 Madrid</p>
+              </td>
+            </tr>
+            <tr>
+              <td style="width: 36px; vertical-align: top;">
+                <div style="width: 28px; height: 28px; background: #1e3a5f; border-radius: 50%; text-align: center; line-height: 28px; color: #c9a227; font-weight: 600; font-size: 14px;">3</div>
+              </td>
+              <td style="vertical-align: top;">
+                <p style="font-weight: 600; color: #1e3a5f; margin: 0 0 4px;">Recibe tu reembolso</p>
+                <p style="color: #6b7280; font-size: 14px; margin: 0;">El reembolso se procesará en 5-7 días hábiles tras recibir el paquete.</p>
+              </td>
+            </tr>
+          </table>
+        </div>
+
+        <!-- CTA -->
+        <div style="text-align: center; margin-top: 24px;">
+          <a href="https://eloyfashionstore.victoriafp.online/cuenta/devoluciones" 
+             style="display: inline-block; background: linear-gradient(135deg, #1e3a5f 0%, #2d5a8f 100%); color: white; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; font-size: 15px;">
+            Ver mis devoluciones
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div style="text-align: center; margin-top: 32px; color: #9ca3af; font-size: 13px;">
+      <p>¿Tienes dudas? Responde a este email o escríbenos a soporte@fashionmarket.es</p>
+      <p style="margin: 16px 0 0; font-size: 12px;">© ${new Date().getFullYear()} FashionMarket. Todos los derechos reservados.</p>
+    </div>
+  </div>
+</body>
+</html>
+  `;
+
+  return sendEmail({
+    to: data.customerEmail,
+    subject: `✅ Devolución aprobada - ${data.returnNumber}`,
+    html,
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// EMAIL DE DEVOLUCIÓN RECHAZADA
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface ReturnRejectedEmailData {
+  customerName: string;
+  customerEmail: string;
+  returnNumber: string;
+  orderNumber: string;
+  reason: string;
+  rejectionReason: string;
+}
+
+/**
+ * Envía email al cliente cuando su devolución es RECHAZADA
+ */
+export async function sendReturnRejectedEmail(data: ReturnRejectedEmailData): Promise<EmailResult> {
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f9fafb;">
+  <div style="max-width: 600px; margin: 0 auto; padding: 40px 20px;">
+    <!-- Header -->
+    <div style="text-align: center; margin-bottom: 32px;">
+      <h1 style="font-size: 28px; font-weight: 600; color: #1e3a5f; margin: 0;">
+        Fashion<span style="color: #c9a227;">Market</span>
+      </h1>
+    </div>
+
+    <!-- Card -->
+    <div style="background: white; border-radius: 16px; box-shadow: 0 10px 40px rgba(0,0,0,0.08); overflow: hidden;">
+      <!-- Banner rojo -->
+      <div style="background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%); padding: 40px 32px; text-align: center;">
+        <table cellpadding="0" cellspacing="0" border="0" style="margin: 0 auto 16px;">
+          <tr><td style="width: 64px; height: 64px; background: rgba(255,255,255,0.2); border-radius: 50%; text-align: center; vertical-align: middle;">
+            <span style="font-size: 28px;">❌</span>
+          </td></tr>
+        </table>
+        <h2 style="color: white; font-size: 24px; margin: 0 0 8px; font-weight: 700;">Devolución No Aprobada</h2>
+        <p style="color: rgba(255,255,255,0.9); margin: 0; font-size: 16px;">No hemos podido aceptar tu solicitud</p>
+      </div>
+
+      <!-- Contenido -->
+      <div style="padding: 32px;">
+        <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 24px;">
+          Hola <strong>${data.customerName}</strong>,
+        </p>
+        <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 24px;">
+          Lamentamos informarte que tu solicitud de devolución <strong>${data.returnNumber}</strong> 
+          del pedido <strong>${data.orderNumber}</strong> no ha podido ser aprobada.
+        </p>
+
+        <!-- Motivo del rechazo -->
+        <div style="background: #fef2f2; border: 1px solid #fecaca; border-left: 4px solid #dc2626; border-radius: 0 12px 12px 0; padding: 20px; margin-bottom: 24px;">
+          <p style="font-weight: 600; color: #991b1b; font-size: 14px; margin: 0 0 8px;">Motivo:</p>
+          <p style="color: #7f1d1d; font-size: 15px; margin: 0; line-height: 1.6;">${data.rejectionReason}</p>
+        </div>
+
+        <!-- Detalles de la solicitud -->
+        <div style="background: #f8fafc; border-radius: 12px; padding: 20px; margin-bottom: 24px;">
+          <table style="width: 100%; border-collapse: collapse;">
+            <tr>
+              <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">Nº Devolución</td>
+              <td style="padding: 8px 0; text-align: right; font-weight: 600; color: #1e3a5f; font-family: monospace;">${data.returnNumber}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">Pedido</td>
+              <td style="padding: 8px 0; text-align: right; font-weight: 600; color: #1e3a5f; font-family: monospace;">${data.orderNumber}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">Motivo original</td>
+              <td style="padding: 8px 0; text-align: right; color: #374151; font-size: 14px;">${reasonLabels[data.reason] || data.reason}</td>
+            </tr>
+          </table>
+        </div>
+
+        <!-- Info de contacto -->
+        <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 12px; padding: 20px; margin-bottom: 24px;">
+          <p style="font-weight: 600; color: #92400e; font-size: 14px; margin: 0 0 8px;">¿No estás de acuerdo?</p>
+          <p style="color: #78350f; font-size: 14px; margin: 0; line-height: 1.5;">
+            Si crees que ha habido un error o deseas aportar más información, puedes responder directamente a este email o contactar con nuestro equipo de soporte.
+          </p>
+        </div>
+
+        <!-- CTA -->
+        <div style="text-align: center; margin-top: 24px;">
+          <a href="https://eloyfashionstore.victoriafp.online/cuenta/pedidos" 
+             style="display: inline-block; background: linear-gradient(135deg, #1e3a5f 0%, #2d5a8f 100%); color: white; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; font-size: 15px;">
+            Ver mis pedidos
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div style="text-align: center; margin-top: 32px; color: #9ca3af; font-size: 13px;">
+      <p>¿Tienes dudas? Responde a este email o escríbenos a soporte@fashionmarket.es</p>
+      <p style="margin: 16px 0 0; font-size: 12px;">© ${new Date().getFullYear()} FashionMarket. Todos los derechos reservados.</p>
+    </div>
+  </div>
+</body>
+</html>
+  `;
+
+  return sendEmail({
+    to: data.customerEmail,
+    subject: `Actualización sobre tu devolución - ${data.returnNumber}`,
+    html,
+  });
+}

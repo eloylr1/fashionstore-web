@@ -9,6 +9,7 @@ export const prerender = false;
 
 import type { APIRoute } from 'astro';
 import { supabaseAdmin, verifyAdminSecure } from '../../../../lib/supabase/server';
+import { sendOrderStatusEmail } from '../../../../lib/email/index';
 
 // GET - Obtener un pedido
 export const GET: APIRoute = async ({ params, cookies }) => {
@@ -102,6 +103,31 @@ export const PATCH: APIRoute = async ({ params, request, cookies }) => {
       .single();
 
     if (error) throw error;
+
+    // Enviar email de notificación al cliente
+    try {
+      // Obtener datos del cliente
+      const { data: orderWithProfile } = await supabase
+        .from('orders')
+        .select('order_number, profiles(full_name, email)')
+        .eq('id', id)
+        .single();
+
+      if (orderWithProfile) {
+        const profile = (orderWithProfile as any).profiles;
+        const customerEmail = profile?.email;
+        const customerName = profile?.full_name || 'Cliente';
+        const orderNumber = orderWithProfile.order_number || id.slice(0, 8);
+
+        if (customerEmail) {
+          const trackingNumber = status === 'shipped' ? (body.tracking_number || data.tracking_number) : undefined;
+          await sendOrderStatusEmail(customerEmail, customerName, orderNumber, status, trackingNumber);
+        }
+      }
+    } catch (emailError) {
+      // No fallar si el email no se envía, el pedido ya fue actualizado
+      console.error('Error sending order status email:', emailError);
+    }
 
     return new Response(JSON.stringify(data), {
       status: 200,

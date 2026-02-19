@@ -1,0 +1,412 @@
+---
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * FASHIONMARKET - Solicitar Devolución
+ * Formulario para que el cliente solicite una devolución de un pedido entregado
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
+
+export const prerender = false;
+
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import { supabase } from '../../../lib/supabase/client';
+
+// Verificar autenticación
+const accessToken = Astro.cookies.get('sb-access-token')?.value;
+const refreshToken = Astro.cookies.get('sb-refresh-token')?.value;
+
+if (!accessToken || !refreshToken || !supabase) {
+  return Astro.redirect('/login?redirect=/cuenta/devoluciones');
+}
+
+const sb = supabase as any;
+
+const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
+  access_token: accessToken,
+  refresh_token: refreshToken,
+});
+
+if (sessionError || !sessionData.user) {
+  return Astro.redirect('/login?redirect=/cuenta/devoluciones');
+}
+
+const user = sessionData.user;
+
+// Obtener order_id desde query params
+const orderId = Astro.url.searchParams.get('order');
+
+if (!orderId) {
+  return Astro.redirect('/cuenta/devoluciones');
+}
+
+// Verificar que el pedido existe, pertenece al usuario y es elegible
+const { data: order, error: orderError } = await sb
+  .from('orders')
+  .select('*')
+  .eq('id', orderId)
+  .eq('user_id', user.id)
+  .single();
+
+if (orderError || !order) {
+  return Astro.redirect('/cuenta/devoluciones');
+}
+
+if (order.status !== 'delivered') {
+  return Astro.redirect(`/cuenta/pedidos/${orderId}`);
+}
+
+// Verificar plazo de 30 días
+const thirtyDaysAgo = new Date();
+thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+if (order.delivered_at && new Date(order.delivered_at) < thirtyDaysAgo) {
+  return Astro.redirect('/cuenta/devoluciones');
+}
+
+// Verificar que no exista una devolución activa
+const { data: existingReturn } = await sb
+  .from('returns')
+  .select('id, status')
+  .eq('order_id', orderId)
+  .not('status', 'eq', 'rejected')
+  .limit(1);
+
+const hasActiveReturn = existingReturn && existingReturn.length > 0;
+
+// Obtener items del pedido
+const { data: orderItems } = await sb
+  .from('order_items')
+  .select(`
+    *,
+    product:products(name, slug, images)
+  `)
+  .eq('order_id', orderId);
+
+const formatPrice = (cents: number) => {
+  return new Intl.NumberFormat('es-ES', {
+    style: 'currency',
+    currency: 'EUR',
+  }).format(cents / 100);
+};
+
+const formatDate = (date: string) => {
+  return new Date(date).toLocaleDateString('es-ES', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+};
+
+const reasonOptions = [
+  { value: 'wrong_size', label: 'Talla incorrecta', icon: '📏' },
+  { value: 'defective', label: 'Producto defectuoso', icon: '🔧' },
+  { value: 'not_as_described', label: 'No coincide con la descripción', icon: '📦' },
+  { value: 'changed_mind', label: 'He cambiado de opinión', icon: '💭' },
+  { value: 'other', label: 'Otro motivo', icon: '📝' },
+];
+---
+
+<BaseLayout title="Solicitar Devolución | FashionMarket">
+  <main class="min-h-screen bg-cream py-8 lg:py-12">
+    <div class="container-custom max-w-3xl">
+      <!-- Breadcrumb -->
+      <nav class="mb-6">
+        <ol class="flex items-center gap-2 text-sm text-charcoal-500">
+          <li><a href="/" class="hover:text-navy-900 transition-colors">Inicio</a></li>
+          <li>/</li>
+          <li><a href="/cuenta" class="hover:text-navy-900 transition-colors">Mi Cuenta</a></li>
+          <li>/</li>
+          <li><a href="/cuenta/devoluciones" class="hover:text-navy-900 transition-colors">Devoluciones</a></li>
+          <li>/</li>
+          <li class="text-navy-900 font-medium">Nueva solicitud</li>
+        </ol>
+      </nav>
+
+      {hasActiveReturn ? (
+        <!-- Ya existe una devolución activa -->
+        <div class="bg-white rounded-lg shadow-sm p-8 text-center">
+          <div class="w-16 h-16 mx-auto mb-4 bg-amber-100 rounded-full flex items-center justify-center">
+            <svg class="w-8 h-8 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <h1 class="text-2xl font-serif text-navy-900 mb-2">Devolución ya solicitada</h1>
+          <p class="text-charcoal-600 mb-6">Ya existe una solicitud de devolución activa para este pedido.</p>
+          <a href="/cuenta/devoluciones" class="inline-flex items-center gap-2 px-6 py-3 bg-navy-900 text-white rounded-lg hover:bg-navy-800 transition-colors font-medium">
+            Ver mis devoluciones
+          </a>
+        </div>
+      ) : (
+        <!-- Formulario de devolución -->
+        <div class="space-y-6">
+          <!-- Header -->
+          <div class="bg-white rounded-lg shadow-sm p-6">
+            <div class="flex items-center gap-4">
+              <div class="w-12 h-12 bg-navy-900/5 rounded-full flex items-center justify-center">
+                <svg class="w-6 h-6 text-navy-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                </svg>
+              </div>
+              <div>
+                <h1 class="text-2xl font-serif text-navy-900">Solicitar Devolución</h1>
+                <p class="text-charcoal-500">
+                  Pedido <span class="font-mono font-medium text-navy-900">{order.order_number}</span> · 
+                  Entregado el {order.delivered_at ? formatDate(order.delivered_at) : 'N/A'}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Política -->
+          <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div class="flex items-start gap-3">
+              <svg class="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <div class="text-sm text-blue-800">
+                <p class="font-semibold mb-1">Política de devoluciones</p>
+                <p>Los artículos deben estar <strong>sin usar</strong>, con sus <strong>etiquetas originales</strong> y en su <strong>embalaje original</strong>. Tienes hasta 30 días desde la entrega para solicitar una devolución.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Productos del pedido -->
+          <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+            <div class="p-4 border-b border-charcoal-100">
+              <h2 class="font-semibold text-navy-900">Productos del pedido</h2>
+              <p class="text-sm text-charcoal-500 mt-1">Se incluirán todos los artículos en la devolución</p>
+            </div>
+            <div class="divide-y divide-charcoal-100">
+              {orderItems && orderItems.map((item: any) => (
+                <div class="p-4 flex gap-4">
+                  <div class="w-16 h-16 bg-charcoal-100 rounded-lg flex-shrink-0 overflow-hidden">
+                    {item.product?.images?.[0] ? (
+                      <img src={item.product.images[0]} alt={item.product_name || item.product?.name} class="w-full h-full object-cover" />
+                    ) : (
+                      <div class="w-full h-full flex items-center justify-center text-charcoal-400">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                      </div>
+                    )}
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <h3 class="font-medium text-navy-900 truncate">{item.product_name || item.product?.name || 'Producto'}</h3>
+                    <p class="text-sm text-charcoal-500">
+                      {item.size && `Talla: ${item.size}`}
+                      {item.size && item.color && ' · '}
+                      {item.color && `Color: ${item.color}`}
+                    </p>
+                    <div class="flex items-center justify-between mt-1">
+                      <span class="text-sm text-charcoal-500">Cantidad: {item.quantity}</span>
+                      <span class="font-medium text-navy-900">{formatPrice((item.price || item.unit_price || 0) * item.quantity)}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div class="p-4 bg-cream/50 border-t border-charcoal-100">
+              <div class="flex justify-between items-center">
+                <span class="font-medium text-charcoal-600">Total a reembolsar</span>
+                <span class="text-lg font-bold text-navy-900">{formatPrice(order.total)}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Formulario -->
+          <form id="return-form" class="bg-white rounded-lg shadow-sm overflow-hidden">
+            <div class="p-4 border-b border-charcoal-100">
+              <h2 class="font-semibold text-navy-900">Motivo de la devolución</h2>
+              <p class="text-sm text-charcoal-500 mt-1">Selecciona el motivo principal</p>
+            </div>
+            
+            <div class="p-6 space-y-6">
+              <!-- Opciones de motivo -->
+              <div class="grid gap-3" id="reason-options">
+                {reasonOptions.map((option) => (
+                  <label class="relative flex items-center gap-4 p-4 border-2 border-charcoal-200 rounded-xl cursor-pointer hover:border-gold-matte hover:bg-cream/30 transition-all reason-option">
+                    <input type="radio" name="reason" value={option.value} class="sr-only peer" required />
+                    <div class="w-10 h-10 rounded-full bg-charcoal-50 flex items-center justify-center text-lg peer-checked:bg-gold-matte/10 transition-colors">
+                      {option.icon}
+                    </div>
+                    <span class="font-medium text-charcoal-700 peer-checked:text-navy-900">{option.label}</span>
+                    <div class="ml-auto w-5 h-5 rounded-full border-2 border-charcoal-300 peer-checked:border-gold-matte peer-checked:bg-gold-matte flex items-center justify-center transition-colors">
+                      <svg class="w-3 h-3 text-white hidden peer-checked:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                  </label>
+                ))}
+              </div>
+
+              <!-- Descripción adicional -->
+              <div>
+                <label for="description" class="block text-sm font-medium text-navy-900 mb-2">
+                  Descripción adicional <span class="text-charcoal-400">(opcional)</span>
+                </label>
+                <textarea 
+                  id="description" 
+                  name="description" 
+                  rows="4"
+                  placeholder="Describe con más detalle el motivo de la devolución..."
+                  class="w-full px-4 py-3 border border-charcoal-200 rounded-lg text-charcoal-700 placeholder:text-charcoal-400 focus:outline-none focus:ring-2 focus:ring-gold-matte/50 focus:border-gold-matte transition-colors resize-none"
+                ></textarea>
+              </div>
+
+              <!-- Información de reembolso -->
+              <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+                <div class="flex items-start gap-3">
+                  <svg class="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <div class="text-sm text-green-800">
+                    <p class="font-semibold mb-1">Reembolso</p>
+                    <p>Una vez aprobada la devolución, el reembolso se procesará a tu <strong>método de pago original</strong> en un plazo de 5-7 días hábiles.</p>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Error message -->
+              <div id="form-error" class="hidden p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm"></div>
+              
+              <!-- Success message -->
+              <div id="form-success" class="hidden p-4 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm"></div>
+
+              <!-- Botones -->
+              <div class="flex flex-col sm:flex-row gap-3 pt-2">
+                <a 
+                  href={`/cuenta/pedidos/${orderId}`}
+                  class="flex-1 inline-flex items-center justify-center gap-2 px-4 py-3 border border-charcoal-200 text-charcoal-700 rounded-lg hover:bg-charcoal-50 transition-colors font-medium"
+                >
+                  Cancelar
+                </a>
+                <button 
+                  type="submit" 
+                  id="submit-btn"
+                  class="flex-1 inline-flex items-center justify-center gap-2 px-4 py-3 bg-navy-900 text-white rounded-lg hover:bg-navy-800 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                  </svg>
+                  <span id="submit-text">Solicitar devolución</span>
+                  <svg id="submit-spinner" class="hidden w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
+      )}
+    </div>
+  </main>
+
+  <script define:vars={{ orderId }}>
+    // ═══════════════════════════════════════════════════════════════════════
+    // FORMULARIO DE DEVOLUCIÓN
+    // ═══════════════════════════════════════════════════════════════════════
+    
+    const form = document.getElementById('return-form');
+    const submitBtn = document.getElementById('submit-btn');
+    const submitText = document.getElementById('submit-text');
+    const submitSpinner = document.getElementById('submit-spinner');
+    const formError = document.getElementById('form-error');
+    const formSuccess = document.getElementById('form-success');
+
+    // Estilos de radio buttons
+    document.querySelectorAll('.reason-option').forEach(label => {
+      const radio = label.querySelector('input[type="radio"]');
+      radio?.addEventListener('change', () => {
+        // Reset all
+        document.querySelectorAll('.reason-option').forEach(l => {
+          l.classList.remove('border-gold-matte', 'bg-cream/30');
+          l.classList.add('border-charcoal-200');
+          const checkIcon = l.querySelector('svg');
+          if (checkIcon) checkIcon.classList.add('hidden');
+          const dot = l.querySelector('.peer-checked\\:border-gold-matte')?.parentElement || l.querySelector('div:last-child');
+        });
+        // Active state
+        label.classList.remove('border-charcoal-200');
+        label.classList.add('border-gold-matte', 'bg-cream/30');
+        const checkIcon = label.querySelector('div:last-child svg');
+        if (checkIcon) checkIcon.classList.remove('hidden');
+      });
+    });
+
+    // Submit
+    form?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const formData = new FormData(form);
+      const reason = formData.get('reason');
+      const description = formData.get('description');
+
+      if (!reason) {
+        formError.textContent = 'Por favor, selecciona un motivo para la devolución.';
+        formError.classList.remove('hidden');
+        formSuccess.classList.add('hidden');
+        return;
+      }
+
+      // Disable button
+      submitBtn.disabled = true;
+      submitText.textContent = 'Enviando solicitud...';
+      submitSpinner.classList.remove('hidden');
+      formError.classList.add('hidden');
+      formSuccess.classList.add('hidden');
+
+      try {
+        const response = await fetch('/api/returns/create', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            order_id: orderId,
+            reason,
+            description: description || '',
+          }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+          throw new Error(data.error || 'Error al crear la solicitud');
+        }
+
+        // Éxito
+        formSuccess.innerHTML = `
+          <div class="flex items-start gap-3">
+            <svg class="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <div>
+              <p class="font-semibold">¡Solicitud enviada correctamente!</p>
+              <p class="mt-1">Tu devolución <strong>${data.return_number || ''}</strong> ha sido registrada. Recibirás un correo cuando sea revisada por nuestro equipo.</p>
+            </div>
+          </div>
+        `;
+        formSuccess.classList.remove('hidden');
+        
+        // Hide form fields
+        document.getElementById('reason-options')?.closest('.space-y-6')?.querySelectorAll(':scope > *:not(#form-success):not(.flex.flex-col)').forEach(el => {
+          el.style.display = 'none';
+        });
+
+        // Change button to redirect
+        submitBtn.disabled = false;
+        submitText.textContent = 'Ver mis devoluciones';
+        submitSpinner.classList.add('hidden');
+        submitBtn.onclick = (e) => {
+          e.preventDefault();
+          window.location.href = '/cuenta/devoluciones';
+        };
+
+      } catch (error) {
+        formError.textContent = error.message || 'Error inesperado al enviar la solicitud.';
+        formError.classList.remove('hidden');
+        submitBtn.disabled = false;
+        submitText.textContent = 'Solicitar devolución';
+        submitSpinner.classList.add('hidden');
+      }
+    });
+  </script>
+</BaseLayout>
