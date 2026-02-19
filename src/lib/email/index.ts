@@ -1004,6 +1004,8 @@ interface ReturnApprovedEmailData {
   refundAmount: number;
   reason: string;
   adminNotes?: string;
+  creditNotePdf?: Buffer;
+  creditNoteNumber?: string;
 }
 
 const reasonLabels: Record<string, string> = {
@@ -1129,6 +1131,21 @@ export async function sendReturnApprovedEmail(data: ReturnApprovedEmailData): Pr
             Ver mis devoluciones
           </a>
         </div>
+
+        ${data.creditNoteNumber ? `
+        <!-- Nota de crédito adjunta -->
+        <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 12px; padding: 20px; margin-top: 24px;">
+          <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
+            <span style="font-size: 20px;">📄</span>
+            <p style="font-weight: 600; color: #991b1b; font-size: 15px; margin: 0;">Nota de Crédito Adjunta</p>
+          </div>
+          <p style="color: #7f1d1d; font-size: 14px; margin: 0; line-height: 1.5;">
+            Se ha generado la nota de crédito <strong>${data.creditNoteNumber}</strong> asociada a esta devolución. 
+            Encontrarás el documento PDF adjunto a este correo. También puedes consultarla en tu sección de 
+            <a href="https://eloyfashionstore.victoriafp.online/cuenta/facturas" style="color: #dc2626; font-weight: 600;">Mis Facturas</a>.
+          </p>
+        </div>
+        ` : ''}
       </div>
     </div>
 
@@ -1142,10 +1159,18 @@ export async function sendReturnApprovedEmail(data: ReturnApprovedEmailData): Pr
 </html>
   `;
 
+  // Preparar adjuntos si existe el PDF de nota de crédito
+  const attachments = data.creditNotePdf ? [{
+    filename: `Nota-Credito-${data.creditNoteNumber || 'NC'}.pdf`,
+    content: data.creditNotePdf,
+    contentType: 'application/pdf',
+  }] : undefined;
+
   return sendEmail({
     to: data.customerEmail,
     subject: `✅ Devolución aprobada - ${data.returnNumber}`,
     html,
+    attachments,
   });
 }
 

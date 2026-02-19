@@ -19,13 +19,29 @@ if (isSupabaseAdminConfigured() && supabaseAdmin) {
       .from('returns')
       .select(`
         *,
-        orders (order_number, total),
-        profiles:user_id!left (full_name, email)
+        orders (order_number, total)
       `)
       .order('created_at', { ascending: false });
     
     if (error) console.error('Error fetching returns:', error);
     returns = data || [];
+
+    // Obtener perfiles de los usuarios de las devoluciones
+    if (returns.length > 0) {
+      const userIds = [...new Set(returns.map((r: any) => r.user_id).filter(Boolean))];
+      if (userIds.length > 0) {
+        const { data: profiles } = await supabaseAdmin
+          .from('profiles')
+          .select('id, full_name, email')
+          .in('id', userIds);
+
+        const profileMap = new Map((profiles || []).map((p: any) => [p.id, p]));
+        returns = returns.map((ret: any) => ({
+          ...ret,
+          profiles: profileMap.get(ret.user_id) || null,
+        }));
+      }
+    }
   } catch (error) {
     console.error('Error fetching returns:', error);
   }
