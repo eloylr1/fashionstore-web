@@ -68,8 +68,8 @@ export const GET: APIRoute = async ({ params, cookies }) => {
           ${item.name}${item.size ? ` - Talla: ${item.size}` : ''}${item.color ? ` - Color: ${item.color}` : ''}
         </td>
         <td style="padding: 12px; border-bottom: 1px solid #fecaca; text-align: center;">${item.quantity}</td>
-        <td style="padding: 12px; border-bottom: 1px solid #fecaca; text-align: right;">${(item.unit_price / 100).toFixed(2)}€</td>
-        <td style="padding: 12px; border-bottom: 1px solid #fecaca; text-align: right; color: #dc2626;">-${(item.total / 100).toFixed(2)}€</td>
+        <td style="padding: 12px; border-bottom: 1px solid #fecaca; text-align: right;">${(Math.abs(item.unit_price) / 100).toFixed(2)}€</td>
+        <td style="padding: 12px; border-bottom: 1px solid #fecaca; text-align: right; color: #dc2626;">-${(Math.abs(item.total) / 100).toFixed(2)}€</td>
       </tr>
     `).join('');
 
@@ -212,7 +212,7 @@ export const GET: APIRoute = async ({ params, cookies }) => {
   </div>
 
   <div class="reason-box">
-    <h4>📋 Motivo del abono</h4>
+    <h4>Motivo del abono</h4>
     <p style="margin: 0 0 8px; color: #991b1b;">${creditNote.reason || 'Cancelación de pedido'}</p>
     <p style="margin: 0; font-size: 14px; color: #666;">Método de reembolso: ${creditNote.refund_method || 'Devolución a tarjeta original'}</p>
   </div>

@@ -21,20 +21,27 @@ let order: any = null;
 
 if (isSupabaseAdminConfigured() && supabaseAdmin) {
   try {
-    // Obtener devolución
+    // Obtener devolución (sin join para evitar errores de FK)
     const { data: retRaw, error } = await (supabaseAdmin as any)
       .from('returns')
-      .select(`
-        *,
-        orders (id, order_number, total, status, payment_method, stripe_payment_intent_id, created_at, delivered_at)
-      `)
+      .select('*')
       .eq('id', id)
       .single();
 
     const ret = retRaw as any;
-    if (error) console.error('Error:', error);
+    if (error) console.error('Error fetching return:', error);
     returnData = ret;
-    order = ret?.orders;
+
+    // Obtener pedido original por separado
+    if (ret?.order_id) {
+      const { data: orderData, error: orderError } = await (supabaseAdmin as any)
+        .from('orders')
+        .select('id, order_number, total, status, payment_method, stripe_payment_intent_id, created_at')
+        .eq('id', ret.order_id)
+        .single();
+      if (orderError) console.error('Error fetching order:', orderError);
+      order = orderData;
+    }
 
     // Cliente
     if (ret?.user_id) {

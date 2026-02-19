@@ -425,11 +425,15 @@ export function generateCreditNotePDF(creditNote: CreditNoteData): Buffer {
     if (item.size) desc += ` - Talla: ${item.size}`;
     if (item.color) desc += ` - Color: ${item.color}`;
     
+    // Los items del RPC vienen con valores negativos, usar Math.abs para mostrar
+    const unitPrice = Math.abs(item.unit_price);
+    const itemTotal = Math.abs(item.total);
+    
     return [
       desc,
       item.quantity.toString(),
-      `${(item.unit_price / 100).toFixed(2)}€`,
-      `-${(item.total / 100).toFixed(2)}€` // Negativo en nota de crédito
+      `${(unitPrice / 100).toFixed(2)}€`,
+      `-${(itemTotal / 100).toFixed(2)}€` // Negativo en nota de crédito
     ];
   });
 

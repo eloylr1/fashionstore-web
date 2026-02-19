@@ -39,16 +39,41 @@ export const GET: APIRoute = async ({ params, cookies }) => {
       return new Response('Usuario no válido', { status: 401 });
     }
 
-    // Obtener factura
-    const { data: invoice, error: invoiceError } = await supabase
+    // Obtener factura - primero por ID directo, luego por order_id
+    let invoice: any = null;
+    let invoiceError: any = null;
+
+    const { data: invoiceById, error: errById } = await supabase
       .from('invoices')
       .select('*')
       .eq('id', invoiceId)
       .single();
 
-    if (invoiceError || !invoice) {
+    if (invoiceById) {
+      invoice = invoiceById;
+    } else {
+      // Fallback: buscar por order_id (cuando se pasa el ID del pedido)
+      const { data: invoiceByOrder, error: errByOrder } = await supabase
+        .from('invoices')
+        .select('*')
+        .eq('order_id', invoiceId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (invoiceByOrder) {
+        invoice = invoiceByOrder;
+      } else {
+        invoiceError = errById || errByOrder;
+      }
+    }
+
+    if (!invoice) {
       return new Response('Factura no encontrada', { status: 404 });
     }
+
+    // Usar el ID real de la factura para generar el PDF
+    const realInvoiceId = invoice.id;
 
     // Verificar que la factura pertenece al usuario (o es admin)
     const { data: profile } = await supabase
@@ -62,7 +87,7 @@ export const GET: APIRoute = async ({ params, cookies }) => {
     }
 
     // Generar PDF
-    const result = await generateInvoicePDFFromDB(supabase, invoiceId);
+    const result = await generateInvoicePDFFromDB(supabase, realInvoiceId);
     
     if (!result) {
       return new Response('Error al generar el PDF', { status: 500 });

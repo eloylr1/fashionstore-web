@@ -682,7 +682,7 @@ export async function sendOrderCancellationEmail(data: CancelOrderEmailData): Pr
         <table style="width: 100%;">
           <tr>
             <td style="width: 40px; vertical-align: top;">
-              <span style="font-size: 24px;">📝</span>
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#9a3412" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
             </td>
             <td>
               <p style="color: #9a3412; font-size: 12px; margin: 0 0 4px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">Motivo de la cancelación</p>
@@ -760,7 +760,7 @@ export async function sendOrderCancellationEmail(data: CancelOrderEmailData): Pr
         <table style="width: 100%;">
           <tr>
             <td style="width: 50px; vertical-align: top;">
-              <span style="font-size: 32px;">💰</span>
+              <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#065f46" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
             </td>
             <td>
               <h4 style="margin: 0 0 12px; color: #065f46; font-size: 16px;">Información sobre tu reembolso</h4>
@@ -779,7 +779,7 @@ export async function sendOrderCancellationEmail(data: CancelOrderEmailData): Pr
       <div style="padding: 0 40px 40px; text-align: center;">
         <a href="https://eloyfashionstore.victoriafp.online/tienda" 
            style="display: inline-block; background: linear-gradient(135deg, #1e3a5f 0%, #2d5a8f 100%); color: white; text-decoration: none; padding: 18px 48px; border-radius: 12px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 14px rgba(30,58,95,0.3);">
-          🛍️ Seguir Comprando
+          Seguir Comprando
         </a>
         <p style="margin: 20px 0 0; color: #6b7280; font-size: 13px;">
           Sentimos que hayas tenido que cancelar tu pedido.<br>
@@ -1043,7 +1043,7 @@ export async function sendReturnApprovedEmail(data: ReturnApprovedEmailData): Pr
         <div style="width: 64px; height: 64px; background: rgba(255,255,255,0.2); border-radius: 50%; margin: 0 auto 16px; display: flex; align-items: center; justify-content: center;">
           <table cellpadding="0" cellspacing="0" border="0" style="margin: 0 auto;">
             <tr><td style="width: 64px; height: 64px; background: rgba(255,255,255,0.2); border-radius: 50%; text-align: center; vertical-align: middle;">
-              <span style="font-size: 28px;">✅</span>
+              <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
             </td></tr>
           </table>
         </div>
@@ -1136,7 +1136,7 @@ export async function sendReturnApprovedEmail(data: ReturnApprovedEmailData): Pr
         <!-- Nota de crédito adjunta -->
         <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 12px; padding: 20px; margin-top: 24px;">
           <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
-            <span style="font-size: 20px;">📄</span>
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#991b1b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
             <p style="font-weight: 600; color: #991b1b; font-size: 15px; margin: 0;">Nota de Crédito Adjunta</p>
           </div>
           <p style="color: #7f1d1d; font-size: 14px; margin: 0; line-height: 1.5;">
@@ -1168,7 +1168,7 @@ export async function sendReturnApprovedEmail(data: ReturnApprovedEmailData): Pr
 
   return sendEmail({
     to: data.customerEmail,
-    subject: `✅ Devolución aprobada - ${data.returnNumber}`,
+    subject: `Devolución aprobada - ${data.returnNumber}`,
     html,
     attachments,
   });
@@ -1213,7 +1213,7 @@ export async function sendReturnRejectedEmail(data: ReturnRejectedEmailData): Pr
       <div style="background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%); padding: 40px 32px; text-align: center;">
         <table cellpadding="0" cellspacing="0" border="0" style="margin: 0 auto 16px;">
           <tr><td style="width: 64px; height: 64px; background: rgba(255,255,255,0.2); border-radius: 50%; text-align: center; vertical-align: middle;">
-            <span style="font-size: 28px;">❌</span>
+            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           </td></tr>
         </table>
         <h2 style="color: white; font-size: 24px; margin: 0 0 8px; font-weight: 700;">Devolución No Aprobada</h2>

@@ -454,4 +454,36 @@ const paymentMethods: Record<string, string> = {
       window.print();
     });
   </script>
+
+  <style>
+    @media print {
+      /* Ocultar sidebar, header, footer y botones de acción */
+      aside, header, footer,
+      [class*="AdminSidebar"], [class*="AdminHeader"],
+      #print-order, #status-select,
+      button, select, a[href*="/api/invoices"] {
+        display: none !important;
+      }
+      /* Hacer que el contenido ocupe toda la página */
+      body {
+        background: white !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      .flex.h-screen {
+        display: block !important;
+      }
+      main {
+        overflow: visible !important;
+        padding: 0 !important;
+      }
+      main > div {
+        padding: 10px !important;
+      }
+      /* Ocultar sección de Acciones */
+      .space-y-3:has(#print-order) {
+        display: none !important;
+      }
+    }
+  </style>
 </AdminLayout>
