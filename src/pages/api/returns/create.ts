@@ -23,10 +23,42 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       return json({ success: false, error: 'No autenticado' }, 401);
     }
 
-    // Obtener usuario
-    const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(accessToken);
-    if (userError || !user) {
-      return json({ success: false, error: 'Sesión no válida' }, 401);
+    // Obtener usuario (intentar refresh si token expirado)
+    let user: any = null;
+    const { data: { user: directUser }, error: userError } = await supabaseAdmin.auth.getUser(accessToken);
+    
+    if (directUser && !userError) {
+      user = directUser;
+    } else if (refreshToken) {
+      // Token expirado - intentar refresh
+      try {
+        const { createClient } = await import('@supabase/supabase-js');
+        const anonUrl = import.meta.env.PUBLIC_SUPABASE_URL;
+        const anonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+        if (anonUrl && anonKey) {
+          const anonClient = createClient(anonUrl, anonKey);
+          const { data: refreshData, error: refreshError } = await anonClient.auth.refreshSession({
+            refresh_token: refreshToken,
+          });
+          if (refreshData?.session && !refreshError) {
+            user = refreshData.session.user;
+            // Actualizar cookies con tokens nuevos
+            const maxAge = 60 * 60 * 24 * 7;
+            cookies.set('sb-access-token', refreshData.session.access_token, {
+              path: '/', maxAge, sameSite: 'lax', httpOnly: false,
+            });
+            cookies.set('sb-refresh-token', refreshData.session.refresh_token, {
+              path: '/', maxAge, sameSite: 'lax', httpOnly: false,
+            });
+          }
+        }
+      } catch (refreshErr) {
+        console.error('Error refreshing token in returns/create:', refreshErr);
+      }
+    }
+
+    if (!user) {
+      return json({ success: false, error: 'Sesión no válida o expirada. Recarga la página.' }, 401);
     }
 
     // Parsear body
@@ -72,7 +104,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     }
 
     // Verificar que no haya ya una devolución activa para este pedido
-    const { data: existingReturn } = await supabaseAdmin
+    const { data: existingReturn } = await (supabaseAdmin as any)
       .from('returns')
       .select('id, status')
       .eq('order_id', order_id)
@@ -84,7 +116,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     }
 
     // Obtener items del pedido
-    const { data: orderItems } = await supabaseAdmin
+    const { data: orderItems } = await (supabaseAdmin as any)
       .from('order_items')
       .select('id, product_name, quantity, unit_price, size, color')
       .eq('order_id', order_id);

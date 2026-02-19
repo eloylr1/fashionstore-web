@@ -32,6 +32,23 @@ if (sessionError || !sessionData.user) {
 
 const user = sessionData.user;
 
+// Escribir tokens actualizados en cookies (por si se refrescaron)
+if (sessionData.session) {
+  const maxAge = 60 * 60 * 24 * 7;
+  Astro.cookies.set('sb-access-token', sessionData.session.access_token, {
+    path: '/',
+    maxAge,
+    sameSite: 'lax',
+    httpOnly: false,
+  });
+  Astro.cookies.set('sb-refresh-token', sessionData.session.refresh_token, {
+    path: '/',
+    maxAge,
+    sameSite: 'lax',
+    httpOnly: false,
+  });
+}
+
 // Obtener devoluciones
 const { data: returns } = await sb
   .from('returns')
