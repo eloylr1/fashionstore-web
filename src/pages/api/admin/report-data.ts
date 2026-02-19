@@ -55,10 +55,10 @@ export const GET: APIRoute = async ({ cookies }) => {
     // KPIs del mes
     const { data: monthOrders } = await supabase
       .from('orders')
-      .select('total_cents, status')
+      .select('total, status')
       .gte('created_at', firstDayOfMonth);
 
-    const monthSalesCents = monthOrders?.reduce((sum, o) => sum + (o.total_cents || 0), 0) || 0;
+    const monthSalesCents = monthOrders?.reduce((sum, o) => sum + (o.total || 0), 0) || 0;
     const pendingCount = monthOrders?.filter(o => o.status === 'pending').length || 0;
 
     // Totales generales
@@ -78,7 +78,7 @@ export const GET: APIRoute = async ({ cookies }) => {
     // Producto más vendido
     const { data: orderItems } = await supabase
       .from('order_items')
-      .select('product_id, quantity, unit_price_cents, products(name)');
+      .select('product_id, quantity, unit_price, products(name)');
 
     const productSales: Record<string, { name: string; units: number; revenue: number }> = {};
     orderItems?.forEach((item: any) => {
@@ -88,7 +88,7 @@ export const GET: APIRoute = async ({ cookies }) => {
         productSales[id] = { name, units: 0, revenue: 0 };
       }
       productSales[id].units += item.quantity || 0;
-      productSales[id].revenue += (item.unit_price_cents || 0) * (item.quantity || 0);
+      productSales[id].revenue += (item.unit_price || item.price || 0) * (item.quantity || 0);
     });
 
     const topProducts = Object.values(productSales)
@@ -100,7 +100,7 @@ export const GET: APIRoute = async ({ cookies }) => {
     // Ventas últimos 7 días
     const { data: recentOrders } = await supabase
       .from('orders')
-      .select('created_at, total_cents')
+      .select('created_at, total')
       .gte('created_at', sevenDaysAgo)
       .order('created_at', { ascending: true });
 
@@ -114,7 +114,7 @@ export const GET: APIRoute = async ({ cookies }) => {
     recentOrders?.forEach((order: any) => {
       const dateStr = new Date(order.created_at).toISOString().split('T')[0];
       if (salesByDay.hasOwnProperty(dateStr)) {
-        salesByDay[dateStr] += order.total_cents || 0;
+        salesByDay[dateStr] += order.total || 0;
       }
     });
 
@@ -123,15 +123,15 @@ export const GET: APIRoute = async ({ cookies }) => {
     // Pedidos recientes para el reporte
     const { data: ordersForReport } = await supabase
       .from('orders')
-      .select('id, created_at, total_cents, status, profiles(full_name, email)')
+      .select('id, created_at, total, status, shipping_name, guest_email')
       .order('created_at', { ascending: false })
       .limit(20);
 
     const formattedOrders = ordersForReport?.map((o: any) => ({
       id: o.id,
       date: o.created_at,
-      customer: o.profiles?.full_name || o.profiles?.email || 'Cliente',
-      total: o.total_cents || 0,
+      customer: o.shipping_name || o.guest_email || 'Cliente',
+      total: o.total || 0,
       status: translateStatus(o.status),
     })) || [];
 

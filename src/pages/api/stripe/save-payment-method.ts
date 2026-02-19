@@ -88,10 +88,13 @@ export const POST: APIRoute = async ({ request, cookies }) => {
         type: 'card',
         card_brand: brand,
         card_last4: last4,
+        brand: brand,
+        last_four: last4,
         expiry_month: expMonth,
         expiry_year: expYear,
         is_default: isDefault,
-        // stripe_payment_method_id: paymentMethodId, // TODO: Añadir después de ejecutar migración SQL
+        stripe_payment_method_id: paymentMethodId,
+        label: `${(brand || 'Card').charAt(0).toUpperCase()}${(brand || 'card').slice(1)} terminada en ${last4}`,
       })
       .select();
 

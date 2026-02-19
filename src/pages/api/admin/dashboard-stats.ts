@@ -105,7 +105,7 @@ export const GET: APIRoute = async ({ cookies }) => {
       
       // Últimos 5 pedidos
       (supabase as any).from('orders')
-        .select('id, order_number, total, status, created_at, shipping_name, shipping_email, user_id')
+        .select('id, order_number, total, status, created_at, shipping_name, guest_email, user_id')
         .order('created_at', { ascending: false })
         .limit(5),
       
@@ -225,7 +225,7 @@ export const GET: APIRoute = async ({ cookies }) => {
       status: order.status,
       createdAt: order.created_at,
       customerName: order.shipping_name || 'Cliente',
-      customerEmail: order.shipping_email || '',
+      customerEmail: order.guest_email || '',
     }));
 
     // Productos con stock bajo

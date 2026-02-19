@@ -318,13 +318,17 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       );
     }
 
-    // 4) Crear order_items - usar solo columnas que existen en la tabla
+    // 4) Crear order_items - incluir imagen y slug para historial
     const orderItems = items.map(item => ({
       order_id: order.id,
       product_id: item.product_id,
       product_name: item.product_name,
+      product_image: item.product_image || null,
+      product_slug: item.product_slug || null,
       quantity: item.quantity,
       price: item.unit_price, // La columna se llama 'price' en la tabla original
+      unit_price: item.unit_price, // También guardar en unit_price si existe
+      total_price: (item.unit_price || 0) * (item.quantity || 1),
       size: item.size || null,
       color: item.color || null,
     }));

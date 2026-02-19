@@ -464,21 +464,22 @@ const stripePublicKey = import.meta.env.PUBLIC_STRIPE_PUBLISHABLE_KEY || '';
                       </label>
                       <div class="space-y-2" id="saved-cards">
                         {userPaymentMethods.map((card, index) => {
-                          // Usar card_brand y card_last4 que son las columnas del schema original
-                          const hasValidData = card.card_brand && card.card_last4;
-                          const cardBrand = card.card_brand || 'card';
-                          const cardLastFour = card.card_last4 || '****';
+                          // Soportar ambos nombres de columna (old: card_brand/card_last4, new: brand/last_four)
+                          const cardBrand = card.brand || card.card_brand || 'card';
+                          const cardLastFour = card.last_four || card.card_last4 || '****';
+                          const hasValidData = cardBrand !== 'card' || cardLastFour !== '****';
+                          const stripePM = card.stripe_payment_method_id || '';
                           return (
-                          <label class={`saved-card-option flex items-center gap-3 p-4 border rounded-lg cursor-pointer transition-colors ${hasValidData ? 'border-charcoal-200 hover:border-navy-900/30' : 'border-red-200 bg-red-50/50'}`}>
+                          <label class={`saved-card-option flex items-center gap-3 p-4 border rounded-lg cursor-pointer transition-colors ${hasValidData && stripePM ? 'border-charcoal-200 hover:border-navy-900/30' : 'border-red-200 bg-red-50/50'}`}>
                             <input 
                               type="radio" 
                               name="savedCard" 
                               value={card.id}
-                              data-stripe-pm={card.stripe_payment_method_id || ''}
+                              data-stripe-pm={stripePM}
                               data-last-four={cardLastFour}
                               data-brand={cardBrand}
-                              checked={index === 0 && hasValidData}
-                              disabled={!hasValidData}
+                              checked={index === 0 && hasValidData && !!stripePM}
+                              disabled={!hasValidData || !stripePM}
                               class="w-4 h-4 text-navy-900 border-charcoal-300 focus:ring-navy-900 disabled:opacity-50"
                             />
                             <div class="flex items-center gap-3 flex-1">
@@ -501,16 +502,16 @@ const stripePublicKey = import.meta.env.PUBLIC_STRIPE_PUBLISHABLE_KEY || '';
                               )}
                               <div>
                                 <div class="flex items-center gap-2">
-                                  <span class={`font-medium ${hasValidData ? 'text-navy-900' : 'text-red-600'}`}>
-                                    {hasValidData 
+                                  <span class={`font-medium ${hasValidData && stripePM ? 'text-navy-900' : 'text-red-600'}`}>
+                                    {hasValidData && stripePM
                                       ? (card.label || `${cardBrand.charAt(0).toUpperCase()}${cardBrand.slice(1)} terminada en ${cardLastFour}`)
-                                      : 'Tarjeta con datos incompletos'}
+                                      : 'Tarjeta sin datos de pago vinculados'}
                                   </span>
-                                  {card.is_default && hasValidData && (
+                                  {card.is_default && hasValidData && stripePM && (
                                     <span class="px-2 py-0.5 bg-navy-100 text-navy-700 text-xs rounded-full">Principal</span>
                                   )}
-                                  {!hasValidData && (
-                                    <span class="px-2 py-0.5 bg-red-100 text-red-700 text-xs rounded-full">Eliminar y volver a añadir</span>
+                                  {(!hasValidData || !stripePM) && (
+                                    <span class="px-2 py-0.5 bg-red-100 text-red-700 text-xs rounded-full">Usa otra tarjeta</span>
                                   )}
                                 </div>
                                 <p class="text-sm text-charcoal-500">•••• •••• •••• {cardLastFour}</p>
