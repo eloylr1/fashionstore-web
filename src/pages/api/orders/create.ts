@@ -460,8 +460,6 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     }
 
     // 7) Generar factura - SIEMPRE crear factura con reintentos
-    const year = new Date().getFullYear();
-    
     const invoiceStatus = payment_method === 'card' ? 'paid' : 'pending';
     
     // Preparar datos de factura base (sin invoice_number que se genera en cada intento)
