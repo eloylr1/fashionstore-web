@@ -1287,10 +1287,10 @@ export async function sendReturnApprovedEmail(data: ReturnApprovedEmailData): Pr
         <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 12px; padding: 20px; margin-top: 24px;">
           <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#991b1b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-            <p style="font-weight: 600; color: #991b1b; font-size: 15px; margin: 0;">Nota de Crédito Adjunta</p>
+            <p style="font-weight: 600; color: #991b1b; font-size: 15px; margin: 0;">Factura Rectificativa Adjunta</p>
           </div>
           <p style="color: #7f1d1d; font-size: 14px; margin: 0; line-height: 1.5;">
-            Se ha generado la nota de crédito <strong>${data.creditNoteNumber}</strong> asociada a esta devolución. 
+            Se ha generado la factura rectificativa <strong>${data.creditNoteNumber}</strong> asociada a esta devolución. 
             Encontrarás el documento PDF adjunto a este correo. También puedes consultarla en tu sección de 
             <a href="https://eloyfashionstore.victoriafp.online/cuenta/facturas" style="color: #dc2626; font-weight: 600;">Mis Facturas</a>.
           </p>
@@ -1311,7 +1311,7 @@ export async function sendReturnApprovedEmail(data: ReturnApprovedEmailData): Pr
 
   // Preparar adjuntos si existe el PDF de nota de crédito
   const attachments = data.creditNotePdf ? [{
-    filename: `Nota-Credito-${data.creditNoteNumber || 'NC'}.pdf`,
+    filename: `Factura-Rectificativa-${data.creditNoteNumber || 'NC'}.pdf`,
     content: data.creditNotePdf,
     contentType: 'application/pdf',
   }] : undefined;

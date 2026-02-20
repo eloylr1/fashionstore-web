@@ -121,8 +121,11 @@ export const cartSubtotalFormatted = computed(cartSubtotal, (subtotal) =>
 /**
  * Añadir producto al carrito
  */
-export function addToCart(product: Product, size: string, quantity: number = 1, color?: string, colorIndex?: number): void {
+export function addToCart(product: Product, size: string, quantity: number = 1, color?: string, colorIndex?: number, variantStock?: number): void {
   const currentItems = cartItems.get();
+  
+  // Usar stock de variante si se proporciona, si no el stock global
+  const effectiveMaxStock = variantStock !== undefined ? variantStock : product.stock;
   
   // Buscar si ya existe este producto con esta talla y color
   const existingIndex = currentItems.findIndex(
@@ -132,11 +135,12 @@ export function addToCart(product: Product, size: string, quantity: number = 1, 
   let newItems: CartItem[];
   
   if (existingIndex > -1) {
-    // Actualizar cantidad si ya existe
+    // Actualizar cantidad si ya existe (y actualizar el maxStock por si cambió)
     newItems = currentItems.map((item, index) => {
       if (index === existingIndex) {
-        const newQuantity = Math.min(item.quantity + quantity, item.maxStock);
-        return { ...item, quantity: newQuantity };
+        const updatedMaxStock = effectiveMaxStock;
+        const newQuantity = Math.min(item.quantity + quantity, updatedMaxStock);
+        return { ...item, quantity: newQuantity, maxStock: updatedMaxStock };
       }
       return item;
     });
@@ -153,11 +157,11 @@ export function addToCart(product: Product, size: string, quantity: number = 1, 
       name: product.name,
       slug: product.slug,
       price: product.price,
-      quantity: Math.min(quantity, product.stock),
+      quantity: Math.min(quantity, effectiveMaxStock),
       size,
       color,
       image,
-      maxStock: product.stock,
+      maxStock: effectiveMaxStock,
     };
     newItems = [...currentItems, newItem];
   }

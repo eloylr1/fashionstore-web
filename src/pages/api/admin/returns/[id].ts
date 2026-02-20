@@ -216,7 +216,7 @@ export const PATCH: APIRoute = async ({ params, request, cookies }) => {
       return new Response(JSON.stringify({
         success: true,
         message: creditNoteNumber 
-          ? `Devolución aprobada y nota de crédito ${creditNoteNumber} generada`
+          ? `Devolución aprobada y factura rectificativa ${creditNoteNumber} generada`
           : 'Devolución aprobada correctamente',
         data: updated,
         creditNoteNumber,

@@ -263,8 +263,12 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       ? (storeSettings.payments.cod_extra_cost || 0) 
       : 0;
 
-    const tax = 0; // IVA ya incluido en precio
+    const tax = 0; // IVA ya incluido en precio (para cálculo del total del pedido)
     const total = subtotal - discount_amount + shipping_cost + cod_extra_cost + tax;
+
+    // Calcular IVA desglosado para factura (precios incluyen IVA al 21%)
+    const invoiceBaseImponible = Math.round(total / 1.21);
+    const invoiceTaxAmount = total - invoiceBaseImponible;
 
     // Determinar estado inicial según método de pago
     let orderStatus = 'pending';
@@ -276,8 +280,31 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       orderStatus = 'paid'; // Pagado con tarjeta
     }
 
-    // Generar número de pedido
-    const orderNumber = `FM-${Date.now().toString(36).toUpperCase()}`;
+    // Generar número de pedido correlativo (PED-YYYY-LNNNNN ej: PED-2026-A00001)
+    const year = new Date().getFullYear();
+    const { data: maxOrder } = await supabase
+      .from('orders')
+      .select('order_number')
+      .ilike('order_number', `PED-${year}-%`)
+      .order('order_number', { ascending: false })
+      .limit(1)
+      .single();
+    
+    let nextOrderSeq = 1;
+    if (maxOrder?.order_number) {
+      const match = maxOrder.order_number.match(/PED-\d{4}-([A-Z])(\d+)/);
+      if (match) {
+        const letterVal = match[1].charCodeAt(0) - 65; // A=0, B=1...
+        nextOrderSeq = letterVal * 99999 + parseInt(match[2], 10) + 1;
+      } else {
+        // Compatibilidad con formato antiguo sin letra
+        const oldMatch = maxOrder.order_number.match(/PED-\d{4}-(\d+)/);
+        if (oldMatch) nextOrderSeq = parseInt(oldMatch[1], 10) + 1;
+      }
+    }
+    const orderLetter = String.fromCharCode(65 + Math.floor((nextOrderSeq - 1) / 99999));
+    const orderDigits = ((nextOrderSeq - 1) % 99999) + 1;
+    const orderNumber = `PED-${year}-${orderLetter}${String(orderDigits).padStart(5, '0')}`;
 
     // 3) Crear pedido - SIEMPRE guardar customer_email para búsquedas
     const { data: order, error: orderError } = await supabase
@@ -443,9 +470,9 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       customer_name: shipping_address.full_name,
       customer_email: finalEmail,
       customer_address: shipping_address,
-      subtotal,
-      tax_rate: storeSettings.taxes.tax_rate,
-      tax_amount: tax,
+      subtotal: invoiceBaseImponible,
+      tax_rate: storeSettings.taxes.tax_rate || 21,
+      tax_amount: invoiceTaxAmount,
       total,
       status: invoiceStatus,
       payment_method,
@@ -473,22 +500,27 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       const { data: maxInvoice } = await supabase
         .from('invoices')
         .select('invoice_number')
-        .ilike('invoice_number', `FM-${year}-%`)
+        .ilike('invoice_number', `FAC-${year}-%`)
         .order('invoice_number', { ascending: false })
         .limit(1)
         .single();
       
-      let nextNum = 1;
+      let nextSeq = 1;
       if (maxInvoice?.invoice_number) {
-        const match = maxInvoice.invoice_number.match(/FM-\d{4}-(\d+)/);
+        const match = maxInvoice.invoice_number.match(/(?:FM|FAC)-\d{4}-([A-Z])(\d+)/);
         if (match) {
-          nextNum = parseInt(match[1], 10) + 1;
+          const lv = match[1].charCodeAt(0) - 65;
+          nextSeq = lv * 99999 + parseInt(match[2], 10) + 1;
+        } else {
+          const oldMatch = maxInvoice.invoice_number.match(/(?:FM|FAC)-\d{4}-(\d+)/);
+          if (oldMatch) nextSeq = parseInt(oldMatch[1], 10) + 1;
         }
       }
       // Añadir offset por intento para evitar colisiones
-      nextNum += attempt;
-      
-      invoiceNumber = `FM-${year}-${String(nextNum).padStart(6, '0')}`;
+      nextSeq += attempt;
+      const invLetter = String.fromCharCode(65 + Math.floor((nextSeq - 1) / 99999));
+      const invDigits = ((nextSeq - 1) % 99999) + 1;
+      invoiceNumber = `FAC-${year}-${invLetter}${String(invDigits).padStart(5, '0')}`;
       
       const invoiceData = { ...baseInvoiceData, invoice_number: invoiceNumber };
       

@@ -18,7 +18,7 @@ export const GET: APIRoute = async ({ params, cookies }) => {
     const creditNoteId = params.id;
 
     if (!creditNoteId) {
-      return new Response('ID de nota de crédito requerido', { status: 400 });
+      return new Response('ID de factura rectificativa requerido', { status: 400 });
     }
 
     if (!supabaseUrl || !supabaseServiceKey) {
@@ -46,7 +46,7 @@ export const GET: APIRoute = async ({ params, cookies }) => {
       .single();
 
     if (cnError || !creditNote) {
-      return new Response('Nota de crédito no encontrada', { status: 404 });
+      return new Response('Factura rectificativa no encontrada', { status: 404 });
     }
 
     // Verificar que pertenece al usuario (o es admin)
@@ -88,7 +88,7 @@ export const GET: APIRoute = async ({ params, cookies }) => {
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Nota de Crédito ${creditNote.credit_note_number}</title>
+  <title>Factura Rectificativa ${creditNote.credit_note_number}</title>
   <style>
     body {
       font-family: 'Helvetica Neue', Arial, sans-serif;
@@ -203,7 +203,7 @@ export const GET: APIRoute = async ({ params, cookies }) => {
       <p style="margin: 5px 0; font-size: 14px; color: #666;">Moda masculina premium</p>
     </div>
     <div class="invoice-info">
-      <div class="invoice-number">NOTA DE CRÉDITO</div>
+      <div class="invoice-number">FACTURA RECTIFICATIVA</div>
       <p style="margin: 5px 0;"><strong>${creditNote.credit_note_number}</strong></p>
       <p style="margin: 5px 0; font-size: 14px;">Fecha: ${new Date(creditNote.issue_date).toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
       <p style="margin: 5px 0; font-size: 12px; color: #666;">Ref. Factura: ${originalInvoiceNumber}</p>
@@ -281,12 +281,12 @@ export const GET: APIRoute = async ({ params, cookies }) => {
       status: 200,
       headers: {
         'Content-Type': 'text/html; charset=utf-8',
-        'Content-Disposition': `inline; filename="nota-credito-${creditNote.credit_note_number}.html"`,
+        'Content-Disposition': `inline; filename="factura-rectificativa-${creditNote.credit_note_number}.html"`,
       },
     });
 
   } catch (error: any) {
     console.error('Error generating credit note:', error);
-    return new Response('Error al generar la nota de crédito', { status: 500 });
+    return new Response('Error al generar la factura rectificativa', { status: 500 });
   }
 };

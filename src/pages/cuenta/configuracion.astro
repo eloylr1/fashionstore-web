@@ -2,7 +2,7 @@
 /**
  * ═══════════════════════════════════════════════════════════════════════════
  * FASHIONMARKET - Configuración de Cuenta
- * Preferencias, seguridad y privacidad
+ * Preferencias y privacidad
  * ═══════════════════════════════════════════════════════════════════════════
  */
 
@@ -29,36 +29,6 @@ if (sessionError || !sessionData.user) {
 }
 
 const user = sessionData.user;
-
-let successMessage = '';
-let errorMessage = '';
-
-// Manejar cambio de contraseña
-if (Astro.request.method === 'POST') {
-  const formData = await Astro.request.formData();
-  const action = formData.get('action');
-
-  if (action === 'change_password') {
-    const newPassword = formData.get('new_password')?.toString() || '';
-    const confirmPassword = formData.get('confirm_password')?.toString() || '';
-
-    if (newPassword.length < 6) {
-      errorMessage = 'La contraseña debe tener al menos 6 caracteres';
-    } else if (newPassword !== confirmPassword) {
-      errorMessage = 'Las contraseñas no coinciden';
-    } else {
-      const { error } = await supabase.auth.updateUser({
-        password: newPassword
-      });
-
-      if (error) {
-        errorMessage = 'Error al cambiar la contraseña: ' + error.message;
-      } else {
-        successMessage = 'Contraseña actualizada correctamente';
-      }
-    }
-  }
-}
 ---
 
 <BaseLayout title="Configuración | FashionMarket">
@@ -75,65 +45,8 @@ if (Astro.request.method === 'POST') {
         </ol>
       </nav>
 
-      {successMessage && (
-        <div class="p-4 bg-green-50 border border-green-200 rounded-lg text-green-700 mb-6">
-          {successMessage}
-        </div>
-      )}
-
-      {errorMessage && (
-        <div class="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 mb-6">
-          {errorMessage}
-        </div>
-      )}
-
-      <!-- Cambiar contraseña -->
-      <div class="bg-white rounded-lg shadow-sm mb-6">
-        <div class="p-6 border-b border-charcoal-100">
-          <h2 class="text-xl font-serif text-navy-900">Cambiar contraseña</h2>
-          <p class="text-charcoal-500 text-sm mt-1">Actualiza tu contraseña de acceso</p>
-        </div>
-        <form method="POST" class="p-6 space-y-4">
-          <input type="hidden" name="action" value="change_password" />
-          
-          <div>
-            <label for="new_password" class="block text-sm font-medium text-navy-900 mb-2">
-              Nueva contraseña
-            </label>
-            <input
-              type="password"
-              id="new_password"
-              name="new_password"
-              required
-              minlength="6"
-              class="w-full px-4 py-3 border border-charcoal-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gold-matte focus:border-transparent"
-              placeholder="Mínimo 6 caracteres"
-            />
-          </div>
-
-          <div>
-            <label for="confirm_password" class="block text-sm font-medium text-navy-900 mb-2">
-              Confirmar contraseña
-            </label>
-            <input
-              type="password"
-              id="confirm_password"
-              name="confirm_password"
-              required
-              minlength="6"
-              class="w-full px-4 py-3 border border-charcoal-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gold-matte focus:border-transparent"
-              placeholder="Repite la contraseña"
-            />
-          </div>
-
-          <button
-            type="submit"
-            class="px-6 py-3 bg-navy-900 text-white rounded-lg hover:bg-navy-800 transition-colors font-medium"
-          >
-            Cambiar contraseña
-          </button>
-        </form>
-      </div>
+      <!-- Mensaje de éxito/error -->
+      <div id="config-message" class="hidden p-4 rounded-lg mb-6"></div>
 
       <!-- Preferencias de comunicación -->
       <div class="bg-white rounded-lg shadow-sm mb-6">
@@ -176,20 +89,6 @@ if (Astro.request.method === 'POST') {
         </div>
         <div class="p-6 space-y-4">
           <a 
-            href="/api/account/export-data"
-            download
-            class="flex items-center justify-between p-4 border border-charcoal-200 rounded-lg hover:bg-charcoal-50 transition-colors"
-          >
-            <div>
-              <span class="font-medium text-navy-900">Descargar mis datos</span>
-              <p class="text-sm text-charcoal-500">Obtén una copia de toda tu información</p>
-            </div>
-            <svg class="w-5 h-5 text-charcoal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-            </svg>
-          </a>
-
-          <a 
             href="/privacidad"
             class="flex items-center justify-between p-4 border border-charcoal-200 rounded-lg hover:bg-charcoal-50 transition-colors"
           >
@@ -218,8 +117,8 @@ if (Astro.request.method === 'POST') {
             </div>
             <button
               type="button"
+              id="btn-delete-account"
               class="px-4 py-2 border border-red-300 text-red-600 rounded-lg hover:bg-red-50 transition-colors text-sm font-medium"
-              onclick="confirm('¿Estás seguro de que quieres eliminar tu cuenta? Esta acción es irreversible.') && alert('Contacta con soporte para eliminar tu cuenta')"
             >
               Eliminar cuenta
             </button>
@@ -235,4 +134,127 @@ if (Astro.request.method === 'POST') {
       </div>
     </div>
   </main>
+
+  <!-- Modal de confirmación de eliminación -->
+  <div id="delete-modal" class="fixed inset-0 z-50 hidden">
+    <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" id="delete-modal-backdrop"></div>
+    <div class="absolute inset-0 flex items-center justify-center p-4">
+      <div class="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 relative">
+        <div class="text-center mb-6">
+          <div class="w-16 h-16 mx-auto mb-4 bg-red-100 rounded-full flex items-center justify-center">
+            <svg class="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+            </svg>
+          </div>
+          <h3 class="text-xl font-serif text-navy-900 mb-2">Eliminar cuenta permanentemente</h3>
+          <p class="text-charcoal-500 text-sm">
+            Esta acción no se puede deshacer. Se eliminarán todos tus datos personales, direcciones, historial de pedidos y preferencias asociados a tu cuenta.
+          </p>
+        </div>
+        <p class="text-sm text-charcoal-600 mb-4 text-center">
+          Escribe <strong class="text-red-600">ELIMINAR</strong> para confirmar:
+        </p>
+        <input 
+          type="text" 
+          id="delete-confirm-input"
+          class="w-full px-4 py-3 border border-charcoal-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent text-center mb-4"
+          placeholder="Escribe ELIMINAR"
+          autocomplete="off"
+        />
+        <div class="flex gap-3">
+          <button
+            type="button"
+            id="btn-cancel-delete"
+            class="flex-1 px-4 py-3 border border-charcoal-200 rounded-lg text-charcoal-600 hover:bg-charcoal-50 transition-colors font-medium"
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            id="btn-confirm-delete"
+            disabled
+            class="flex-1 px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Eliminar mi cuenta
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const deleteBtn = document.getElementById('btn-delete-account');
+    const deleteModal = document.getElementById('delete-modal');
+    const deleteBackdrop = document.getElementById('delete-modal-backdrop');
+    const cancelBtn = document.getElementById('btn-cancel-delete');
+    const confirmBtn = document.getElementById('btn-confirm-delete') as HTMLButtonElement;
+    const confirmInput = document.getElementById('delete-confirm-input') as HTMLInputElement;
+    const messageDiv = document.getElementById('config-message');
+
+    function showModal() {
+      deleteModal?.classList.remove('hidden');
+      confirmInput.value = '';
+      confirmBtn.disabled = true;
+    }
+
+    function hideModal() {
+      deleteModal?.classList.add('hidden');
+      confirmInput.value = '';
+      confirmBtn.disabled = true;
+    }
+
+    deleteBtn?.addEventListener('click', showModal);
+    deleteBackdrop?.addEventListener('click', hideModal);
+    cancelBtn?.addEventListener('click', hideModal);
+
+    confirmInput?.addEventListener('input', () => {
+      confirmBtn.disabled = confirmInput.value !== 'ELIMINAR';
+    });
+
+    confirmBtn?.addEventListener('click', async () => {
+      if (confirmInput.value !== 'ELIMINAR') return;
+
+      confirmBtn.disabled = true;
+      confirmBtn.textContent = 'Eliminando...';
+
+      try {
+        const response = await fetch('/api/auth/delete-account', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          hideModal();
+          if (messageDiv) {
+            messageDiv.className = 'p-4 bg-green-50 border border-green-200 rounded-lg text-green-700 mb-6';
+            messageDiv.textContent = 'Tu cuenta ha sido eliminada correctamente. Redirigiendo...';
+            messageDiv.classList.remove('hidden');
+          }
+          setTimeout(() => {
+            window.location.href = '/';
+          }, 2000);
+        } else {
+          hideModal();
+          if (messageDiv) {
+            messageDiv.className = 'p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 mb-6';
+            messageDiv.textContent = data.error || 'Error al eliminar la cuenta. Inténtalo de nuevo.';
+            messageDiv.classList.remove('hidden');
+          }
+          confirmBtn.textContent = 'Eliminar mi cuenta';
+          confirmBtn.disabled = false;
+        }
+      } catch (err) {
+        hideModal();
+        if (messageDiv) {
+          messageDiv.className = 'p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 mb-6';
+          messageDiv.textContent = 'Error de conexión. Inténtalo de nuevo.';
+          messageDiv.classList.remove('hidden');
+        }
+        confirmBtn.textContent = 'Eliminar mi cuenta';
+        confirmBtn.disabled = false;
+      }
+    });
+  </script>
 </BaseLayout>

@@ -162,9 +162,12 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       const { count } = await serviceClient
         .from('credit_notes')
         .select('*', { count: 'exact', head: true })
-        .like('credit_note_number', `NC-${year}-%`);
+        .like('credit_note_number', `FR-${year}-%`);
       
-      const creditNoteNumber = `NC-${year}-${String((count || 0) + 1).padStart(6, '0')}`;
+      const seq = (count || 0) + 1;
+      const frLetter = String.fromCharCode(65 + Math.floor((seq - 1) / 99999));
+      const frDigits = ((seq - 1) % 99999) + 1;
+      const creditNoteNumber = `FR-${year}-${frLetter}${String(frDigits).padStart(5, '0')}`;
       
       const creditNoteItems = (orderData.order_items || []).map((item: any) => ({
         name: item.product_name,
@@ -320,7 +323,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
         
         <div style="background: #f0fdf4; border: 1px solid #86efac; border-radius: 8px; padding: 15px; margin: 25px 0;">
           <p style="margin: 0; color: #166534; font-weight: 500;">
-            Adjuntamos la nota de credito <strong>${creditNote.credit_note_number}</strong> en formato PDF
+            Adjuntamos la factura rectificativa <strong>${creditNote.credit_note_number}</strong> en formato PDF
           </p>
         </div>
         
@@ -343,10 +346,10 @@ export const POST: APIRoute = async ({ request, cookies }) => {
           // Enviar email
           const emailResult = await sendEmail({
             to: customerEmail,
-            subject: `Pedido #${orderData.order_number} cancelado - Nota de credito ${creditNote.credit_note_number}`,
+            subject: `Pedido #${orderData.order_number} cancelado - Factura rectificativa ${creditNote.credit_note_number}`,
             html: emailHtml,
             attachments: [{
-              filename: `NotaCredito-${creditNote.credit_note_number}.pdf`,
+              filename: `FacturaRectificativa-${creditNote.credit_note_number}.pdf`,
               content: pdfBuffer,
               contentType: 'application/pdf',
             }],

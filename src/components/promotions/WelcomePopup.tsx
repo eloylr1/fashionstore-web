@@ -112,10 +112,10 @@ export default function WelcomePopup({ isLoggedIn = false }: WelcomePopupProps) 
             <span className="inline-block bg-gold-matte/20 text-gold-matte text-xs font-semibold tracking-wider uppercase px-3 py-1 rounded-full mb-4">
               ¡Oferta de Bienvenida!
             </span>
-            <h2 className="font-serif text-3xl font-bold mb-2">
+            <h2 className="font-serif text-3xl font-bold mb-2 text-white drop-shadow-lg">
               {DISCOUNT_PERCENTAGE} de Descuento
             </h2>
-            <p className="text-white/80 text-sm">
+            <p className="text-white/90 text-sm font-medium">
               en tu primera compra
             </p>
           </div>

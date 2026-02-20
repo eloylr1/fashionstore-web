@@ -247,10 +247,10 @@ export function generateInvoicePDF(invoice: InvoiceData): Buffer {
   const totalsX = pageWidth - margin - 80;
   const valuesX = pageWidth - margin;
   
-  // Subtotal
+  // Base imponible
   doc.setFontSize(10);
   doc.setTextColor(...COLORS.text);
-  doc.text('Subtotal', totalsX, y);
+  doc.text('Base imponible', totalsX, y);
   doc.text(`${(invoice.subtotal / 100).toFixed(2)}€`, valuesX, y, { align: 'right' });
   
   // Descuento (si aplica)
@@ -326,7 +326,7 @@ export function generateCreditNotePDF(creditNote: CreditNoteData): Buffer {
   doc.setFontSize(20);
   doc.setTextColor(...COLORS.red);
   doc.setFont('helvetica', 'bold');
-  doc.text('NOTA DE CRÉDITO', pageWidth - margin, y, { align: 'right' });
+  doc.text('FACTURA RECTIFICATIVA', pageWidth - margin, y, { align: 'right' });
   
   doc.setFontSize(12);
   doc.setTextColor(...COLORS.primary);
@@ -590,7 +590,7 @@ export function generateInvoicePDFDirect(data: {
     customer_email: data.customerEmail,
     customer_address: data.customerAddress,
     items: invoiceItems,
-    subtotal: data.subtotal + (data.shippingCost || 0) + (data.codExtraCost || 0),
+    subtotal: baseImponible,
     tax_rate: data.taxRate || 21,
     tax_amount: taxAmount,
     total: data.total,
@@ -620,6 +620,16 @@ export async function generateInvoicePDFFromDB(
     return null;
   }
 
+  // Recalcular IVA para facturas antiguas con tax_amount=0
+  const taxRate = invoice.tax_rate || 21;
+  let invoiceSubtotal = invoice.subtotal;
+  let invoiceTaxAmount = invoice.tax_amount;
+  
+  if (invoiceTaxAmount === 0 && invoice.total > 0) {
+    invoiceSubtotal = Math.round(invoice.total / (1 + taxRate / 100));
+    invoiceTaxAmount = invoice.total - invoiceSubtotal;
+  }
+
   const pdf = generateInvoicePDF({
     invoice_number: invoice.invoice_number,
     issue_date: invoice.issue_date,
@@ -628,9 +638,9 @@ export async function generateInvoicePDFFromDB(
     customer_nif: invoice.customer_nif,
     customer_address: invoice.customer_address,
     items: invoice.items || [],
-    subtotal: invoice.subtotal,
-    tax_rate: invoice.tax_rate || 21,
-    tax_amount: invoice.tax_amount,
+    subtotal: invoiceSubtotal,
+    tax_rate: taxRate,
+    tax_amount: invoiceTaxAmount,
     total: invoice.total,
     discount_amount: invoice.discount_amount,
     company_name: invoice.company_name || 'FashionMarket S.L.',
@@ -687,7 +697,7 @@ export async function generateCreditNotePDFFromDB(
 
   return {
     pdf,
-    filename: `nota-credito-${creditNote.credit_note_number}.pdf`,
+    filename: `factura-rectificativa-${creditNote.credit_note_number}.pdf`,
     creditNote,
   };
 }

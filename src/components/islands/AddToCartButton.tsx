@@ -148,7 +148,7 @@ export default function AddToCartButton({ product }: AddToCartButtonProps) {
 
     // Simular pequeño delay para feedback visual
     setTimeout(() => {
-      addToCart(product, selectedSize, quantity, selectedColor || undefined, colorIdx !== undefined && colorIdx >= 0 ? colorIdx : undefined);
+      addToCart(product, selectedSize, quantity, selectedColor || undefined, colorIdx !== undefined && colorIdx >= 0 ? colorIdx : undefined, selectedVariantStock);
       setIsAdding(false);
       // Reset después de añadir
       setQuantity(1);

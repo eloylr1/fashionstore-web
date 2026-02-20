@@ -60,6 +60,17 @@ export const GET: APIRoute = async ({ params, cookies }) => {
       return new Response('No autorizado', { status: 403 });
     }
 
+    // Calcular IVA correctamente (para facturas antiguas con tax_amount=0)
+    const taxRate = invoice.tax_rate || 21;
+    let displaySubtotal = invoice.subtotal;
+    let displayTaxAmount = invoice.tax_amount;
+    
+    // Si tax_amount es 0 pero total > subtotal, recalcular (precios incluyen IVA)
+    if (displayTaxAmount === 0 && invoice.total > 0) {
+      displaySubtotal = Math.round(invoice.total / (1 + taxRate / 100));
+      displayTaxAmount = invoice.total - displaySubtotal;
+    }
+
     // Generar HTML de la factura
     const items = invoice.items as any[];
     const itemsHTML = items.map((item: any) => `
@@ -232,12 +243,12 @@ export const GET: APIRoute = async ({ params, cookies }) => {
   <div class="totals">
     <table>
       <tr>
-        <td>Subtotal</td>
-        <td style="text-align: right;">${(invoice.subtotal / 100).toFixed(2)}€</td>
+        <td>Base imponible</td>
+        <td style="text-align: right;">${(displaySubtotal / 100).toFixed(2)}€</td>
       </tr>
       <tr>
-        <td>IVA (${invoice.tax_rate}%)</td>
-        <td style="text-align: right;">${(invoice.tax_amount / 100).toFixed(2)}€</td>
+        <td>IVA (${taxRate}%)</td>
+        <td style="text-align: right;">${(displayTaxAmount / 100).toFixed(2)}€</td>
       </tr>
       <tr class="total-row">
         <td>TOTAL</td>

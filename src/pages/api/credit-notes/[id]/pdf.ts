@@ -19,7 +19,7 @@ export const GET: APIRoute = async ({ params, cookies }) => {
     const creditNoteId = params.id;
 
     if (!creditNoteId) {
-      return new Response('ID de nota de crédito requerido', { status: 400 });
+      return new Response('ID de factura rectificativa requerido', { status: 400 });
     }
 
     if (!supabaseUrl || !supabaseServiceKey) {
@@ -47,7 +47,7 @@ export const GET: APIRoute = async ({ params, cookies }) => {
       .single();
 
     if (cnError || !creditNote) {
-      return new Response('Nota de crédito no encontrada', { status: 404 });
+      return new Response('Factura rectificativa no encontrada', { status: 404 });
     }
 
     // Verificar que pertenece al usuario (o es admin)

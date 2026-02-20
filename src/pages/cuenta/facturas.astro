@@ -201,7 +201,7 @@ const getCreditNoteStatusBadge = (status: string) => {
           <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
               <h1 class="text-2xl font-serif text-navy-900">Mis Facturas</h1>
-              <p class="text-charcoal-500 mt-1">Descarga tus facturas y notas de crédito</p>
+              <p class="text-charcoal-500 mt-1">Descarga tus facturas y facturas rectificativas</p>
             </div>
             
             <!-- Estadísticas rápidas -->
@@ -222,7 +222,7 @@ const getCreditNoteStatusBadge = (status: string) => {
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z"/>
                     </svg>
                     <span class="text-red-700 font-medium">{creditNotes.length}</span>
-                    <span class="text-red-600">notas</span>
+                    <span class="text-red-600">rectificativas</span>
                   </span>
                 </div>
               )}
@@ -239,7 +239,7 @@ const getCreditNoteStatusBadge = (status: string) => {
                 <select id="filterType" class="w-full px-4 py-2.5 border border-charcoal-200 rounded-lg focus:ring-2 focus:ring-gold-matte/30 focus:border-gold-matte transition-colors appearance-none bg-white cursor-pointer">
                   <option value="all">Todos los documentos</option>
                   <option value="invoice">Solo Facturas</option>
-                  <option value="credit_note">Solo Notas de Crédito</option>
+                  <option value="credit_note">Solo Facturas Rectificativas</option>
                 </select>
               </div>
 
@@ -297,7 +297,7 @@ const getCreditNoteStatusBadge = (status: string) => {
                                 {docNumber}
                               </span>
                               <span class={`px-2.5 py-1 text-xs font-medium rounded-full ${isInvoice ? 'bg-blue-100 text-blue-800' : 'bg-red-100 text-red-800'}`}>
-                                {isInvoice ? 'Factura' : 'Nota de Crédito'}
+                                {isInvoice ? 'Factura' : 'Factura Rectificativa'}
                               </span>
                               <span class={`px-2.5 py-1 text-xs font-medium rounded-full border ${status.class}`}>
                                 {status.text}

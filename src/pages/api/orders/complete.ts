@@ -20,16 +20,33 @@ const stripeSecretKey = import.meta.env.STRIPE_SECRET_KEY;
 const siteUrl = import.meta.env.SITE_URL || 'http://localhost:4322';
 
 /**
- * Genera un número de pedido corto y legible
- * Formato: FM-XXXXXX (6 caracteres alfanuméricos)
+ * Genera un número de pedido correlativo
+ * Formato: PED-YYYY-LNNNNN (ej: PED-2026-A00001)
  */
-function generateOrderNumber(): string {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Sin 0, O, I, 1 para evitar confusión
-  let result = 'FM-';
-  for (let i = 0; i < 6; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
+async function generateCorrelativeOrderNumber(supabase: any): Promise<string> {
+  const year = new Date().getFullYear();
+  const { data: maxOrder } = await supabase
+    .from('orders')
+    .select('order_number')
+    .ilike('order_number', `PED-${year}-%`)
+    .order('order_number', { ascending: false })
+    .limit(1)
+    .single();
+
+  let nextSeq = 1;
+  if (maxOrder?.order_number) {
+    const match = maxOrder.order_number.match(/PED-\d{4}-([A-Z])(\d+)/);
+    if (match) {
+      const letterVal = match[1].charCodeAt(0) - 65;
+      nextSeq = letterVal * 99999 + parseInt(match[2], 10) + 1;
+    } else {
+      const oldMatch = maxOrder.order_number.match(/PED-\d{4}-(\d+)/);
+      if (oldMatch) nextSeq = parseInt(oldMatch[1], 10) + 1;
+    }
   }
-  return result;
+  const letter = String.fromCharCode(65 + Math.floor((nextSeq - 1) / 99999));
+  const digits = ((nextSeq - 1) % 99999) + 1;
+  return `PED-${year}-${letter}${String(digits).padStart(5, '0')}`;
 }
 
 export const POST: APIRoute = async ({ request, cookies }) => {
@@ -139,13 +156,17 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       ? 0 
       : storeSettings.shipping.standard_shipping_cost;
     const taxRate = storeSettings.taxes.tax_rate || 21;
-    const taxAmount = Math.round((subtotal - discountAmount) * taxRate / 100);
     const total = subtotal - discountAmount + shippingCost;
+    
+    // Calcular IVA desglosado para factura (precios ya incluyen IVA)
+    const invoiceBaseImponible = Math.round(total / (1 + taxRate / 100));
+    const invoiceTaxAmount = total - invoiceBaseImponible;
 
-    // Generar número de pedido corto (y verificar que sea único)
-    let orderNumber = generateOrderNumber();
+    // Generar número de pedido correlativo
+    let orderNumber = await generateCorrelativeOrderNumber(supabase);
+    // Verificar unicidad (por si acaso)
     let attempts = 0;
-    while (attempts < 10) {
+    while (attempts < 5) {
       const { data: existing } = await supabase
         .from('orders')
         .select('id')
@@ -153,7 +174,15 @@ export const POST: APIRoute = async ({ request, cookies }) => {
         .single();
       
       if (!existing) break;
-      orderNumber = generateOrderNumber();
+      // Si ya existe, incrementar manualmente
+      const match = orderNumber.match(/PED-\d{4}-([A-Z])(\d+)/);
+      if (match) {
+        const letterVal = match[1].charCodeAt(0) - 65;
+        const seq = letterVal * 99999 + parseInt(match[2], 10) + 1;
+        const newLetter = String.fromCharCode(65 + Math.floor((seq - 1) / 99999));
+        const newDigits = ((seq - 1) % 99999) + 1;
+        orderNumber = `PED-${new Date().getFullYear()}-${newLetter}${String(newDigits).padStart(5, '0')}`;
+      }
       attempts++;
     }
 
@@ -166,7 +195,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
         status: 'paid',
         subtotal,
         shipping_cost: shippingCost,
-        tax: taxAmount,
+        tax: invoiceTaxAmount,
         total,
         shipping_address: shippingAddress,
         stripe_payment_intent_id: paymentIntentId,
@@ -243,9 +272,9 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       customer_email: finalEmail,
       customer_nif: customerNif || null,
       customer_address: shippingAddress,
-      subtotal,
+      subtotal: invoiceBaseImponible,
       tax_rate: taxRate,
-      tax_amount: taxAmount,
+      tax_amount: invoiceTaxAmount,
       total,
       status: 'paid',
       payment_method: 'card',
@@ -276,22 +305,27 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       const { data: maxInvoice } = await supabase
         .from('invoices')
         .select('invoice_number')
-        .ilike('invoice_number', `FM-${year}-%`)
+        .ilike('invoice_number', `FAC-${year}-%`)
         .order('invoice_number', { ascending: false })
         .limit(1)
         .single();
       
-      let nextNum = 1;
+      let nextSeq = 1;
       if (maxInvoice?.invoice_number) {
-        const match = maxInvoice.invoice_number.match(/FM-\d{4}-(\d+)/);
+        const match = maxInvoice.invoice_number.match(/(?:FM|FAC)-\d{4}-([A-Z])(\d+)/);
         if (match) {
-          nextNum = parseInt(match[1], 10) + 1;
+          const lv = match[1].charCodeAt(0) - 65;
+          nextSeq = lv * 99999 + parseInt(match[2], 10) + 1;
+        } else {
+          const oldMatch = maxInvoice.invoice_number.match(/(?:FM|FAC)-\d{4}-(\d+)/);
+          if (oldMatch) nextSeq = parseInt(oldMatch[1], 10) + 1;
         }
       }
       // Añadir offset por intento para evitar colisiones
-      nextNum += attempt;
-      
-      invoiceNumber = `FM-${year}-${String(nextNum).padStart(6, '0')}`;
+      nextSeq += attempt;
+      const invLetter = String.fromCharCode(65 + Math.floor((nextSeq - 1) / 99999));
+      const invDigits = ((nextSeq - 1) % 99999) + 1;
+      invoiceNumber = `FAC-${year}-${invLetter}${String(invDigits).padStart(5, '0')}`;
       
       const invoiceData = { ...baseInvoiceData, invoice_number: invoiceNumber };
       
@@ -380,7 +414,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       subtotal,
       shippingCost,
       discount: discountAmount,
-      tax: taxAmount,
+      tax: invoiceTaxAmount,
       total,
       shippingAddress: shippingAddress || {},
       invoiceNumber: invoice?.invoice_number || '',
