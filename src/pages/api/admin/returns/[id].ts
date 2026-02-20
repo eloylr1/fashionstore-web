@@ -9,9 +9,12 @@
 export const prerender = false;
 
 import type { APIRoute } from 'astro';
+import Stripe from 'stripe';
 import { supabaseAdmin, verifyAdminSecure } from '../../../../lib/supabase/server';
 import { sendReturnApprovedEmail, sendReturnRejectedEmail } from '../../../../lib/email/index';
 import { generateCreditNotePDF, generateCreditNotePDFFromDB } from '../../../../lib/pdf/invoiceGenerator';
+
+const stripeSecretKey = import.meta.env.STRIPE_SECRET_KEY || '';
 
 // GET - Obtener devolución con detalles
 export const GET: APIRoute = async ({ params, cookies }) => {
@@ -93,7 +96,7 @@ export const PATCH: APIRoute = async ({ params, request, cookies }) => {
       .from('returns')
       .select(`
         *,
-        orders (id, order_number, total)
+        orders (id, order_number, total, payment_method, stripe_payment_intent_id)
       `)
       .eq('id', id)
       .single();
@@ -137,6 +140,35 @@ export const PATCH: APIRoute = async ({ params, request, cookies }) => {
 
       if (updateError) throw updateError;
 
+      // ── REEMBOLSO EN STRIPE ──
+      let stripeRefundId: string | null = null;
+      const paymentIntentId = returnData.orders?.stripe_payment_intent_id;
+      const refundAmount = returnData.refund_amount || returnData.orders?.total || 0;
+
+      if (paymentIntentId && stripeSecretKey) {
+        try {
+          console.log('Procesando reembolso en Stripe para devolución:', id, 'PI:', paymentIntentId);
+          const stripe = new Stripe(stripeSecretKey, { apiVersion: '2025-01-27.acacia' as any });
+          const refund = await stripe.refunds.create({
+            payment_intent: paymentIntentId,
+            amount: refundAmount, // En céntimos
+            reason: 'requested_by_customer',
+            metadata: {
+              return_id: id!,
+              return_number: returnData.return_number || '',
+              order_number: returnData.orders?.order_number || '',
+            },
+          });
+          stripeRefundId = refund.id;
+          console.log('Reembolso Stripe creado:', refund.id, 'Estado:', refund.status, 'Importe:', refund.amount);
+        } catch (stripeError: any) {
+          console.error('ERROR al procesar reembolso en Stripe:', stripeError.message);
+          // No bloquear la aprobación si falla Stripe
+        }
+      } else {
+        console.log('Reembolso Stripe omitido:', !paymentIntentId ? 'sin payment_intent' : 'sin clave Stripe');
+      }
+
       // Generar nota de crédito (factura negativa) vía RPC
       let creditNotePdf: Buffer | undefined;
       let creditNoteNumber: string | undefined;
@@ -145,8 +177,8 @@ export const PATCH: APIRoute = async ({ params, request, cookies }) => {
         const { data: rpcResult, error: rpcError } = await (supabase as any)
           .rpc('process_return_with_credit_note', {
             p_return_id: id,
-            p_refund_method: 'stripe',
-            p_stripe_refund_id: null,
+            p_refund_method: stripeRefundId ? 'stripe' : 'credit_note',
+            p_stripe_refund_id: stripeRefundId,
           });
 
         if (rpcError) {

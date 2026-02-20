@@ -7,11 +7,13 @@
 
 import type { APIRoute } from 'astro';
 import { createClient } from '@supabase/supabase-js';
+import Stripe from 'stripe';
 import { sendEmail } from '../../../lib/email';
 import { generateCreditNotePDF } from '../../../lib/pdf/invoiceGenerator';
 
 const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL || '';
 const supabaseServiceKey = import.meta.env.SUPABASE_SERVICE_ROLE_KEY || '';
+const stripeSecretKey = import.meta.env.STRIPE_SECRET_KEY || '';
 
 export const POST: APIRoute = async ({ request, cookies }) => {
   console.log('=== INICIO CANCELACION DE PEDIDO ===');
@@ -126,6 +128,35 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 
     console.log('Pedido marcado como cancelado');
 
+    // ── REEMBOLSO EN STRIPE ──
+    let stripeRefundId: string | null = null;
+    const paymentIntentId = orderData.stripe_payment_intent_id || orderData.payment_intent_id;
+    const paidStatuses = ['paid', 'processing'];
+    const wasPaid = paidStatuses.includes(orderData.status);
+
+    if (wasPaid && paymentIntentId && stripeSecretKey) {
+      try {
+        console.log('Procesando reembolso en Stripe para PI:', paymentIntentId);
+        const stripe = new Stripe(stripeSecretKey, { apiVersion: '2025-01-27.acacia' as any });
+        const refund = await stripe.refunds.create({
+          payment_intent: paymentIntentId,
+          reason: 'requested_by_customer',
+          metadata: {
+            order_id: order_id,
+            order_number: orderData.order_number || '',
+            cancelled_by: isAdmin ? 'admin' : 'customer',
+          },
+        });
+        stripeRefundId = refund.id;
+        console.log('Reembolso Stripe creado:', refund.id, 'Estado:', refund.status, 'Importe:', refund.amount);
+      } catch (stripeError: any) {
+        console.error('ERROR al procesar reembolso en Stripe:', stripeError.message);
+        // No bloquear la cancelación si falla Stripe
+      }
+    } else {
+      console.log('Reembolso Stripe omitido:', !wasPaid ? 'pedido no pagado' : !paymentIntentId ? 'sin payment_intent' : 'sin clave Stripe');
+    }
+
     // 3. Obtener factura original
     const { data: originalInvoice } = await serviceClient
       .from('invoices')
@@ -197,7 +228,8 @@ export const POST: APIRoute = async ({ request, cookies }) => {
           tax_amount: -Math.abs(originalInvoice?.tax_amount || orderData.tax || 0),
           total: -Math.abs(originalInvoice?.total || orderData.total || 0),
           reason: 'Cancelación de pedido por el cliente',
-          refund_method: 'Devolución a método de pago original',
+          refund_method: stripeRefundId ? 'stripe' : 'Devolución a método de pago original',
+          stripe_refund_id: stripeRefundId,
           items: creditNoteItems,
           status: 'pending',
         })
